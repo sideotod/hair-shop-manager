@@ -35,8 +35,8 @@
 - Modify: `AGENTS.md`
 - Modify: `DESIGN.md`
 - Modify: `FUNCTION.md`
-- Rename: `docs/superpowers/plans/2026-07-30-hairnuri-renewal.md` to `docs/superpowers/plans/2026-07-30-hairhaeyo-renewal.md`
-- Rename: `docs/superpowers/specs/2026-07-30-hairnuri-ui-design.md` to `docs/superpowers/specs/2026-07-30-hairhaeyo-ui-design.md`
+- Modify: `docs/superpowers/plans/2026-07-30-hairhaeyo-renewal.md` after renaming the legacy-named plan
+- Modify: `docs/superpowers/specs/2026-07-30-hairhaeyo-ui-design.md` after renaming the legacy-named specification
 
 **Interfaces:**
 - Consumes: approved naming constants `Hairhaeyo`, `헤어해요`, `SALON MANAGEMENT`.
