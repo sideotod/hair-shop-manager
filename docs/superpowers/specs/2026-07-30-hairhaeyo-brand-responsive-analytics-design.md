@@ -15,8 +15,8 @@
 ### 화면
 
 - 사이드바 로고: `HAIRHAEYO`
-- 보조 표기: `헤어해요 · SALON OPERATIONS`
-- 브라우저 제목: `Hairhaeyo Salon Operations`
+- 보조 표기: `헤어해요 · SALON MANAGEMENT`
+- 브라우저 제목: `Hairhaeyo Salon Management`
 - 설명: `헤어해요 미용실 고객·예약·매출 관리 시스템`
 - CSV 파일명 prefix: `hairhaeyo-`
 
@@ -29,7 +29,7 @@
 
 ### Figma
 
-- 파일명: `Hairhaeyo Salon Operations Web App`
+- 파일명: `Hairhaeyo Salon Management Web App`
 - Foundations·Components·Core Screens의 로고와 제품명 표기를 갱신한다.
 - 노드 ID가 변경되면 상세 설계 문서의 참조 ID를 함께 갱신한다.
 
