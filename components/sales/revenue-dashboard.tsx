@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useRef, useState, useSyncExternalStore } from "react";
 import { useRouter } from "next/navigation";
 import {
   Bar,
@@ -36,6 +36,42 @@ import {
 const card = "rounded-[14px] border border-[var(--border)] bg-white";
 const money = (value: number) => `${Math.round(value / 10000).toLocaleString("ko-KR")}만`;
 const won = (value: number) => `₩${value.toLocaleString("ko-KR")}`;
+
+export function revenueChartMotion(reduced: boolean, begin: number, duration: number) {
+  return {
+    isAnimationActive: !reduced,
+    animationBegin: reduced ? 0 : begin,
+    animationDuration: reduced ? 0 : duration,
+    animationEasing: "ease-out" as const,
+  };
+}
+
+export function revenueChartMotions(reduced: boolean) {
+  return {
+    daily: revenueChartMotion(reduced, 0, 560),
+    payment: revenueChartMotion(reduced, 80, 520),
+    service: revenueChartMotion(reduced, 0, 500),
+    staffSales: revenueChartMotion(reduced, 0, 480),
+    staffProfit: revenueChartMotion(reduced, 80, 480),
+    deduction: revenueChartMotion(reduced, 0, 520),
+  };
+}
+
+const reducedMotionQuery = "(prefers-reduced-motion: reduce)";
+
+function subscribeToReducedMotion(onChange: () => void) {
+  const media = window.matchMedia(reducedMotionQuery);
+  media.addEventListener("change", onChange);
+  return () => media.removeEventListener("change", onChange);
+}
+
+function reducedMotionSnapshot() {
+  return window.matchMedia(reducedMotionQuery).matches;
+}
+
+function usePrefersReducedMotion() {
+  return useSyncExternalStore(subscribeToReducedMotion, reducedMotionSnapshot, () => true);
+}
 
 export function resolveRevenueSelection(kind: RevenueSelection["kind"], value: unknown, analytics: RevenueAnalytics): RevenueSelection | null {
   if (!value || typeof value !== "object") return null;
@@ -146,6 +182,7 @@ function ValueButtons({
 
 export function RevenueDashboard({ analytics, query: initialQuery = DEFAULT_REVENUE_QUERY }: { analytics: RevenueAnalytics; query?: RevenueQuery }) {
   const router = useRouter();
+  const chartMotion = revenueChartMotions(usePrefersReducedMotion());
   const [query, setQuery] = useState<RevenueQuery>(initialQuery);
   const [visibleSeries, setVisibleSeries] = useState({ gross: true, profit: true });
   const [selection, setSelection] = useState<RevenueSelection | null>(null);
@@ -230,14 +267,14 @@ export function RevenueDashboard({ analytics, query: initialQuery = DEFAULT_REVE
             <ChartSurface className="h-[218px]" kind="date" label="일별 매출" onReady={chartRef("date")}><ResponsiveContainer height="100%" width="100%"><LineChart data={analytics.daily} margin={{ left: 8, right: 12 }} onClick={(value) => selectChartValue("date", value)}>
               <CartesianGrid stroke="#ece8e3" vertical={false} /><XAxis dataKey="date" tickLine={false} /><YAxis tickFormatter={money} tickLine={false} width={58} />
               <Tooltip formatter={(value) => `₩${Number(value).toLocaleString("ko-KR")}`} /><Legend />
-              {visibleSeries.gross && <Line dataKey="gross" isAnimationActive={false} name="총매출" stroke="#5c344f" strokeWidth={3} type="monotone" />}
-              {visibleSeries.profit && <Line dataKey="profit" isAnimationActive={false} name="샵 수익" stroke="#5b806d" strokeWidth={3} type="monotone" />}
+              {visibleSeries.gross && <Line {...chartMotion.daily} dataKey="gross" name="총매출" stroke="#5c344f" strokeWidth={3} type="monotone" />}
+              {visibleSeries.profit && <Line {...chartMotion.daily} dataKey="profit" name="샵 수익" stroke="#5b806d" strokeWidth={3} type="monotone" />}
             </LineChart></ResponsiveContainer></ChartSurface>
             <ValueButtons items={analytics.daily.map((item) => ({ key: item.date, text: `${item.date} · ${won(item.gross)} / ${won(item.profit)}` }))} kind="date" label="매출" onSelect={select("date")} />
           </ChartCard>
 
           <ChartCard kind="payment" title="결제수단 비중">
-            <ChartSurface className="h-[250px]" kind="payment" label="결제수단" onReady={chartRef("payment")}><ResponsiveContainer height="100%" width="100%"><PieChart onClick={(value) => selectChartValue("payment", value)}><Pie data={analytics.payments} dataKey="value" innerRadius={62} isAnimationActive={false} nameKey="name" outerRadius={96} paddingAngle={3}>
+            <ChartSurface className="h-[250px]" kind="payment" label="결제수단" onReady={chartRef("payment")}><ResponsiveContainer height="100%" width="100%"><PieChart onClick={(value) => selectChartValue("payment", value)}><Pie {...chartMotion.payment} data={analytics.payments} dataKey="value" innerRadius={62} nameKey="name" outerRadius={96} paddingAngle={3}>
               {analytics.payments.map((item) => <Cell fill={item.color} key={item.name} />)}
             </Pie><Tooltip formatter={(value) => `${value}%`} /><Legend /></PieChart></ResponsiveContainer></ChartSurface>
             <ValueButtons items={analytics.payments.map((item) => ({ key: item.name, text: `${item.name} ${item.value}%` }))} kind="payment" label="결제수단" onSelect={select("payment")} />
@@ -246,7 +283,7 @@ export function RevenueDashboard({ analytics, query: initialQuery = DEFAULT_REVE
           <ChartCard kind="service" title="시술 카테고리 순위">
             <ChartSurface className="h-[250px]" kind="service" label="시술 카테고리" onReady={chartRef("service")}><ResponsiveContainer height="100%" width="100%"><BarChart data={analytics.services} layout="vertical" margin={{ left: 18, right: 24 }} onClick={(value) => selectChartValue("service", value)}>
               <CartesianGrid horizontal={false} stroke="#ece8e3" /><XAxis tickFormatter={money} type="number" /><YAxis dataKey="name" tickLine={false} type="category" width={54} />
-              <Tooltip formatter={(value) => `₩${Number(value).toLocaleString("ko-KR")}`} /><Bar dataKey="sales" fill="#5c344f" isAnimationActive={false} name="매출" radius={[0, 7, 7, 0]} />
+              <Tooltip formatter={(value) => `₩${Number(value).toLocaleString("ko-KR")}`} /><Bar {...chartMotion.service} dataKey="sales" fill="#5c344f" name="매출" radius={[0, 7, 7, 0]} />
             </BarChart></ResponsiveContainer></ChartSurface>
             <ValueButtons items={analytics.services.map((item) => ({ key: item.name, text: `${item.name} ${won(item.sales)}` }))} kind="service" label="시술" onSelect={select("service")} />
           </ChartCard>
@@ -255,7 +292,7 @@ export function RevenueDashboard({ analytics, query: initialQuery = DEFAULT_REVE
             <ChartSurface className="h-[250px]" kind="staff" label="디자이너 매출" onReady={chartRef("staff")}><ResponsiveContainer height="100%" width="100%"><BarChart data={analytics.staff} margin={{ left: 8, right: 12 }} onClick={(value) => selectChartValue("staff", value)}>
               <CartesianGrid stroke="#ece8e3" vertical={false} /><XAxis dataKey="name" tickLine={false} /><YAxis tickFormatter={money} tickLine={false} width={58} />
               <Tooltip formatter={(value) => `₩${Number(value).toLocaleString("ko-KR")}`} /><Legend />
-              <Bar dataKey="sales" fill="#5c344f" isAnimationActive={false} name="매출" radius={[6, 6, 0, 0]} /><Bar dataKey="profit" fill="#b77d8f" isAnimationActive={false} name="샵 수익" radius={[6, 6, 0, 0]} />
+              <Bar {...chartMotion.staffSales} dataKey="sales" fill="#5c344f" name="매출" radius={[6, 6, 0, 0]} /><Bar {...chartMotion.staffProfit} dataKey="profit" fill="#b77d8f" name="샵 수익" radius={[6, 6, 0, 0]} />
             </BarChart></ResponsiveContainer></ChartSurface>
             <ValueButtons items={analytics.staff.map((item) => ({ key: item.name, text: `${item.name} · ${won(item.sales)} / ${won(item.profit)}` }))} kind="staff" label="담당자" onSelect={select("staff")} />
           </ChartCard>
@@ -265,7 +302,7 @@ export function RevenueDashboard({ analytics, query: initialQuery = DEFAULT_REVE
           <ChartCard kind="deduction" title="총매출에서 샵 수익까지">
             <ChartSurface className="h-[250px]" kind="deduction" label="공제" onReady={chartRef("deduction")}><ResponsiveContainer height="100%" width="100%"><BarChart data={analytics.deductions} margin={{ left: 8, right: 12 }} onClick={(value) => selectChartValue("deduction", value)}>
               <CartesianGrid stroke="#ece8e3" vertical={false} /><XAxis dataKey="name" tickLine={false} /><YAxis tickFormatter={money} tickLine={false} width={60} />
-              <Tooltip formatter={(value) => `₩${Number(value).toLocaleString("ko-KR")}`} /><Bar dataKey="value" isAnimationActive={false} name="금액" radius={[7, 7, 0, 0]}>
+              <Tooltip formatter={(value) => `₩${Number(value).toLocaleString("ko-KR")}`} /><Bar {...chartMotion.deduction} dataKey="value" name="금액" radius={[7, 7, 0, 0]}>
                 {analytics.deductions.map((item) => <Cell fill={item.color} key={item.name} />)}
               </Bar>
             </BarChart></ResponsiveContainer></ChartSurface>
