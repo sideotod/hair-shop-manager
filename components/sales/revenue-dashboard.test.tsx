@@ -1,5 +1,18 @@
+import type { ReactNode } from "react";
 import { renderToStaticMarkup } from "react-dom/server";
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, vi } from "vitest";
+
+vi.mock("recharts", async (importOriginal) => {
+  const recharts = await importOriginal<typeof import("recharts")>();
+
+  return {
+    ...recharts,
+    BarChart: ({ data }: { data?: ReadonlyArray<{ name?: string }> }) => (
+      <div data-bar-chart-items={data?.map((item) => item.name).join("|")} />
+    ),
+    ResponsiveContainer: ({ children }: { children: ReactNode }) => children,
+  };
+});
 
 import { RevenueDashboard } from "./revenue-dashboard";
 
@@ -22,5 +35,49 @@ describe("RevenueDashboard", () => {
     expect(html).toContain("총매출 표시");
     expect(html).toContain("샵 수익 표시");
     expect(html).toContain('aria-pressed="true"');
+  });
+
+  it("renders values from the injected revenue aggregate", () => {
+    const analytics = {
+      selectedPeriod: { start: "2026-08-01", end: "2026-08-01", label: "8월 1일" },
+      comparisonPeriod: { start: "2026-07-31", end: "2026-07-31", label: "7월 31일" },
+      metrics: [["테스트 총매출", "₩123", "테스트 비교", "text-[var(--success)]"]],
+      daily: [{ date: "8/1", gross: 123, profit: 45 }],
+      payments: [{ name: "테스트 결제", value: 100, color: "#000000" }],
+      services: [{ name: "테스트 시술", sales: 123 }],
+      staff: [{ name: "테스트 담당자", sales: 123, profit: 45 }],
+      deductions: [{ name: "테스트 공제", value: 78, color: "#000000" }],
+    } as const;
+
+    const html = renderToStaticMarkup(<RevenueDashboard analytics={analytics} />);
+
+    expect(html).toContain("테스트 총매출");
+    expect(html).toContain("₩123");
+    expect(html).toContain("8/1");
+    expect(html).toContain("테스트 결제 100%");
+    expect(html).toContain("테스트 시술");
+    expect(html).toContain('data-bar-chart-items="테스트 담당자"');
+    expect(html).toContain('data-bar-chart-items="테스트 공제"');
+    expect(html).not.toContain("₩29,960,000");
+  });
+
+  it("builds the dashboard CSV action from injected daily rows", () => {
+    const analytics = {
+      selectedPeriod: { start: "2026-08-01", end: "2026-08-01", label: "8월 1일" },
+      comparisonPeriod: { start: "2026-07-31", end: "2026-07-31", label: "7월 31일" },
+      metrics: [],
+      daily: [{ date: "8/1", gross: 123, profit: 45 }],
+      payments: [],
+      services: [],
+      staff: [],
+      deductions: [],
+    } as const;
+
+    const html = renderToStaticMarkup(<RevenueDashboard analytics={analytics} />);
+    const href = html.match(/href="([^"]+)"[^>]*>CSV 내보내기<\/a>/)?.[1];
+
+    expect(href).toBeDefined();
+    expect(decodeURIComponent(href ?? "")).toContain("8/1,123,45");
+    expect(decodeURIComponent(href ?? "")).not.toContain("7/24,3480000,2240000");
   });
 });
