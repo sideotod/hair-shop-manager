@@ -10,9 +10,10 @@ const menu = [
   ["직원 · 설정", "/settings"],
 ] as const;
 
-export function AppShell({ children, activeHref = "/" }: { children: React.ReactNode; activeHref?: string }) {
+export function AppShell({ children, activeHref = "/", overlay }: { children: React.ReactNode; activeHref?: string; overlay?: React.ReactNode }) {
   return (
-    <div className="grid min-h-screen min-w-[1280px] grid-cols-[232px_1fr] bg-[var(--background)]">
+    <>
+    <div data-app-shell-background {...(overlay ? { inert: true, "aria-hidden": true } : {})} className="grid min-h-screen grid-cols-[232px_minmax(0,1fr)] bg-[var(--background)]">
       <aside className="sticky top-0 flex h-screen flex-col bg-[var(--sidebar)] px-6 py-7 text-white">
         <div>
           <strong className="block text-[22px] leading-none tracking-[-0.02em]">HAIRHAEYO</strong>
@@ -41,7 +42,7 @@ export function AppShell({ children, activeHref = "/" }: { children: React.React
         </div>
       </aside>
 
-      <div>
+      <div className="min-w-0">
         <header className="flex h-[72px] items-center justify-between bg-white px-7 text-[13px]">
           <strong className="font-medium">2026년 7월 30일 목요일</strong>
           <div className="flex items-center gap-3">
@@ -53,5 +54,7 @@ export function AppShell({ children, activeHref = "/" }: { children: React.React
         {children}
       </div>
     </div>
+    {overlay}
+    </>
   );
 }
