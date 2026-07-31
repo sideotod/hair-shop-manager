@@ -106,3 +106,10 @@ None. The Task 3 brief asks for a four-layout selector; browser print rendering/
 - Power, SMS default, and birthday-calendar policy values remain server-owned through `SalonStore`; no client-only policy state was introduced.
 - All customer mutations retain the exact `원장` actor. Existing values take precedence only for an edit; defaults apply only to a new form.
 - Native-print invocation and layout selection are behaviorally covered. Visual print output and actual browser rendering remain Task 9 browser QA.
+
+## Build regression fix
+
+- Root cause: `app/customer-actions.ts` was marked `"use server"` while exporting five synchronous record operations solely for direct unit testing. Next.js production compilation correctly rejected those exports because Server Action modules may export only async functions.
+- Fix: moved the synchronous customer record operations and their private pure helpers unchanged into `lib/customer-operations.ts`. The Server Action module now imports them and exports only the five async action wrappers; the existing action test imports the operations from the library module.
+- Scope: customer operation module boundary only. No Task 4 booking code was changed.
+- Verification: focused customer tests passed 15/15; `npm run typecheck` passed; `HAIRHAEYO_DEMO_MODE=1 npm run build` compiled, typechecked, generated 8/8 static pages, and completed successfully; `git diff --check` passed.

@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 
+import { completeWaitingCustomerRecord, saveCustomerPolicyRecord, saveCustomerRecord, saveWaitingCustomerRecord } from "../lib/customer-operations";
 import { createSalonStore } from "../lib/salon-store";
-import { completeWaitingCustomerRecord, saveCustomerPolicyRecord, saveCustomerRecord, saveWaitingCustomerRecord } from "./customer-actions";
 
 const store = createSalonStore(":memory:");
 
