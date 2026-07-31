@@ -4,6 +4,17 @@ export type JsonPrimitive = boolean | null | number | string;
 export type JsonValue = JsonPrimitive | JsonObject | readonly JsonValue[];
 export type JsonObject = { [key: string]: JsonValue };
 
+export type CustomerValue = JsonObject & {
+  name: string;
+  phone: string;
+  phoneAbsent: boolean;
+  smsOptIn: boolean;
+  points: number;
+  operator: "원장";
+};
+
+export type WaitingCustomerValue = JsonObject & { name: string; memo: string; operator: "원장" };
+
 export type SalonRecord<T extends JsonValue = JsonValue> = {
   id: string;
   kind: RecordKind;
