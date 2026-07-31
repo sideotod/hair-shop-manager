@@ -31,7 +31,7 @@ export function verifyOwnerPassword(password: string, storedHash: string): boole
 export const SEEDED_OWNER_PASSWORD_HASH = hashOwnerPassword(DEMO_OWNER_PASSWORD, "hairhaeyo-owner-demo");
 
 export function configuredOwnerPasswordHash(env: AuthEnvironment = process.env) {
-  if (isDemoMode(env)) return SEEDED_OWNER_PASSWORD_HASH;
+  if (env.NODE_ENV !== "production" && isDemoMode(env)) return SEEDED_OWNER_PASSWORD_HASH;
   const configured = env.HAIRHAEYO_OWNER_PASSWORD_HASH?.trim();
   if (!configured) throw new Error("HAIRHAEYO_OWNER_PASSWORD_HASH is required outside demo mode");
   if (!/^scrypt\$[^$]+\$[0-9a-f]+$/i.test(configured)) throw new Error("HAIRHAEYO_OWNER_PASSWORD_HASH must be a valid scrypt hash");
@@ -42,7 +42,7 @@ function configuredSessionSecret(env: AuthEnvironment) {
   const configured = env.HAIRHAEYO_SESSION_SECRET?.trim();
   if (configured && configured.length >= MIN_SESSION_SECRET_LENGTH) return configured;
   if (configured) throw new Error(`HAIRHAEYO_SESSION_SECRET must be at least ${MIN_SESSION_SECRET_LENGTH} characters`);
-  if (isDemoMode(env)) return DEMO_SESSION_SECRET;
+  if (env.NODE_ENV !== "production" && isDemoMode(env)) return DEMO_SESSION_SECRET;
   if (env.NODE_ENV === "test") return TEST_SESSION_SECRET;
   throw new Error("HAIRHAEYO_SESSION_SECRET is required outside demo and test modes");
 }

@@ -54,6 +54,13 @@ describe("owner authentication", () => {
     expect(() => configuredOwnerPasswordHash({ NODE_ENV: "production" })).toThrow(/HAIRHAEYO_OWNER_PASSWORD_HASH/);
   });
 
+  it("requires the configured owner password hash in production even when demo mode is flagged", () => {
+    const productionDemoEnv = { ...productionEnv, HAIRHAEYO_DEMO_MODE: "1" } as const;
+
+    expect(() => configuredOwnerPasswordHash({ HAIRHAEYO_DEMO_MODE: "1", NODE_ENV: "production" })).toThrow(/HAIRHAEYO_OWNER_PASSWORD_HASH/);
+    expect(configuredOwnerPasswordHash(productionDemoEnv)).toBe(productionEnv.HAIRHAEYO_OWNER_PASSWORD_HASH);
+  });
+
   it("shows the seeded password on the login page only in demo mode", async () => {
     vi.stubEnv("HAIRHAEYO_DEMO_MODE", "1");
     const demoHtml = renderToStaticMarkup(await LoginPage({ searchParams: Promise.resolve({}) }));
@@ -73,5 +80,13 @@ describe("owner authentication", () => {
     expect(() => createOwnerSessionToken(now + 60_000, { HAIRHAEYO_SESSION_SECRET: "too-short", NODE_ENV: "production" })).toThrow(/32/);
     expect(isValidOwnerSession("123.invalid", now, { NODE_ENV: "production" })).toBe(false);
     expect(isValidOwnerSession(createOwnerSessionToken(now + 60_000, productionEnv), now, { NODE_ENV: "production" })).toBe(false);
+  });
+
+  it("requires the configured session secret in production even when demo mode is flagged", () => {
+    const now = Date.parse("2026-07-31T03:00:00.000Z");
+    const productionDemoEnv = { ...productionEnv, HAIRHAEYO_DEMO_MODE: "1" } as const;
+
+    expect(() => createOwnerSessionToken(now + 60_000, { HAIRHAEYO_DEMO_MODE: "1", NODE_ENV: "production" })).toThrow(/HAIRHAEYO_SESSION_SECRET/);
+    expect(isValidOwnerSession(createOwnerSessionToken(now + 60_000, productionDemoEnv), now, productionDemoEnv)).toBe(true);
   });
 });
