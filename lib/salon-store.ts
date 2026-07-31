@@ -2,10 +2,11 @@ import { randomUUID } from "node:crypto";
 import { mkdirSync } from "node:fs";
 import { dirname, join } from "node:path";
 import { DatabaseSync } from "node:sqlite";
+import { isDeepStrictEqual } from "node:util";
 
-import type { AuditEvent, LedgerEntry, LedgerInput, RecordKind, SalonRecord, SalonSnapshot, SalonStore } from "./salon-domain";
+import type { AuditEvent, JsonObject, JsonValue, LedgerEntry, LedgerInput, RecordKind, SalonRecord, SalonSnapshot, SalonStore } from "./salon-domain";
 
-export type { AuditEvent, LedgerEntry, LedgerInput, RecordKind, SalonRecord, SalonSnapshot, SalonStore } from "./salon-domain";
+export type { AuditEvent, JsonObject, JsonValue, LedgerEntry, LedgerInput, RecordKind, SalonRecord, SalonSnapshot, SalonStore } from "./salon-domain";
 
 type RecordRow = {
   kind: string;
@@ -43,13 +44,20 @@ type AuditRow = {
 
 const now = () => new Date().toISOString();
 
-function parseJson<T>(payload: string): T {
+function parseJson<T extends JsonValue>(payload: string): T {
   return JSON.parse(payload) as T;
 }
 
 function stringifyJson(value: unknown, label: string) {
-  const payload = JSON.stringify(value);
-  if (payload === undefined) throw new Error(`${label} must be JSON serializable`);
+  let payload: string | undefined;
+  try {
+    payload = JSON.stringify(value);
+  } catch {
+    throw new Error(`${label} must survive an exact JSON round-trip`);
+  }
+  if (payload === undefined || !isDeepStrictEqual(value, JSON.parse(payload))) {
+    throw new Error(`${label} must survive an exact JSON round-trip`);
+  }
   return payload;
 }
 
@@ -61,7 +69,7 @@ function assertWon(value: number, field: string) {
   if (!Number.isSafeInteger(value)) throw new Error(`${field} must be an integer won amount`);
 }
 
-function recordFromRow<T>(row: RecordRow): SalonRecord<T> {
+function recordFromRow<T extends JsonValue>(row: RecordRow): SalonRecord<T> {
   return {
     id: row.id,
     kind: row.kind,
@@ -99,6 +107,18 @@ function auditFromRow(row: AuditRow): AuditEvent {
     recordId: row.record_id,
     payload: parseJson(row.payload),
   };
+}
+
+function addAudit(db: DatabaseSync, action: string, kind: string | null, recordId: string | null, actor: string, payload: unknown, occurredAt: string) {
+  db.prepare("INSERT INTO audit_events (id, occurred_at, actor, action, kind, record_id, payload) VALUES (?, ?, ?, ?, ?, ?, ?)").run(
+    randomUUID(),
+    occurredAt,
+    actor,
+    action,
+    kind,
+    recordId,
+    stringifyJson(payload, "audit payload"),
+  );
 }
 
 function transaction<T>(db: DatabaseSync, operation: () => T): T {
@@ -177,12 +197,18 @@ function seed(db: DatabaseSync) {
       ["notices", "notice-seed-1", { title: "운영 안내", body: "원장 전용 운영 데이터", operator: "원장" }],
     ];
     const insertRecord = db.prepare("INSERT INTO records (kind, id, payload, created_at, updated_at, archived_at) VALUES (?, ?, ?, ?, ?, NULL)");
-    for (const [kind, id, value] of records) insertRecord.run(kind, id, stringifyJson(value, `${kind}:${id}`), seededAt, seededAt);
+    for (const [kind, id, value] of records) {
+      insertRecord.run(kind, id, stringifyJson(value, `${kind}:${id}`), seededAt, seededAt);
+      addAudit(db, "seed-record", kind, id, "원장", { before: null, after: { id, kind, value, createdAt: seededAt, updatedAt: seededAt, archivedAt: null } }, seededAt);
+    }
 
     db.prepare("INSERT INTO settings (id, payload, updated_at) VALUES (1, ?, ?)").run(
       stringifyJson({ shopName: "헤어해요", ownerName: "원장", smsRemaining: 500 }, "settings"),
       seededAt,
     );
+
+    const seedSettings = db.prepare("SELECT payload FROM settings WHERE id = 1").get() as { payload: string };
+    addAudit(db, "seed-settings", "settings", "1", "원장", { before: null, after: parseJson<JsonObject>(seedSettings.payload) }, seededAt);
 
     const ledger = [
       ["ledger-seed-1", "seed-revenue-20260724", "2026-07-24T12:00:00.000Z", 10480000, 1000000, 300000, 2200000, 0, 0, 6080000],
@@ -191,7 +217,10 @@ function seed(db: DatabaseSync) {
       ["ledger-seed-4", "seed-revenue-20260727", "2026-07-27T12:00:00.000Z", 4720000, 370000, 160000, 830000, 0, 0, 2750000],
     ] as const;
     const insertLedger = db.prepare("INSERT INTO ledger (id, request_key, kind, occurred_at, correction_of, amount_won, vat_won, fee_won, incentive_won, points_won, coupon_won, profit_won) VALUES (?, ?, 'payment', ?, NULL, ?, ?, ?, ?, ?, ?, ?)");
-    for (const entry of ledger) insertLedger.run(...entry);
+    for (const [id, requestKey, occurredAt, amountWon, vatWon, feeWon, incentiveWon, pointsWon, couponWon, profitWon] of ledger) {
+      insertLedger.run(id, requestKey, occurredAt, amountWon, vatWon, feeWon, incentiveWon, pointsWon, couponWon, profitWon);
+      addAudit(db, "seed-ledger", "ledger", id, "원장", { before: null, after: { id, requestKey, kind: "payment", occurredAt, correctionOf: null, amountWon, vatWon, feeWon, incentiveWon, pointsWon, couponWon, profitWon } }, occurredAt);
+    }
   });
 }
 
@@ -201,30 +230,19 @@ export function createSalonStore(filename = join(process.cwd(), ".data", "hairha
   createSchema(db);
   seed(db);
 
-  const findRecord = <T>(kind: RecordKind, id: string) => {
+  const findRecord = <T extends JsonValue>(kind: RecordKind, id: string) => {
     const row = db.prepare("SELECT * FROM records WHERE kind = ? AND id = ?").get(kind, id) as RecordRow | undefined;
     return row ? recordFromRow<T>(row) : null;
   };
-  const addAudit = (action: string, kind: string | null, recordId: string | null, actor: string, payload: unknown, occurredAt: string) => {
-    db.prepare("INSERT INTO audit_events (id, occurred_at, actor, action, kind, record_id, payload) VALUES (?, ?, ?, ?, ?, ?, ?)").run(
-      randomUUID(),
-      occurredAt,
-      actor,
-      action,
-      kind,
-      recordId,
-      stringifyJson(payload, "audit payload"),
-    );
-  };
 
   return {
-    list<T>(kind: RecordKind) {
+    list<T extends JsonValue = JsonValue>(kind: RecordKind) {
       return (db.prepare("SELECT * FROM records WHERE kind = ? AND archived_at IS NULL ORDER BY created_at, id").all(kind) as RecordRow[]).map(recordFromRow<T>);
     },
-    get<T>(kind: RecordKind, id: string) {
+    get<T extends JsonValue = JsonValue>(kind: RecordKind, id: string) {
       return findRecord<T>(kind, id);
     },
-    save<T>(kind: RecordKind, id: string, value: T, actor: string) {
+    save<T extends JsonValue>(kind: RecordKind, id: string, value: T, actor: string) {
       assertText(kind, "kind");
       assertText(id, "id");
       assertText(actor, "actor");
@@ -243,7 +261,7 @@ export function createSalonStore(filename = join(process.cwd(), ".data", "hairha
         db.prepare(`INSERT INTO records (kind, id, payload, created_at, updated_at, archived_at) VALUES (?, ?, ?, ?, ?, NULL)
           ON CONFLICT(kind, id) DO UPDATE SET payload = excluded.payload, updated_at = excluded.updated_at, archived_at = NULL`)
           .run(kind, id, payload, after.createdAt, timestamp);
-        addAudit("save", kind, id, actor, { before, after }, timestamp);
+        addAudit(db, "save", kind, id, actor, { before, after }, timestamp);
         return after;
       });
     },
@@ -252,12 +270,12 @@ export function createSalonStore(filename = join(process.cwd(), ".data", "hairha
       assertText(id, "id");
       assertText(actor, "actor");
       return transaction(db, () => {
-        const before = findRecord<unknown>(kind, id);
+        const before = findRecord<JsonValue>(kind, id);
         if (!before || before.archivedAt) throw new Error(`Cannot archive missing active ${kind}:${id}`);
         const timestamp = now();
         db.prepare("UPDATE records SET archived_at = ?, updated_at = ? WHERE kind = ? AND id = ?").run(timestamp, timestamp, kind, id);
         const after = { ...before, updatedAt: timestamp, archivedAt: timestamp };
-        addAudit("archive", kind, id, actor, { before, after }, timestamp);
+        addAudit(db, "archive", kind, id, actor, { before, after }, timestamp);
         return after;
       });
     },
@@ -286,6 +304,9 @@ export function createSalonStore(filename = join(process.cwd(), ".data", "hairha
         if (db.prepare("SELECT 1 FROM ledger WHERE request_key = ?").get(entry.requestKey)) {
           throw new Error(`Duplicate ledger requestKey: ${entry.requestKey}`);
         }
+        if ((entry.kind === "refund" || entry.kind === "correction") && !entry.correctionOf?.trim()) {
+          throw new Error(`${entry.kind} ledger entry requires correctionOf`);
+        }
         if (entry.correctionOf && !db.prepare("SELECT 1 FROM ledger WHERE id = ?").get(entry.correctionOf)) {
           throw new Error(`Unknown correctionOf ledger entry: ${entry.correctionOf}`);
         }
@@ -303,7 +324,7 @@ export function createSalonStore(filename = join(process.cwd(), ".data", "hairha
           entry.couponWon,
           entry.profitWon,
         );
-        addAudit("append-ledger", "ledger", entry.id, actor, { before: null, after: entry }, entry.occurredAt);
+        addAudit(db, "append-ledger", "ledger", entry.id, actor, { before: null, after: entry }, entry.occurredAt);
         return entry;
       });
     },
@@ -312,9 +333,9 @@ export function createSalonStore(filename = join(process.cwd(), ".data", "hairha
     },
     getSettings() {
       const row = db.prepare("SELECT payload FROM settings WHERE id = 1").get() as { payload: string } | undefined;
-      return row ? parseJson<Record<string, unknown>>(row.payload) : {};
+      return row ? parseJson<JsonObject>(row.payload) : {};
     },
-    saveSettings(values: Record<string, unknown>, actor: string) {
+    saveSettings(values: JsonObject, actor: string) {
       assertText(actor, "actor");
       return transaction(db, () => {
         const before = this.getSettings();
@@ -324,12 +345,12 @@ export function createSalonStore(filename = join(process.cwd(), ".data", "hairha
           stringifyJson(after, "settings"),
           timestamp,
         );
-        addAudit("save-settings", "settings", "1", actor, { before, after }, timestamp);
+        addAudit(db, "save-settings", "settings", "1", actor, { before, after }, timestamp);
         return after;
       });
     },
     snapshot() {
-      const records: Record<string, readonly SalonRecord<unknown>[]> = {};
+      const records: Record<string, readonly SalonRecord<JsonValue>[]> = {};
       for (const row of db.prepare("SELECT DISTINCT kind FROM records ORDER BY kind").all() as { kind: string }[]) records[row.kind] = this.list(row.kind);
       return {
         records,

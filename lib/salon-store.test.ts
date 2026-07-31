@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 
+import type { JsonValue } from "./salon-domain";
 import { createSalonStore } from "./salon-store";
 
 describe("SalonStore", () => {
@@ -64,6 +65,19 @@ describe("SalonStore", () => {
     expect(store.snapshot().auditEvents.slice(auditCount).filter((event) => event.action === "append-ledger")).toHaveLength(2);
   });
 
+  it("rejects refund and correction entries without a persisted correction target", () => {
+    const store = createSalonStore(":memory:");
+    const ledgerCount = store.listLedger().length;
+
+    for (const kind of ["refund", "correction"]) {
+      expect(() => store.appendLedger({ requestKey: `${kind}-missing`, kind, amountWon: -1000 }, "원장")).toThrow(/correctionOf/i);
+      expect(() => store.appendLedger({ requestKey: `${kind}-empty`, kind, correctionOf: "   ", amountWon: -1000 }, "원장")).toThrow(/correctionOf/i);
+      expect(() => store.appendLedger({ requestKey: `${kind}-unknown`, kind, correctionOf: "missing", amountWon: -1000 }, "원장")).toThrow(/correctionOf/i);
+    }
+
+    expect(store.listLedger()).toHaveLength(ledgerCount);
+  });
+
   it("stores only integer won amounts", () => {
     const store = createSalonStore(":memory:");
     const ledgerCount = store.listLedger().length;
@@ -74,7 +88,18 @@ describe("SalonStore", () => {
     expect(store.snapshot().auditEvents).toHaveLength(auditCount);
   });
 
-  it("seeds deterministic owner-shop data and audits settings changes", () => {
+  it("rejects values that cannot survive an exact JSON round-trip", () => {
+    const store = createSalonStore(":memory:");
+    const auditCount = store.snapshot().auditEvents.length;
+
+    expect(() => store.save("customers", "invalid-record", { nested: { omitted: undefined } } as unknown as JsonValue, "원장")).toThrow(/JSON round-trip/i);
+    expect(() => store.saveSettings({ callback: () => undefined } as unknown as Record<string, JsonValue>, "원장")).toThrow(/JSON round-trip/i);
+
+    expect(store.get("customers", "invalid-record")).toBeNull();
+    expect(store.snapshot().auditEvents).toHaveLength(auditCount);
+  });
+
+  it("seeds deterministic owner-shop data with immutable creation history", () => {
     const store = createSalonStore(":memory:");
     const customers = store.list<{ gender: string; visitType: string; operator: string }>("customers");
 
@@ -86,6 +111,10 @@ describe("SalonStore", () => {
     }
     expect(store.listLedger().reduce((total, entry) => total + entry.amountWon, 0)).toBe(29960000);
     expect(store.listLedger().reduce((total, entry) => total + entry.profitWon, 0)).toBe(17390000);
+
+    const seedEvents = store.snapshot().auditEvents;
+    expect(seedEvents.filter((event) => event.action === "seed-ledger")).toHaveLength(store.listLedger().length);
+    expect(seedEvents).toContainEqual(expect.objectContaining({ action: "seed-settings", kind: "settings", recordId: "1", actor: "원장" }));
 
     const auditCount = store.snapshot().auditEvents.length;
     const settings = store.saveSettings({ shopName: "헤어해요", smsRemaining: 480 }, "원장");
