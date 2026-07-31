@@ -189,6 +189,7 @@ function createSchema(db: DatabaseSync) {
       payload TEXT NOT NULL
     );
   `);
+  db.exec("CREATE UNIQUE INDEX IF NOT EXISTS ledger_one_reversal_per_original ON ledger(correction_of) WHERE kind IN ('refund', 'correction')");
   const ledgerColumns = new Set((db.prepare("PRAGMA table_info(ledger)").all() as { name: string }[]).map(({ name }) => name));
   if (!ledgerColumns.has("customer_id")) db.exec("ALTER TABLE ledger ADD COLUMN customer_id TEXT");
   if (!ledgerColumns.has("gross_won")) db.exec("ALTER TABLE ledger ADD COLUMN gross_won INTEGER NOT NULL DEFAULT 0");
@@ -304,6 +305,10 @@ export function createSalonStore(filename = join(process.cwd(), ".data", "hairha
     return transaction(db, () => {
       if (new Set(entries.map(({ requestKey }) => requestKey)).size !== entries.length || entries.some(({ requestKey }) => db.prepare("SELECT 1 FROM ledger WHERE request_key = ?").get(requestKey))) {
         throw new Error("Duplicate ledger requestKey");
+      }
+      const reversals = entries.filter(({ kind }) => kind === "refund" || kind === "correction");
+      if (new Set(reversals.map(({ correctionOf }) => correctionOf)).size !== reversals.length || reversals.some(({ correctionOf }) => db.prepare("SELECT 1 FROM ledger WHERE correction_of = ? AND kind IN ('refund', 'correction')").get(correctionOf))) {
+        throw new Error("Payment already reversed by a refund or correction");
       }
       for (const entry of entries) {
         if ((entry.kind === "refund" || entry.kind === "correction") && !entry.correctionOf?.trim()) throw new Error(`${entry.kind} ledger entry requires correctionOf`);

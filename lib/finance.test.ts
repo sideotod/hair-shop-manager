@@ -37,15 +37,16 @@ const paymentBase = {
 
 describe("calculatePayment", () => {
   it.each(PAYMENT_METHODS.map(({ key }) => key))("accepts the %s payment method", (method) => {
+    const points = method === "points" ? 11000 : 0;
     expect(calculatePayment({
       gross: 11000,
       discount: 0,
-      points: 0,
+      points,
       vatMode: "included",
       cardFeeRateBps: 0,
       expense: 0,
       payments: { [method]: 11000 },
-    })).toMatchObject({ gross: 11000, netPaid: 11000, vat: 1000 });
+    })).toMatchObject({ gross: 11000, netPaid: 11000 - points, vat: points ? 0 : 1000 });
   });
 
   it("validates split payments and charges the configured fee only on card won", () => {
@@ -78,7 +79,7 @@ describe("calculatePayment", () => {
       vatMode: "separate",
       cardFeeRateBps: 0,
       expense: 0,
-      payments: { transfer: 8800 },
+      payments: { transfer: 8800, points: 1000 },
     })).toEqual({ gross: 10000, discount: 1000, points: 1000, netPaid: 8800, vat: 800, fee: 0, expense: 0, shopProfit: 8000 });
   });
 
@@ -93,6 +94,28 @@ describe("calculatePayment", () => {
       payments: { card: 3333 },
     }).fee).toBe(100);
   });
+
+  it("uses points only when the points tender exactly matches the applied balance", () => {
+    expect(calculatePayment({
+      gross: 11000,
+      discount: 0,
+      points: 1000,
+      vatMode: "included",
+      cardFeeRateBps: 0,
+      expense: 0,
+      payments: { card: 10000, points: 1000 },
+    })).toMatchObject({ netPaid: 10000 });
+
+    expect(() => calculatePayment({
+      gross: 11000,
+      discount: 0,
+      points: 1000,
+      vatMode: "included",
+      cardFeeRateBps: 0,
+      expense: 0,
+      payments: { card: 10000, points: 0 },
+    })).toThrow("포인트 결제수단");
+  });
 });
 
 describe("immutable payment records", () => {
@@ -100,6 +123,17 @@ describe("immutable payment records", () => {
     const store = createSalonStore(":memory:");
     try {
       expect(() => recordPayment(store, form({ ...paymentBase, customerId: "" }))).toThrow("결제 고객");
+    } finally {
+      store.close();
+    }
+  });
+
+  it("rejects non-member and mismatched points tenders before they can bypass customer points", () => {
+    const store = createSalonStore(":memory:");
+    try {
+      expect(() => recordPayment(store, form({ ...paymentBase, requestKey: "non-member-points-tender", memberType: "non-member", customerId: "", pointsEarnedWon: "0", payment_points: "100" }))).toThrow("비회원");
+      expect(() => recordPayment(store, form({ ...paymentBase, requestKey: "mismatched-points-tender", pointsUsedWon: "0", payment_card: "11000", payment_points: "100" }))).toThrow("포인트 결제수단");
+      expect(() => recordPayment(store, form({ ...paymentBase, requestKey: "insufficient-points-tender", pointsUsedWon: "100", payment_card: "10900", payment_points: "100" }))).toThrow("사용 가능한 포인트");
     } finally {
       store.close();
     }
@@ -150,9 +184,10 @@ describe("immutable payment records", () => {
         pointsEarnedWon: "100",
         expenseWon: "200",
         payment_card: "10500",
+        payment_points: "500",
       }));
 
-      expect(saved).toMatchObject({ grossWon: 12000, discountWon: 1000, amountWon: 10500, vatWon: 955, feeWon: 315, expenseWon: 200, pointsWon: -400, profitWon: 9030 });
+      expect(saved).toMatchObject({ grossWon: 12000, discountWon: 1000, amountWon: 10500, vatWon: 955, feeWon: 315, expenseWon: 200, pointsWon: -400, profitWon: 9030, details: expect.objectContaining({ pointsUsedWon: 500, paymentMethods: expect.objectContaining({ points: 500, card: 10500 }) }) });
       expect(store.get<{ points?: number }>("customers", "customer-seed-1")?.value.points).toBe(100);
     } finally {
       store.close();
@@ -174,6 +209,18 @@ describe("immutable payment records", () => {
       expect(correction[0]).toMatchObject({ kind: "correction", correctionOf: second.id, amountWon: -11000, vatWon: -1000, feeWon: -330, profitWon: -9670 });
       expect(correction[1]).toMatchObject({ kind: "payment", correctionOf: second.id, amountWon: 11000, vatWon: 1000, feeWon: 330, profitWon: 9670 });
       expect(() => refundPaymentRecord(store, form({ targetId: payment.id, requestKey: "refund-request-2" }))).toThrow("이미 환불 또는 정정");
+    } finally {
+      store.close();
+    }
+  });
+
+  it("enforces one refund or correction reversal for an original inside the ledger transaction", () => {
+    const store = createSalonStore(":memory:");
+    try {
+      const payment = recordPayment(store, form(paymentBase));
+      refundPaymentRecord(store, form({ targetId: payment.id, requestKey: "first-reversal", reason: "환불" }));
+
+      expect(() => store.appendLedger({ requestKey: "second-reversal", kind: "correction", correctionOf: payment.id, amountWon: -payment.amountWon, details: {} }, "원장")).toThrow("already reversed");
     } finally {
       store.close();
     }
@@ -201,15 +248,47 @@ describe("immutable payment records", () => {
     }
   });
 
+  it("projects the reversal before validating retained point use in corrections", () => {
+    const store = createSalonStore(":memory:");
+    try {
+      const customer = store.get<Record<string, string | number>>("customers", "customer-seed-1");
+      store.save("customers", "customer-seed-1", { ...customer?.value, points: 100 }, "원장");
+      const usedOnly = { ...paymentBase, requestKey: "correction-used-only", pointsEarnedWon: "0", pointsUsedWon: "100", payment_card: "10900", payment_points: "100" };
+      const original = recordPayment(store, form(usedOnly));
+      expect(store.get<{ points?: number }>("customers", "customer-seed-1")?.value.points).toBe(0);
+
+      expect(() => correctPaymentRecord(store, form({ ...usedOnly, targetId: original.id, requestKey: "correction-used-only-replacement", reason: "정정" }))).not.toThrow();
+      expect(store.get<{ points?: number; pointDebtWon?: number }>("customers", "customer-seed-1")?.value).toMatchObject({ points: 0, pointDebtWon: 0 });
+    } finally {
+      store.close();
+    }
+  });
+
+  it("projects combined earned and used points across a correction", () => {
+    const store = createSalonStore(":memory:");
+    try {
+      const customer = store.get<Record<string, string | number>>("customers", "customer-seed-1");
+      store.save("customers", "customer-seed-1", { ...customer?.value, points: 100 }, "원장");
+      const earnedAndUsed = { ...paymentBase, requestKey: "correction-earned-used", pointsEarnedWon: "50", pointsUsedWon: "100", payment_card: "10900", payment_points: "100" };
+      const original = recordPayment(store, form(earnedAndUsed));
+      expect(store.get<{ points?: number }>("customers", "customer-seed-1")?.value.points).toBe(50);
+
+      expect(() => correctPaymentRecord(store, form({ ...earnedAndUsed, targetId: original.id, requestKey: "correction-earned-used-replacement", reason: "정정" }))).not.toThrow();
+      expect(store.get<{ points?: number; pointDebtWon?: number }>("customers", "customer-seed-1")?.value).toMatchObject({ points: 50, pointDebtWon: 0 });
+    } finally {
+      store.close();
+    }
+  });
+
   it("keeps spendable points nonnegative, carries refund debt, and repays it before future earnings", () => {
     const store = createSalonStore(":memory:");
     try {
       const awarded = recordPayment(store, form({ ...paymentBase, requestKey: "award-points", pointsEarnedWon: "100" }));
-      recordPayment(store, form({ ...paymentBase, requestKey: "spend-points", pointsEarnedWon: "0", pointsUsedWon: "100", payment_card: "10900" }));
+      recordPayment(store, form({ ...paymentBase, requestKey: "spend-points", pointsEarnedWon: "0", pointsUsedWon: "100", payment_card: "10900", payment_points: "100" }));
       refundPaymentRecord(store, form({ targetId: awarded.id, requestKey: "refund-award-points", reason: "환불" }));
 
       expect(store.get<{ points?: number; pointDebtWon?: number }>("customers", "customer-seed-1")?.value).toMatchObject({ points: 0, pointDebtWon: 100 });
-      expect(() => recordPayment(store, form({ ...paymentBase, requestKey: "spend-debt", pointsEarnedWon: "0", pointsUsedWon: "1", payment_card: "10999" }))).toThrow("사용 가능한 포인트");
+      expect(() => recordPayment(store, form({ ...paymentBase, requestKey: "spend-debt", pointsEarnedWon: "0", pointsUsedWon: "1", payment_card: "10999", payment_points: "1" }))).toThrow("사용 가능한 포인트");
 
       recordPayment(store, form({ ...paymentBase, requestKey: "repay-point-debt", pointsEarnedWon: "120" }));
       expect(store.get<{ points?: number; pointDebtWon?: number }>("customers", "customer-seed-1")?.value).toMatchObject({ points: 20, pointDebtWon: 0 });
@@ -222,7 +301,7 @@ describe("immutable payment records", () => {
     const store = createSalonStore(":memory:");
     try {
       const awarded = recordPayment(store, form({ ...paymentBase, requestKey: "correction-award", pointsEarnedWon: "100" }));
-      recordPayment(store, form({ ...paymentBase, requestKey: "correction-spend", pointsEarnedWon: "0", pointsUsedWon: "100", payment_card: "10900" }));
+      recordPayment(store, form({ ...paymentBase, requestKey: "correction-spend", pointsEarnedWon: "0", pointsUsedWon: "100", payment_card: "10900", payment_points: "100" }));
       correctPaymentRecord(store, form({ ...paymentBase, targetId: awarded.id, requestKey: "correction-revoke", pointsEarnedWon: "0", reason: "적립 정정" }));
 
       expect(store.get<{ points?: number; pointDebtWon?: number }>("customers", "customer-seed-1")?.value).toMatchObject({ points: 0, pointDebtWon: 100 });

@@ -45,6 +45,7 @@ describe("server revenue aggregate", () => {
         { name: "할인", value: 0 },
         { name: "포인트 사용", value: 0 },
         { name: "실결제", value: 29960000 },
+        { name: "환불", value: 0 },
         { name: "VAT", value: 2720000 },
         { name: "결제 수수료", value: 910000 },
         { name: "지출", value: 8940000 },
@@ -100,7 +101,7 @@ describe("server revenue aggregate", () => {
     try {
       const customer = store.get<Record<string, string | number>>("customers", "customer-seed-1");
       store.save("customers", "customer-seed-1", { ...customer?.value, points: 1000 }, "원장");
-      const payment = recordPayment(store, form({ ...splitPayment, pointsUsedWon: "1000", payment_cash: "5000", payment_card: "5000" }));
+      const payment = recordPayment(store, form({ ...splitPayment, pointsUsedWon: "1000", payment_cash: "5000", payment_card: "5000", payment_points: "1000" }));
       const beforeRefund = buildRevenueAnalytics(buildRevenueTransactions([payment]), { view: "month", cursor: "2026-07-31" }, "2026-07-31");
       expect(beforeRefund.payments).toEqual(expect.arrayContaining([
         expect.objectContaining({ name: "현금", amount: 5000 }),
@@ -110,7 +111,12 @@ describe("server revenue aggregate", () => {
 
       const refund = refundPaymentRecord(store, form({ targetId: payment.id, requestKey: "refund-split", reason: "환불" }));
       const afterRefund = buildRevenueAnalytics(buildRevenueTransactions([payment, refund]), { view: "month", cursor: "2026-07-31" }, "2026-07-31");
-      expect(afterRefund.payments.filter(({ name }) => name === "현금" || name === "카드").every(({ amount }) => amount === 0)).toBe(true);
+      expect(afterRefund.payments).toEqual(expect.arrayContaining([
+        expect.objectContaining({ name: "현금", amount: 5000, value: 45 }),
+        expect.objectContaining({ name: "카드", amount: 5000, value: 45 }),
+      ]));
+      expect(afterRefund.transactions.reduce((sum, row) => sum + (row.paymentAmounts["현금"] ?? 0), 0)).toBe(0);
+      expect(afterRefund.transactions.reduce((sum, row) => sum + (row.paymentAmounts["카드"] ?? 0), 0)).toBe(0);
       expect(afterRefund.settlement.find(({ name }) => name === "포인트 사용")).toEqual({ name: "포인트 사용", value: 0 });
     } finally {
       store.close();
@@ -121,10 +127,23 @@ describe("server revenue aggregate", () => {
     const ledger = [
       { id: "before-nine", requestKey: "before-nine", kind: "payment", occurredAt: "2026-08-01T08:59:00+09:00", correctionOf: null, grossWon: 1000, amountWon: 1000, discountWon: 0, vatWon: 0, feeWon: 0, expenseWon: 0, incentiveWon: 0, pointsWon: 0, couponWon: 0, profitWon: 1000, details: {} },
       { id: "at-nine", requestKey: "at-nine", kind: "payment", occurredAt: "2026-08-01T09:00:00+09:00", correctionOf: null, grossWon: 2000, amountWon: 2000, discountWon: 0, vatWon: 0, feeWon: 0, expenseWon: 0, incentiveWon: 0, pointsWon: 0, couponWon: 0, profitWon: 2000, details: {} },
-    ] satisfies LedgerEntry[];
+    ] as LedgerEntry[];
     const transactions = buildRevenueTransactions(ledger);
 
     expect(transactions.map(({ id, date }) => ({ id, date }))).toEqual([{ id: "before-nine", date: "2026-07-31" }, { id: "at-nine", date: "2026-08-01" }]);
     expect(filterRevenueTransactions(transactions, { view: "month", cursor: "2026-08-01" }).map(({ id }) => id)).toEqual(["at-nine"]);
+  });
+
+  it("uses positive payment inflows for pie slices while exposing signed refunds in settlement", () => {
+    const ledger = [
+      { id: "cash-sale", requestKey: "cash-sale", kind: "payment", occurredAt: "2026-07-31T10:00:00+09:00", correctionOf: null, grossWon: 10000, amountWon: 10000, discountWon: 0, vatWon: 0, feeWon: 0, expenseWon: 0, incentiveWon: 0, pointsWon: 0, couponWon: 0, profitWon: 10000, details: { paymentMethods: { cash: 10000 } } },
+      { id: "card-refund", requestKey: "card-refund", kind: "refund", occurredAt: "2026-07-31T11:00:00+09:00", correctionOf: "cash-sale", grossWon: -5000, amountWon: -5000, discountWon: 0, vatWon: 0, feeWon: 0, expenseWon: 0, incentiveWon: 0, pointsWon: 0, couponWon: 0, profitWon: -5000, details: { paymentMethods: { card: -5000 } } },
+    ] as LedgerEntry[];
+    const analytics = buildRevenueAnalytics(buildRevenueTransactions(ledger), { view: "month", cursor: "2026-07-31" }, "2026-07-31");
+
+    expect(analytics.payments).toEqual([expect.objectContaining({ name: "현금", amount: 10000, value: 100 })]);
+    expect(analytics.payments.every(({ amount, value }) => amount >= 0 && value >= 0 && value <= 100)).toBe(true);
+    expect(analytics.settlement.find(({ name }) => name === "환불")).toEqual({ name: "환불", value: -5000 });
+    expect(analytics.settlement.find(({ name }) => name === "실결제")).toEqual({ name: "실결제", value: 5000 });
   });
 });

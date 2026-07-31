@@ -53,7 +53,8 @@ export function calculatePayment(input: PaymentInput): PaymentTotals {
 
   const vat = Math.round(taxable / (input.vatMode === "included" ? 11 : 10));
   const netPaid = taxable + (input.vatMode === "separate" ? vat : 0);
-  const paymentSum = PAYMENT_METHODS.reduce((sum, { key }) => sum + (input.payments[key] ?? 0), 0);
+  if ((input.payments.points ?? 0) !== input.points) throw new Error("포인트 결제수단과 사용 포인트가 일치해야 합니다.");
+  const paymentSum = PAYMENT_METHODS.filter(({ key }) => key !== "points").reduce((sum, { key }) => sum + (input.payments[key] ?? 0), 0);
   if (paymentSum !== netPaid) throw new Error(`결제수단 합계는 ${netPaid.toLocaleString("ko-KR")}원이어야 합니다.`);
 
   const fee = Math.round(((input.payments.card ?? 0) * input.cardFeeRateBps) / 10000);
@@ -123,9 +124,10 @@ function paymentLedgerInput(store: SalonStore, formData: FormData, correction?: 
   const customer = customerId ? customerValue(store, customerId) : null;
   const pointsUsed = won(formData, "pointsUsedWon");
   const pointsEarned = won(formData, "pointsEarnedWon");
+  const pointsTender = won(formData, "payment_points");
   const availablePoints = customer && typeof customer.points === "number" && Number.isSafeInteger(customer.points) ? customer.points : 0;
-  if (memberType === "non-member" && (pointsUsed || pointsEarned)) throw new Error("비회원은 포인트를 사용하거나 적립할 수 없습니다.");
-  if (pointsUsed > availablePoints) throw new Error("사용 가능한 포인트를 초과했습니다.");
+  if (memberType === "non-member" && (pointsUsed || pointsEarned || pointsTender)) throw new Error("비회원은 포인트를 사용하거나 적립할 수 없습니다.");
+  if (!correction && pointsUsed > availablePoints) throw new Error("사용 가능한 포인트를 초과했습니다.");
 
   const serviceMajor = text(formData, "serviceMajor");
   if (!serviceMajor) throw new Error("시술 대분류를 선택하세요.");

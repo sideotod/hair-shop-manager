@@ -60,7 +60,7 @@ function amounts(records: readonly RevenueTransaction[], key: "service" | "gende
 
 function paymentRevenue(records: readonly RevenueTransaction[]) {
   const values = new Map<string, number>();
-  for (const record of records) for (const [name, amount] of Object.entries(record.paymentAmounts)) values.set(name, (values.get(name) ?? 0) + amount);
+  for (const record of records) for (const [name, amount] of Object.entries(record.paymentAmounts)) if (amount > 0) values.set(name, (values.get(name) ?? 0) + amount);
   const total = [...values.values()].reduce((sum, amount) => sum + amount, 0);
   return Object.freeze([...values].map(([name, amount], index) => Object.freeze({ name, amount, value: total ? Math.round((amount / total) * 100) : 0, color: colors[index % colors.length] })).sort((a, b) => b.amount - a.amount));
 }
@@ -77,6 +77,7 @@ export function buildRevenueAnalytics(allRecords: readonly RevenueTransaction[],
   const vat = sum(transactions, (record) => record.vat);
   const fee = sum(transactions, (record) => record.fee);
   const expense = sum(transactions, (record) => record.expense);
+  const refunds = sum(transactions.filter((record) => record.status === "환불"), (record) => record.netPaid);
   const range = revenueRange(query);
   return Object.freeze({
     selectedPeriod: range,
@@ -87,7 +88,7 @@ export function buildRevenueAnalytics(allRecords: readonly RevenueTransaction[],
     genders: amounts(transactions, "gender"),
     visitTypes: amounts(transactions, "visitType"),
     settlement: Object.freeze([
-      { name: "총 시술금액", value: gross }, { name: "할인", value: discount }, { name: "포인트 사용", value: points }, { name: "실결제", value: paid }, { name: "VAT", value: vat }, { name: "결제 수수료", value: fee }, { name: "지출", value: expense }, { name: "샵 수익", value: sum(transactions, (record) => record.profit) },
+      { name: "총 시술금액", value: gross }, { name: "할인", value: discount }, { name: "포인트 사용", value: points }, { name: "실결제", value: paid }, { name: "환불", value: refunds }, { name: "VAT", value: vat }, { name: "결제 수수료", value: fee }, { name: "지출", value: expense }, { name: "샵 수익", value: sum(transactions, (record) => record.profit) },
     ].map((row) => Object.freeze(row))),
     transactions,
   });
