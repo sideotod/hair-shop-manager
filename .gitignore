@@ -3,6 +3,8 @@ node_modules/
 out/
 coverage/
 .data/
+src-tauri/target/
+src-tauri/gen/
 *.tsbuildinfo
 .env*
 !.env.example

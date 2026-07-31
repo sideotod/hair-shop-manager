@@ -189,9 +189,15 @@ function seed(db: DatabaseSync) {
     const records: ReadonlyArray<readonly [string, string, Record<string, unknown>]> = [
       ["customers", "customer-seed-1", { name: "김하늘", gender: "female", visitType: "repeat", operator: "원장" }],
       ["customers", "customer-seed-2", { name: "이도윤", gender: "male", visitType: "first", operator: "원장" }],
-      ["waiting-customers", "waiting-seed-1", { name: "박봄", memo: "커트", gender: "female", visitType: "first", operator: "원장" }],
+      ["waiting-customers", "waiting-seed-1", { customerId: "customer-seed-2", name: "박봄", memo: "커트", gender: "female", visitType: "first", operator: "원장" }],
       ["bookings", "booking-seed-1", { customerId: "customer-seed-1", startsAt: "2026-07-31T10:00:00.000Z", service: "커트", status: "confirmed", operator: "원장" }],
+      ["bookings", "booking-seed-2", { customerId: "customer-seed-2", startsAt: "2026-08-01T11:00:00.000Z", service: "남성 펌", status: "confirmed", operator: "원장" }],
+      ["bookings", "booking-seed-3", { customerId: "customer-seed-1", startsAt: "2026-08-02T12:00:00.000Z", service: "클리닉", status: "confirmed", operator: "원장" }],
+      ["bookings", "booking-seed-4", { customerId: "customer-seed-2", startsAt: "2026-08-03T13:00:00.000Z", service: "커트", status: "confirmed", operator: "원장" }],
       ["messages", "message-seed-1", { recipientId: "customer-seed-1", channel: "SMS", status: "dry-run", operator: "원장" }],
+      ["automations", "automation-seed-1", { label: "신규 고객 등록 문자", status: "사용", schedule: "등록 10분 후", operator: "원장" }],
+      ["automations", "automation-seed-2", { label: "예약 당일 안내 문자", status: "사용", schedule: "예약 3시간 전", operator: "원장" }],
+      ["automations", "automation-seed-3", { label: "생일 자동 문자", status: "중지", schedule: "생일 당일 09:00", operator: "원장" }],
       ["products", "product-seed-1", { name: "헤어 오일", priceWon: 28000, operator: "원장" }],
       ["coupons", "coupon-seed-1", { name: "클리닉 5회", balanceWon: 250000, operator: "원장" }],
       ["notices", "notice-seed-1", { title: "운영 안내", body: "원장 전용 운영 데이터", operator: "원장" }],
@@ -203,7 +209,7 @@ function seed(db: DatabaseSync) {
     }
 
     db.prepare("INSERT INTO settings (id, payload, updated_at) VALUES (1, ?, ?)").run(
-      stringifyJson({ shopName: "헤어해요", ownerName: "원장", smsRemaining: 500 }, "settings"),
+      stringifyJson({ shopName: "수원 본점", ownerName: "원장", smsRemaining: 500 }, "settings"),
       seededAt,
     );
 

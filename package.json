@@ -6,7 +6,11 @@
     "dev": "next dev",
     "build": "next build",
     "test": "vitest run",
-    "typecheck": "tsc --noEmit"
+    "typecheck": "tsc --noEmit",
+    "tauri": "tauri",
+    "tauri:dev": "tauri dev",
+    "tauri:info": "tauri info",
+    "tauri:build": "tauri build"
   },
   "dependencies": {
     "next": "16.2.12",
@@ -16,6 +20,7 @@
   },
   "devDependencies": {
     "@tailwindcss/postcss": "4.3.3",
+    "@tauri-apps/cli": "^2.11.4",
     "@types/node": "^24.0.0",
     "@types/react": "^19.0.0",
     "@types/react-dom": "^19.0.0",

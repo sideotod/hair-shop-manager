@@ -102,6 +102,8 @@ describe("SalonStore", () => {
   it("seeds deterministic owner-shop data with immutable creation history", () => {
     const store = createSalonStore(":memory:");
     const customers = store.list<{ gender: string; visitType: string; operator: string }>("customers");
+    const bookings = store.list<{ startsAt: string; operator: string }>("bookings");
+    const automations = store.list<{ label: string; status: string; operator: string }>("automations");
 
     expect(new Set(customers.map(({ value }) => value.gender))).toEqual(new Set(["female", "male"]));
     expect(new Set(customers.map(({ value }) => value.visitType))).toEqual(new Set(["first", "repeat"]));
@@ -109,17 +111,28 @@ describe("SalonStore", () => {
     for (const kind of ["waiting-customers", "bookings", "messages", "products", "coupons", "notices"]) {
       expect(store.list(kind), kind).not.toEqual([]);
     }
+    expect(bookings.map(({ value }) => value.startsAt.slice(0, 10))).toEqual([
+      "2026-07-31",
+      "2026-08-01",
+      "2026-08-02",
+      "2026-08-03",
+    ]);
+    expect(bookings.every(({ value }) => value.operator === "원장")).toBe(true);
+    expect(automations.map(({ value }) => value.status)).toEqual(["사용", "사용", "중지"]);
+    expect(automations.every(({ value }) => value.operator === "원장")).toBe(true);
     expect(store.listLedger().reduce((total, entry) => total + entry.amountWon, 0)).toBe(29960000);
     expect(store.listLedger().reduce((total, entry) => total + entry.profitWon, 0)).toBe(17390000);
+    expect(store.getSettings()).toMatchObject({ shopName: "수원 본점", ownerName: "원장", smsRemaining: 500 });
 
     const seedEvents = store.snapshot().auditEvents;
     expect(seedEvents.filter((event) => event.action === "seed-ledger")).toHaveLength(store.listLedger().length);
     expect(seedEvents).toContainEqual(expect.objectContaining({ action: "seed-settings", kind: "settings", recordId: "1", actor: "원장" }));
+    expect(seedEvents.every((event) => event.actor === "원장")).toBe(true);
 
     const auditCount = store.snapshot().auditEvents.length;
-    const settings = store.saveSettings({ shopName: "헤어해요", smsRemaining: 480 }, "원장");
+    const settings = store.saveSettings({ shopName: "광교점", ownerName: "이수진", smsRemaining: 480 }, "원장");
 
-    expect(settings).toMatchObject({ shopName: "헤어해요", ownerName: "원장", smsRemaining: 480 });
+    expect(settings).toMatchObject({ shopName: "광교점", ownerName: "이수진", smsRemaining: 480 });
     expect(store.getSettings()).toEqual(settings);
     expect(store.snapshot().auditEvents.slice(auditCount)).toEqual([
       expect.objectContaining({ action: "save-settings", kind: "settings", recordId: "1", actor: "원장" }),

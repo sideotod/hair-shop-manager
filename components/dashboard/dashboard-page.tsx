@@ -1,118 +1,138 @@
+import Link from "next/link";
+
+import type { JsonObject, JsonValue, SalonRecord, SalonSnapshot } from "../../lib/salon-domain";
 import { AppShell } from "../app-shell";
 
-const metrics = [
-  { label: "오늘 매출", value: "₩4,280,000", meta: "어제보다 12.4% ↑", tone: "text-[var(--success)]" },
-  { label: "오늘 예약", value: "38건", meta: "대기 4 · 완료 21", tone: "text-[var(--brand)]" },
-  { label: "신규 고객", value: "9명", meta: "재방문 예정 6명", tone: "text-[var(--rose)]" },
-  { label: "확인 필요", value: "3건", meta: "노쇼 1 · 미수금 2", tone: "text-[var(--warning)]" },
-] as const;
-
-const bookings = [
-  ["09:30", "윤가영", "첫 방문 상담 · 컷", "하린 실장", "방문", "success"],
-  ["10:30", "김민지", "프리미엄 컬러 + 클리닉", "서윤 원장", "시술중", "brand"],
-  ["11:00", "박서준", "남성 펌", "도현 디자이너", "예약", "brand"],
-  ["13:30", "한예린", "두피 스케일링", "하린 실장", "대기", "warning"],
-  ["15:00", "정유나", "레이어드 컷", "서윤 원장", "예약", "brand"],
-  ["17:30", "오지훈", "다운펌 + 컷", "도현 디자이너", "예약", "brand"],
-] as const;
-
-const staff = [
-  ["서윤 원장", "₩1,680,000", "8 / 10"],
-  ["하린 실장", "₩1,120,000", "7 / 9"],
-  ["도현 디자이너", "₩860,000", "6 / 8"],
-  ["민아 디자이너", "₩620,000", "4 / 7"],
-] as const;
-
-const alerts = [
-  ["미수금", "김소연 · ₩120,000", "bg-[var(--danger)]"],
-  ["노쇼", "최재민 · 14:00 예약", "bg-[var(--warning)]"],
-  ["재고 부족", "케라틴 클리닉 3개", "bg-[var(--rose)]"],
-  ["생일 고객", "이번 주 12명", "bg-[var(--success)]"],
-] as const;
-
 const card = "rounded-[14px] border border-[var(--border)] bg-white";
+const dayNames = ["오늘", "내일", "모레", "글피"] as const;
+const dateFormatter = new Intl.DateTimeFormat("en-CA", { day: "2-digit", month: "2-digit", timeZone: "Asia/Seoul", year: "numeric" });
+const timeFormatter = new Intl.DateTimeFormat("ko-KR", { hour: "2-digit", hour12: false, minute: "2-digit", timeZone: "Asia/Seoul" });
 
-export function DashboardPage() {
+function objectValue(record: SalonRecord<JsonValue>): JsonObject {
+  return typeof record.value === "object" && record.value !== null && !Array.isArray(record.value) ? record.value as JsonObject : {};
+}
+
+function textValue(value: JsonObject, key: string, fallback = "-") {
+  return typeof value[key] === "string" ? value[key] : fallback;
+}
+
+function dateKey(value: Date | string) {
+  const parts = dateFormatter.formatToParts(typeof value === "string" ? new Date(value) : value);
+  const part = (type: string) => parts.find((item) => item.type === type)?.value ?? "";
+  return `${part("year")}-${part("month")}-${part("day")}`;
+}
+
+function addDays(key: string, days: number) {
+  const date = new Date(`${key}T00:00:00.000Z`);
+  date.setUTCDate(date.getUTCDate() + days);
+  return date.toISOString().slice(0, 10);
+}
+
+function statusLabel(status: string) {
+  return ({ confirmed: "예약", completed: "완료", waiting: "대기", cancelled: "취소" } as Record<string, string>)[status] ?? status;
+}
+
+export function DashboardPage({ snapshot, today = new Date() }: { snapshot: SalonSnapshot; today?: Date }) {
+  const customers = snapshot.records.customers ?? [];
+  const bookings = snapshot.records.bookings ?? [];
+  const waitingCustomers = snapshot.records["waiting-customers"] ?? [];
+  const automations = snapshot.records.automations ?? [];
+  const notices = snapshot.records.notices ?? [];
+  const settings = snapshot.settings;
+  const shopName = typeof settings.shopName === "string" ? settings.shopName : "수원 본점";
+  const ownerName = typeof settings.ownerName === "string" ? settings.ownerName : "원장";
+  const smsRemaining = typeof settings.smsRemaining === "number" ? settings.smsRemaining : 0;
+  const todayKey = dateKey(today);
+  const customerNames = new Map(customers.map((record) => [record.id, textValue(objectValue(record), "name", record.id)]));
+  const todayBookings = bookings
+    .filter((record) => dateKey(textValue(objectValue(record), "startsAt")) === todayKey)
+    .sort((left, right) => textValue(objectValue(left), "startsAt").localeCompare(textValue(objectValue(right), "startsAt")));
+  const dayCounts = dayNames.map((label, offset) => ({ label, count: bookings.filter((record) => dateKey(textValue(objectValue(record), "startsAt")) === addDays(todayKey, offset)).length }));
+  const todaySales = snapshot.ledger.filter((entry) => dateKey(entry.occurredAt) === todayKey).reduce((total, entry) => total + entry.amountWon, 0);
+  const recentAudit = snapshot.auditEvents.slice(-5).reverse();
+
   return (
-    <AppShell activeHref="/">
-      <main className="px-10 pb-14 pt-9">
-        <div className="flex items-start justify-between">
+    <AppShell activeHref="/" customers={customers} ownerName={ownerName} shopName={shopName} smsRemaining={smsRemaining} today={today}>
+      <main className="px-8 pb-14 pt-8">
+        <div className="flex items-start justify-between gap-6">
           <div>
-            <h1 className="text-[28px] font-bold tracking-[-0.03em]">오늘 현황</h1>
-            <p className="mt-1 text-[13px] text-[var(--muted)]">예약 흐름과 매출, 직원 상태를 한 화면에서 확인합니다.</p>
+            <h1 className="text-[28px] font-bold tracking-[-0.03em]">오늘</h1>
+            <p className="mt-1 text-[13px] text-[var(--muted)]">예약, 대기, 문자 자동화를 한 화면에서 확인합니다.</p>
           </div>
-          <button className="h-10 rounded-[10px] bg-[var(--brand)] px-7 text-sm font-medium text-white" type="button">
-            예약 등록
-          </button>
+          <nav aria-label="빠른 작업" className="flex flex-wrap justify-end gap-2">
+            {[
+              ["고객 등록", "/customers?new=1"],
+              ["대기 등록", "/customers?waiting=1"],
+              ["예약 등록", "/bookings?new=1"],
+              ["결제 등록", "/sales/transactions?new=1"],
+              ["문자 발송", "/messages?new=1"],
+            ].map(([label, href]) => <Link className="rounded-[9px] border border-[var(--border)] bg-white px-4 py-2.5 text-sm font-medium text-[var(--brand)] first:bg-[var(--brand)] first:text-white" href={href} key={href}>{label}</Link>)}
+          </nav>
         </div>
 
-        <section aria-label="오늘 핵심 지표" className="mt-10 grid grid-cols-4 gap-4">
-          {metrics.map((metric) => (
-            <article className={`${card} min-h-32 px-5 py-4`} key={metric.label}>
-              <h2 className="text-[13px] font-medium text-[var(--muted)]">{metric.label}</h2>
-              <p className="mt-3 text-[27px] font-bold leading-none tabular-nums">{metric.value}</p>
-              <p className={`mt-3 text-xs font-medium ${metric.tone}`}>{metric.meta}</p>
+        <section aria-label="오늘 핵심 지표" className="mt-7 grid grid-cols-4 gap-4">
+          {[
+            ["오늘 매출", `₩${todaySales.toLocaleString("ko-KR")}`, "서버 거래 원장 합계"],
+            ["오늘 예약", `${todayBookings.length}건`, "단일 원장 예약"],
+            ["대기 고객", `${waitingCustomers.length}명`, "현재 대기 목록"],
+            ["SMS", `${smsRemaining.toLocaleString("ko-KR")}건`, "발송 가능 잔여량"],
+          ].map(([label, value, meta]) => (
+            <article className={`${card} min-h-28 px-5 py-4`} key={label}>
+              <h2 className="text-[13px] font-medium text-[var(--muted)]">{label}</h2>
+              <p className="mt-3 text-[26px] font-bold leading-none tabular-nums">{value}</p>
+              <p className="mt-3 text-xs text-[var(--muted)]">{meta}</p>
             </article>
           ))}
         </section>
 
-        <div className="mt-6 grid grid-cols-[minmax(0,1fr)_390px] gap-5">
-          <section className={`${card} min-h-[676px] px-6 py-5`}>
-            <div className="flex items-center justify-between">
-              <h2 className="text-[19px] font-bold">오늘 예약</h2>
-              <span className="text-xs font-medium text-[var(--muted)]">전체 38</span>
-            </div>
+        <section aria-label="나흘 예약 건수" className="mt-5 grid grid-cols-4 gap-3">
+          {dayCounts.map(({ label, count }) => <p className={`${card} px-4 py-3 text-center text-sm font-medium`} key={label}>{label} {count}건</p>)}
+        </section>
 
-            <ol className="mt-6 divide-y divide-[var(--border)]">
-              {bookings.map(([time, customer, service, designer, status, tone]) => (
-                <li className="grid min-h-[88px] grid-cols-[72px_1fr_170px_84px] items-center" key={`${time}-${customer}`}>
-                  <time className="text-[13px] font-bold text-[var(--brand)]">{time}</time>
-                  <div>
-                    <strong className="block text-[15px] font-medium">{customer}</strong>
-                    <span className="mt-1 block text-xs text-[var(--muted)]">{service}</span>
-                  </div>
-                  <span className="text-[13px]">{designer}</span>
-                  <span className={`justify-self-start rounded-full px-3 py-1 text-[11px] font-medium ${
-                    tone === "success"
-                      ? "bg-[#e8f0eb] text-[var(--success)]"
-                      : tone === "warning"
-                        ? "bg-[#f6eedc] text-[var(--warning)]"
-                        : "bg-[var(--brand-soft)] text-[var(--brand)]"
-                  }`}>
-                    {status}
-                  </span>
-                </li>
-              ))}
-            </ol>
+        <div className="mt-5 grid grid-cols-[minmax(0,1.45fr)_minmax(340px,0.8fr)] gap-5">
+          <section className={`${card} px-6 py-5`}>
+            <div className="flex items-center justify-between"><h2 className="text-lg font-bold">원장 예약 타임라인</h2><Link className="text-xs font-medium text-[var(--brand)]" href="/bookings">예약 전체 보기</Link></div>
+            {todayBookings.length > 0 ? (
+              <ol className="mt-4 divide-y divide-[var(--border)]">
+                {todayBookings.map((record) => {
+                  const booking = objectValue(record);
+                  const startsAt = textValue(booking, "startsAt");
+                  const customerId = textValue(booking, "customerId");
+                  return (
+                    <li className="grid min-h-20 grid-cols-[76px_1fr_88px] items-center gap-3" key={record.id}>
+                      <time className="font-bold tabular-nums text-[var(--brand)]" dateTime={startsAt}>{timeFormatter.format(new Date(startsAt))}</time>
+                      <div><strong className="block text-sm">{customerNames.get(customerId) ?? customerId}</strong><span className="mt-1 block text-xs text-[var(--muted)]">{textValue(booking, "service")}</span></div>
+                      <span className="justify-self-start rounded-full bg-[var(--brand-soft)] px-3 py-1 text-xs font-medium text-[var(--brand)]">상태: {statusLabel(textValue(booking, "status"))}</span>
+                    </li>
+                  );
+                })}
+              </ol>
+            ) : <p className="mt-8 rounded-[10px] bg-[var(--background)] p-8 text-center text-sm text-[var(--muted)]">오늘 예약이 없습니다.</p>}
           </section>
 
-          <div className="space-y-5">
-            <section className={`${card} h-80 px-5 py-5`}>
-              <h2 className="text-lg font-bold">디자이너 현황</h2>
-              <ul className="mt-6 space-y-7">
-                {staff.map(([name, sales, progress]) => (
-                  <li className="grid grid-cols-[1fr_120px_48px] text-[13px]" key={name}>
-                    <strong className="font-medium">{name}</strong>
-                    <strong className="font-bold tabular-nums">{sales}</strong>
-                    <span className="text-right text-xs text-[var(--muted)]">{progress}</span>
-                  </li>
-                ))}
+          <section className={`${card} px-5 py-5`}>
+            <div className="flex items-center justify-between"><h2 className="text-lg font-bold">대기 고객</h2><Link className="text-xs font-medium text-[var(--brand)]" href="/customers?waiting=1">대기 등록</Link></div>
+            {waitingCustomers.length > 0 ? (
+              <ul className="mt-4 divide-y divide-[var(--border)]">
+                {waitingCustomers.map((record) => {
+                  const waiting = objectValue(record);
+                  const customerId = textValue(waiting, "customerId", "");
+                  return (
+                    <li className="py-4" key={record.id}>
+                      <div className="flex items-start justify-between gap-4"><div><strong className="block text-sm">{textValue(waiting, "name")}</strong><span className="mt-1 block text-xs text-[var(--muted)]">{textValue(waiting, "memo", "메모 없음")}</span></div><span className="rounded-full bg-[#f6eedc] px-2.5 py-1 text-[11px] font-medium text-[var(--warning)]">상태: 대기</span></div>
+                      <div className="mt-3 flex gap-3 text-xs font-medium"><Link className="text-[var(--brand)]" href={customerId ? `/customers?customer=${customerId}` : `/customers?waiting=${record.id}`}>고객 보기</Link><Link className="text-[var(--brand)]" href={customerId ? `/sales/transactions?customer=${customerId}` : "/customers?new=1"}>{customerId ? "결제 이동" : "고객 등록"}</Link></div>
+                    </li>
+                  );
+                })}
               </ul>
-            </section>
+            ) : <p className="mt-6 text-sm text-[var(--muted)]">대기 고객이 없습니다.</p>}
+          </section>
+        </div>
 
-            <section className={`${card} h-[336px] px-5 py-5`}>
-              <h2 className="text-lg font-bold">확인 필요</h2>
-              <ul className="mt-7 space-y-7">
-                {alerts.map(([label, detail, dot]) => (
-                  <li className="grid grid-cols-[10px_76px_1fr] items-center text-[13px]" key={label}>
-                    <span aria-hidden="true" className={`size-2 rounded-full ${dot}`} />
-                    <span className="text-xs font-medium text-[var(--muted)]">{label}</span>
-                    <strong className="font-medium">{detail}</strong>
-                  </li>
-                ))}
-              </ul>
-            </section>
-          </div>
+        <div className="mt-5 grid grid-cols-3 gap-5">
+          <section className={`${card} px-5 py-5`}><h2 className="text-lg font-bold">자동화 대기열</h2>{automations.length > 0 ? <ul className="mt-4 space-y-3">{automations.map((record) => { const automation = objectValue(record); return <li className="rounded-[10px] bg-[var(--background)] p-3 text-sm" key={record.id}><div className="flex justify-between gap-3"><strong>{textValue(automation, "label")}</strong><span className="font-medium text-[var(--brand)]">상태: {textValue(automation, "status")}</span></div><span className="mt-1 block text-xs text-[var(--muted)]">{textValue(automation, "schedule")}</span></li>; })}</ul> : <p className="mt-6 text-sm text-[var(--muted)]">대기 중인 자동화가 없습니다.</p>}</section>
+          <section className={`${card} px-5 py-5`}><h2 className="text-lg font-bold">공지사항</h2>{notices.length > 0 ? <ul className="mt-4 space-y-3">{notices.map((record) => { const notice = objectValue(record); return <li className="rounded-[10px] border border-[var(--border)] p-3" key={record.id}><strong className="text-sm">{textValue(notice, "title")}</strong><p className="mt-1 text-xs text-[var(--muted)]">{textValue(notice, "body")}</p></li>; })}</ul> : <p className="mt-6 text-sm text-[var(--muted)]">공지사항이 없습니다.</p>}</section>
+          <section className={`${card} px-5 py-5`}><h2 className="text-lg font-bold">최근 감사 이력</h2>{recentAudit.length > 0 ? <ol className="mt-4 space-y-3">{recentAudit.map((event) => <li className="border-b border-[var(--border)] pb-3 text-xs last:border-0" key={event.id}><strong className="block text-sm">{event.actor} · {event.action}</strong><span className="mt-1 block text-[var(--muted)]">{event.kind ?? "시스템"} · {new Date(event.occurredAt).toLocaleString("ko-KR", { timeZone: "Asia/Seoul" })}</span></li>)}</ol> : <p className="mt-6 text-sm text-[var(--muted)]">감사 이력이 없습니다.</p>}</section>
         </div>
       </main>
     </AppShell>
