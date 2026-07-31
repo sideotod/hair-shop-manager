@@ -7,6 +7,7 @@ export type JsonObject = { [key: string]: JsonValue };
 export type CustomerValue = JsonObject & {
   name: string;
   phone: string;
+  telephone: string;
   phoneAbsent: boolean;
   smsOptIn: boolean;
   points: number;
@@ -30,6 +31,7 @@ export type LedgerInput = {
   kind: string;
   occurredAt?: string;
   correctionOf?: string;
+  customerId?: string;
   amountWon: number;
   vatWon?: number;
   feeWon?: number;
@@ -45,6 +47,7 @@ export type LedgerEntry = {
   kind: string;
   occurredAt: string;
   correctionOf: string | null;
+  customerId?: string | null;
   amountWon: number;
   vatWon: number;
   feeWon: number;

@@ -2,52 +2,80 @@ import { renderToStaticMarkup } from "react-dom/server";
 import { describe, expect, it } from "vitest";
 
 import { createSalonStore } from "../../lib/salon-store";
+import type { JsonValue } from "../../lib/salon-domain";
 import { CustomersPage } from "./customers-page";
 
+function page(store = createSalonStore(":memory:"), props: Partial<React.ComponentProps<typeof CustomersPage>> = {}) {
+  const snapshot = store.snapshot();
+  return renderToStaticMarkup(<CustomersPage
+    bookings={snapshot.records.bookings ?? []}
+    coupons={snapshot.records["customer-coupons"] ?? []}
+    customers={snapshot.records.customers ?? []}
+    ledger={snapshot.ledger}
+    messages={snapshot.records.messages ?? []}
+    products={snapshot.records["product-sales"] ?? []}
+    settings={snapshot.settings}
+    waitingCustomers={snapshot.records["waiting-customers"] ?? []}
+    {...props}
+  />);
+}
+
+function listRows(html: string) {
+  return [...html.matchAll(/data-customer-row="([^"]+)"/g)].map((match) => match[1]);
+}
+
 describe("CustomersPage", () => {
-  it("renders the complete FUNCTION.md 2.1–2.5 customer and waiting workflow", () => {
-    const store = createSalonStore(":memory:");
-    const snapshot = store.snapshot();
-    const html = renderToStaticMarkup(<CustomersPage
-      bookings={snapshot.records.bookings ?? []}
-      customers={snapshot.records.customers ?? []}
-      ledger={snapshot.ledger}
-      messages={snapshot.records.messages ?? []}
-      selectedCustomerId="customer-seed-1"
-      settings={snapshot.settings}
-      showNew
-      showWaiting
-      waitingCustomers={snapshot.records["waiting-customers"] ?? []}
-    />);
+  it("renders linked booking, ledger, product, point, coupon, and message histories", () => {
+    const html = page(undefined, { selectedCustomerId: "customer-seed-1" });
 
-    for (const label of ["성명", "성별", "휴대전화", "휴대전화 없음", "일반 전화", "주소 / 우편번호", "이메일", "SMS 수신", "생년월일", "생일 구분", "닉네임", "고객 등급", "고객 그룹", "방문 동기", "포인트", "포인트 카드", "패밀리 번호", "메모 (150자 이하)", "첫 만남 날짜", "가입일"]) {
-      expect(html).toContain(label);
-    }
-    expect(html).toContain('maxLength="150"');
-    expect(html).toContain("수신 거부");
-    expect(html).toContain("양력");
-    expect(html).toContain("음력");
-    expect(html).toContain("등록 직후 SMS 발송");
-    expect(html).toContain("초기 예약 날짜");
-    expect(html).toContain("대기 고객 동시 등록");
-
-    expect(html).toContain('aria-label="고객 검색 기준"');
-    expect(html.match(/<select aria-label="고객 검색 기준"[^>]*>[\s\S]*?<\/select>/)?.[0].match(/<option value=/g)).toHaveLength(10);
-    for (const label of ["기본 정보", "예약", "시술·결제", "상품", "포인트", "쿠폰·선불", "문자", "파워 고객", "매출 기준", "등급별", "그룹별", "성별", "방문동기", "최근 방문", "미방문", "생일 대상", "인쇄 양식 1", "인쇄 양식 2", "인쇄 양식 3", "인쇄 양식 4", "기존 회원 결제 이동", "대기 완료"]) {
-      expect(html).toContain(label);
-    }
-    expect(html).toContain('href="/messages?customer=customer-seed-1"');
-    expect(html).toContain('href="/sales/transactions?customer=customer-seed-2"');
+    expect(html).toContain("2026-07-31T10:00:00.000Z · 커트 · confirmed");
+    expect(html).toContain("2026-07-24 · 결제 · ₩10,480,000");
+    expect(html).toContain("헤어 오일 · ₩28,000");
+    expect(html).toContain("2026-07-24 · 1,000P");
+    expect(html).toContain("클리닉 5회 · 잔액 ₩250,000");
+    expect(html).toContain("SMS · dry-run");
   });
 
-  it("renders explicit empty and selected-detail states without staff fields", () => {
-    const seeded = createSalonStore(":memory:").snapshot();
-    const html = renderToStaticMarkup(<CustomersPage bookings={[]} customers={[]} ledger={[]} messages={[]} settings={seeded.settings} waitingCustomers={[]} />);
+  it("filters selected grade, group, gender, motive, ledger-sales, and activity criteria", () => {
+    const store = createSalonStore(":memory:");
+    const first = store.get("customers", "customer-seed-1")!;
+    const second = store.get("customers", "customer-seed-2")!;
+    store.save("customers", first.id, { ...(first.value as Record<string, JsonValue>), grade: "VIP2", group: "충성", motive: "소개" }, "원장");
+    store.save("customers", second.id, { ...(second.value as Record<string, JsonValue>), grade: "일반", group: "신규", motive: "검색" }, "원장");
+    store.save("customers", "customer-idle", { name: "미방문", phone: "01011112222", telephone: "", phoneAbsent: false, smsOptIn: true, points: 0, gender: "female", operator: "원장" }, "원장");
 
-    expect(html).toContain("조건에 맞는 고객이 없습니다.");
-    expect(html).toContain("목록에서 고객을 선택하면 상세와 이력을 확인할 수 있습니다.");
-    expect(html).toContain("대기 고객이 없습니다.");
-    expect(html).not.toContain("디자이너");
-    expect(html).not.toContain("직원");
+    for (const [segment, segmentValue, expected] of [["grade", "VIP2", ["customer-seed-1"]], ["group", "신규", ["customer-seed-2"]], ["gender", "female", ["customer-seed-1", "customer-idle"]], ["motive", "소개", ["customer-seed-1"]]] as const) {
+      expect(listRows(page(store, { segment, segmentValue }))).toEqual(expected);
+    }
+    expect(listRows(page(store, { segment: "sales", salesThreshold: "15000000" }))).toEqual(["customer-seed-1"]);
+    expect(listRows(page(store, { segment: "recent", today: new Date("2026-08-05T00:00:00.000Z") }))).toEqual(["customer-seed-1", "customer-seed-2"]);
+    expect(listRows(page(store, { segment: "nonvisit", today: new Date("2026-08-05T00:00:00.000Z") }))).toEqual(["customer-idle"]);
+  });
+
+  it("renders distinct server-selected printable layouts and a native print control", () => {
+    const contact = page(undefined, { printLayout: "1" });
+    const membership = page(undefined, { printLayout: "2" });
+    const loyalty = page(undefined, { printLayout: "4" });
+
+    expect(contact).toContain('data-print-layout="1"');
+    expect(contact).toContain("<th>휴대전화</th>");
+    expect(membership).toContain('data-print-layout="2"');
+    expect(membership).toContain("<th>등급</th>");
+    expect(membership).not.toContain("<th>휴대전화</th>");
+    expect(loyalty).toContain("<th>패밀리 번호</th>");
+    expect(loyalty).toContain("현재 양식 인쇄");
+  });
+
+  it("renders usable customer policy choices and selected-customer bulk controls", () => {
+    const store = createSalonStore(":memory:");
+    store.saveSettings({ customerGroups: "충성, 신규", customerGrades: "일반, VIP2", visitMotives: "소개, 검색" }, "원장");
+    const html = page(store, { showNew: true });
+
+    expect(html).toContain('name="customerIds"');
+    expect(html).toContain('name="bulkGroup"');
+    expect(html).toContain('name="bulkGrade"');
+    expect(html).toContain('value="충성"');
+    expect(html).toContain(">VIP2<");
+    expect(html).toContain('list="visit-motives"');
   });
 });

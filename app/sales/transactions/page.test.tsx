@@ -43,6 +43,15 @@ describe("TransactionsPage", () => {
     expect(renderToStaticMarkup(page)).toContain("조건에 맞는 거래 기록이 없습니다.");
   });
 
+  it("consumes a customer query as the payment-registration preselection", async () => {
+    const page = await TransactionsPage({ searchParams: Promise.resolve({ ...baseQuery, new: "1", customer: "customer-seed-2" }) });
+    const html = renderToStaticMarkup(page);
+
+    expect(html).toContain('aria-label="결제 등록 고객"');
+    expect(html).toContain("결제 등록 고객: <strong>이도윤</strong>");
+    expect(html).toContain('type="hidden" name="customerId" value="customer-seed-2"');
+  });
+
   it.each([
     [{ start: "2026-07-26", end: "2026-07-27" }, "7/26", "7/25"],
     [{ staff: "harin" }, "7/25", "7/24"],

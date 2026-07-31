@@ -42,6 +42,7 @@ describe("SalonStore", () => {
       id: "ledger-payment-1",
       requestKey: "payment-1",
       kind: "payment",
+      customerId: "customer-seed-1",
       occurredAt: "2026-07-31T09:00:00.000Z",
       amountWon: 11000,
       vatWon: 1000,
@@ -67,7 +68,7 @@ describe("SalonStore", () => {
     }, "원장");
 
     expect(store.listLedger()).toEqual(expect.arrayContaining([
-      expect.objectContaining({ id: saved.id, amountWon: 11000 }),
+      expect.objectContaining({ id: saved.id, customerId: "customer-seed-1", amountWon: 11000 }),
       expect.objectContaining({ id: correction.id, correctionOf: saved.id, amountWon: -11000 }),
     ]));
     expect(store.snapshot().auditEvents.slice(auditCount).filter((event) => event.action === "append-ledger")).toHaveLength(2);

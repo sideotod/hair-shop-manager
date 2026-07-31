@@ -3,6 +3,7 @@ import Link from "next/link";
 import { AppShell } from "../../../components/app-shell";
 import { parseRevenueSearchParams, serializeRevenueQuery } from "../../../components/sales/revenue-query";
 import { filterRevenueSelection, filterRevenueTransactions, revenueTransactions } from "../../../lib/revenue-data";
+import { createSalonStore } from "../../../lib/salon-store";
 
 const labels = { date: "날짜", payment: "결제수단", service: "시술", staff: "담당자", deduction: "공제" } as const;
 type SelectionKind = keyof typeof labels;
@@ -19,9 +20,13 @@ export default async function TransactionsPage({
   const params = await searchParams;
   const selection = typeof params.selection === "string" && params.selection in labels ? params.selection as SelectionKind : null;
   const selectionKey = value(params.selectionKey);
+  const customerId = value(params.customer);
   const query = parseRevenueSearchParams(params);
   const rows = filterRevenueSelection(filterRevenueTransactions(revenueTransactions, query), selection && selectionKey ? { kind: selection, key: selectionKey } : null);
   const backHref = `/sales?${serializeRevenueQuery(query)}`;
+  const store = createSalonStore();
+  const customer = customerId ? store.get<{ name?: string }>("customers", customerId) : null;
+  store.close();
 
   return (
     <AppShell activeHref="/sales">
@@ -34,6 +39,8 @@ export default async function TransactionsPage({
           </div>
           <Link className="rounded-[10px] border border-[var(--border)] bg-white px-4 py-3 text-sm font-medium text-[var(--brand)]" href={backHref}>매출 분석으로 돌아가기</Link>
         </div>
+
+        {customer && <section aria-label="결제 등록 고객" className="mt-5 rounded-[10px] border border-[var(--border)] bg-white px-5 py-4"><p className="text-sm">결제 등록 고객: <strong>{customer.value.name ?? customer.id}</strong></p><input name="customerId" type="hidden" value={customer.id} /></section>}
 
         <section className="mt-8 overflow-x-auto rounded-[14px] border border-[var(--border)] bg-white" aria-label="필터된 개별 거래 기록" data-revenue-transactions>
           <table className="w-full min-w-[960px] border-collapse text-left text-[13px]">

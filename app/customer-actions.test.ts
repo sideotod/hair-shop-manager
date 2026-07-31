@@ -63,4 +63,20 @@ describe("customer actions", () => {
     expect(store.getSettings()).toMatchObject({ customerGroups: "VIP, 신규", customerGrades: "일반, VIP1, VIP2", defaultSmsOptIn: false, birthdayCalendar: "lunar" });
     expect(store.snapshot().auditEvents.at(-1)).toMatchObject({ action: "save-settings", actor: "원장" });
   });
+
+  it("persists the ordinary telephone and rejects impossible initial booking dates", () => {
+    saveCustomerRecord(store, form({ name: "유선 고객", phone: "010-5555-4444", telephone: "031-123-4567" }));
+    expect(store.list<{ name: string; telephone: string }>("customers").find(({ value }) => value.name === "유선 고객")?.value.telephone).toBe("031-123-4567");
+
+    expect(() => saveCustomerRecord(store, form({ name: "잘못된 날짜", phone: "010-3333-2222", initialBookingDate: "2026-02-30", initialBookingTime: "12:00" }))).toThrow("초기 예약 날짜와 시간을");
+    expect(store.list<{ name: string }>("customers").some(({ value }) => value.name === "잘못된 날짜")).toBe(false);
+  });
+
+  it("applies persisted bulk group and grade values to selected customers", () => {
+    store.saveSettings({ customerGroups: "기존 그룹", customerGrades: "기존 등급" }, "원장");
+    saveCustomerPolicyRecord(store, form({ customerIds: "customer-seed-1", bulkGroup: "충성", bulkGrade: "VIP2" }));
+
+    expect(store.get<{ group: string; grade: string }>("customers", "customer-seed-1")?.value).toMatchObject({ group: "충성", grade: "VIP2" });
+    expect(store.getSettings()).toMatchObject({ customerGroups: "기존 그룹", customerGrades: "기존 등급" });
+  });
 });

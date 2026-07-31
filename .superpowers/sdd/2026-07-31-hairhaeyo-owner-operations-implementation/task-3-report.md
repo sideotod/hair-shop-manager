@@ -48,3 +48,24 @@ Routine page markup was implemented first, then covered with focused static-rend
 ## Concerns
 
 None. The Task 3 brief asks for a four-layout selector; browser print rendering/visual QA remains outside this task and is explicitly deferred to Task 9.
+
+## Fix round 1
+
+### Root-cause corrections
+
+- Customer saves now persist `telephone`; server date validation round-trips date values and bounds time values before any record mutation.
+- Customer-keyed ledger entries, product-sale records, and customer-coupon records drive customer histories and sales segments. Existing SQLite databases receive the additive `ledger.customer_id` migration.
+- Grade, group, gender, and motive segments require their selected value. Sales uses the linked ledger aggregate; recent/nonvisit use booking/payment timestamps rather than `visitType`.
+- Bulk group/grade updates mutate only selected customer records and preserve policy settings omitted by the bulk form. Policy values are consumed by the registration form's grade/group/motive controls.
+- The waiting payment link targets `/sales/transactions?new=1&customer=…`; that route resolves and renders the payment-registration customer context without adding payment-entry functionality ahead of Task 5.
+- Print layout is query-selected, renders four distinct printable tables, and uses a small client button that calls native `window.print()` with print-only CSS.
+
+### Tests and evidence
+
+- RED: `app/customer-actions.test.ts` proved missing `telephone` persistence and missing bulk customer updates.
+- GREEN: server payload, exact date/time validation, and bulk mutation changes passed 14 focused action/store tests.
+- RED: bulk-only submission cleared stored policy values; the regression test showed empty group/grade settings.
+- GREEN: omitted policy fields are preserved; the action test passes.
+- Behavioral page tests now assert linked histories, selected-value segments, ledger sales, timestamp-based recent/nonvisit, policy controls, and distinct print layouts. Transaction-page coverage asserts payment customer preselection.
+- Final focused command: `npm test -- app/customer-actions.test.ts components/customers/customers-page.test.tsx app/sales/transactions/page.test.tsx lib/salon-store.test.ts` — 27/27 passed.
+- `npm run typecheck` and `git diff --check` passed.

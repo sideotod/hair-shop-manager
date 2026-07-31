@@ -23,6 +23,7 @@ type LedgerRow = {
   kind: string;
   occurred_at: string;
   correction_of: string | null;
+  customer_id: string | null;
   amount_won: number;
   vat_won: number;
   fee_won: number;
@@ -87,6 +88,7 @@ function ledgerFromRow(row: LedgerRow): LedgerEntry {
     kind: row.kind,
     occurredAt: row.occurred_at,
     correctionOf: row.correction_of,
+    customerId: row.customer_id,
     amountWon: row.amount_won,
     vatWon: row.vat_won,
     feeWon: row.fee_won,
@@ -151,6 +153,7 @@ function createSchema(db: DatabaseSync) {
       kind TEXT NOT NULL,
       occurred_at TEXT NOT NULL,
       correction_of TEXT REFERENCES ledger(id),
+      customer_id TEXT,
       amount_won INTEGER NOT NULL,
       vat_won INTEGER NOT NULL,
       fee_won INTEGER NOT NULL,
@@ -174,6 +177,8 @@ function createSchema(db: DatabaseSync) {
       payload TEXT NOT NULL
     );
   `);
+  const ledgerColumns = db.prepare("PRAGMA table_info(ledger)").all() as { name: string }[];
+  if (!ledgerColumns.some(({ name }) => name === "customer_id")) db.exec("ALTER TABLE ledger ADD COLUMN customer_id TEXT");
 }
 
 function seed(db: DatabaseSync) {
@@ -200,6 +205,8 @@ function seed(db: DatabaseSync) {
       ["automations", "automation-seed-3", { label: "생일 자동 문자", status: "중지", schedule: "생일 당일 09:00", operator: "원장" }],
       ["products", "product-seed-1", { name: "헤어 오일", priceWon: 28000, operator: "원장" }],
       ["coupons", "coupon-seed-1", { name: "클리닉 5회", balanceWon: 250000, operator: "원장" }],
+      ["product-sales", "product-sale-seed-1", { customerId: "customer-seed-1", name: "헤어 오일", priceWon: 28000, operator: "원장" }],
+      ["customer-coupons", "customer-coupon-seed-1", { customerId: "customer-seed-1", name: "클리닉 5회", balanceWon: 250000, operator: "원장" }],
       ["notices", "notice-seed-1", { title: "운영 안내", body: "원장 전용 운영 데이터", operator: "원장" }],
     ];
     const insertRecord = db.prepare("INSERT INTO records (kind, id, payload, created_at, updated_at, archived_at) VALUES (?, ?, ?, ?, ?, NULL)");
@@ -217,15 +224,15 @@ function seed(db: DatabaseSync) {
     addAudit(db, "seed-settings", "settings", "1", "원장", { before: null, after: parseJson<JsonObject>(seedSettings.payload) }, seededAt);
 
     const ledger = [
-      ["ledger-seed-1", "seed-revenue-20260724", "2026-07-24T12:00:00.000Z", 10480000, 1000000, 300000, 2200000, 0, 0, 6080000],
-      ["ledger-seed-2", "seed-revenue-20260725", "2026-07-25T12:00:00.000Z", 8640000, 800000, 250000, 1800000, 0, 0, 5010000],
-      ["ledger-seed-3", "seed-revenue-20260726", "2026-07-26T12:00:00.000Z", 6120000, 550000, 200000, 1250000, 0, 0, 3550000],
-      ["ledger-seed-4", "seed-revenue-20260727", "2026-07-27T12:00:00.000Z", 4720000, 370000, 160000, 830000, 0, 0, 2750000],
+      ["ledger-seed-1", "seed-revenue-20260724", "2026-07-24T12:00:00.000Z", 10480000, 1000000, 300000, 2200000, 1000, 0, 6080000, "customer-seed-1"],
+      ["ledger-seed-2", "seed-revenue-20260725", "2026-07-25T12:00:00.000Z", 8640000, 800000, 250000, 1800000, 0, 0, 5010000, "customer-seed-2"],
+      ["ledger-seed-3", "seed-revenue-20260726", "2026-07-26T12:00:00.000Z", 6120000, 550000, 200000, 1250000, 0, 0, 3550000, "customer-seed-1"],
+      ["ledger-seed-4", "seed-revenue-20260727", "2026-07-27T12:00:00.000Z", 4720000, 370000, 160000, 830000, 0, 0, 2750000, "customer-seed-2"],
     ] as const;
-    const insertLedger = db.prepare("INSERT INTO ledger (id, request_key, kind, occurred_at, correction_of, amount_won, vat_won, fee_won, incentive_won, points_won, coupon_won, profit_won) VALUES (?, ?, 'payment', ?, NULL, ?, ?, ?, ?, ?, ?, ?)");
-    for (const [id, requestKey, occurredAt, amountWon, vatWon, feeWon, incentiveWon, pointsWon, couponWon, profitWon] of ledger) {
-      insertLedger.run(id, requestKey, occurredAt, amountWon, vatWon, feeWon, incentiveWon, pointsWon, couponWon, profitWon);
-      addAudit(db, "seed-ledger", "ledger", id, "원장", { before: null, after: { id, requestKey, kind: "payment", occurredAt, correctionOf: null, amountWon, vatWon, feeWon, incentiveWon, pointsWon, couponWon, profitWon } }, occurredAt);
+    const insertLedger = db.prepare("INSERT INTO ledger (id, request_key, kind, occurred_at, correction_of, customer_id, amount_won, vat_won, fee_won, incentive_won, points_won, coupon_won, profit_won) VALUES (?, ?, 'payment', ?, NULL, ?, ?, ?, ?, ?, ?, ?, ?)");
+    for (const [id, requestKey, occurredAt, amountWon, vatWon, feeWon, incentiveWon, pointsWon, couponWon, profitWon, customerId] of ledger) {
+      insertLedger.run(id, requestKey, occurredAt, customerId, amountWon, vatWon, feeWon, incentiveWon, pointsWon, couponWon, profitWon);
+      addAudit(db, "seed-ledger", "ledger", id, "원장", { before: null, after: { id, requestKey, kind: "payment", occurredAt, correctionOf: null, customerId, amountWon, vatWon, feeWon, incentiveWon, pointsWon, couponWon, profitWon } }, occurredAt);
     }
   });
 }
@@ -298,6 +305,7 @@ export function createSalonStore(filename = join(process.cwd(), ".data", "hairha
         kind: input.kind,
         occurredAt: input.occurredAt ?? now(),
         correctionOf: input.correctionOf ?? null,
+        customerId: input.customerId ?? null,
         amountWon: input.amountWon,
         vatWon: input.vatWon ?? 0,
         feeWon: input.feeWon ?? 0,
@@ -319,12 +327,14 @@ export function createSalonStore(filename = join(process.cwd(), ".data", "hairha
         if (entry.correctionOf && !db.prepare("SELECT 1 FROM ledger WHERE id = ?").get(entry.correctionOf)) {
           throw new Error(`Unknown correctionOf ledger entry: ${entry.correctionOf}`);
         }
-        db.prepare("INSERT INTO ledger (id, request_key, kind, occurred_at, correction_of, amount_won, vat_won, fee_won, incentive_won, points_won, coupon_won, profit_won) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)").run(
+        if (entry.customerId && !findRecord("customers", entry.customerId)) throw new Error(`Unknown customerId ledger entry: ${entry.customerId}`);
+        db.prepare("INSERT INTO ledger (id, request_key, kind, occurred_at, correction_of, customer_id, amount_won, vat_won, fee_won, incentive_won, points_won, coupon_won, profit_won) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)").run(
           entry.id,
           entry.requestKey,
           entry.kind,
           entry.occurredAt,
           entry.correctionOf,
+          entry.customerId ?? null,
           entry.amountWon,
           entry.vatWon,
           entry.feeWon,

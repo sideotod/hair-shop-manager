@@ -26,6 +26,16 @@ function recordId(formData: FormData, name: string, prefix: string) {
   return text(formData, name) || `${prefix}-${randomUUID()}`;
 }
 
+function validDate(value: string) {
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(value)) return false;
+  const date = new Date(`${value}T00:00:00.000Z`);
+  return !Number.isNaN(date.getTime()) && date.toISOString().slice(0, 10) === value;
+}
+
+function validDateTime(date: string, time: string) {
+  return validDate(date) && /^(?:[01]\d|2[0-3]):[0-5]\d$/.test(time);
+}
+
 function revalidateCustomers() {
   revalidatePath("/");
   revalidatePath("/customers");
@@ -46,6 +56,7 @@ function customerFrom(formData: FormData): CustomerValue {
   return {
     name,
     phone: phoneAbsent ? "" : phone,
+    telephone: text(formData, "telephone"),
     phoneAbsent,
     gender: text(formData, "gender") || "unspecified",
     smsOptIn: text(formData, "smsOptIn") !== "off",
@@ -70,6 +81,9 @@ function customerFrom(formData: FormData): CustomerValue {
 
 export function saveCustomerRecord(store: SalonStore, formData: FormData) {
   const customer = customerFrom(formData);
+  for (const [field, value] of [["생년월일", customer.birthday], ["첫 만남 날짜", customer.firstMetAt], ["가입일", customer.joinedAt]] as const) {
+    if (typeof value !== "string" || (value && !validDate(value))) throw new Error(`${field}을 확인하세요.`);
+  }
   const id = recordId(formData, "customerId", "customer");
   const duplicate = store.list("customers").some((record) => {
     if (record.id === id) return false;
@@ -79,7 +93,7 @@ export function saveCustomerRecord(store: SalonStore, formData: FormData) {
   if (duplicate && !checked(formData, "allowDuplicate")) throw new Error("중복 고객입니다. 중복 등록을 확인하세요.");
   const bookingDate = text(formData, "initialBookingDate");
   const bookingTime = text(formData, "initialBookingTime");
-  if ((bookingDate || bookingTime) && (!/^\d{4}-\d{2}-\d{2}$/.test(bookingDate) || !/^\d{2}:\d{2}$/.test(bookingTime))) {
+  if ((bookingDate || bookingTime) && !validDateTime(bookingDate, bookingTime)) {
     throw new Error("초기 예약 날짜와 시간을 확인하세요.");
   }
   const waitingMemo = text(formData, "waitingMemo");
@@ -115,13 +129,21 @@ export function completeWaitingCustomerRecord(store: SalonStore, formData: FormD
 }
 
 export function saveCustomerPolicyRecord(store: SalonStore, formData: FormData) {
-  return store.saveSettings({
-    customerGroups: text(formData, "customerGroups"),
-    customerGrades: text(formData, "customerGrades"),
-    visitMotives: text(formData, "visitMotives"),
-    defaultSmsOptIn: text(formData, "defaultSmsOptIn") !== "off",
-    birthdayCalendar: text(formData, "birthdayCalendar") || "solar",
-  }, actor);
+  const policy: JsonObject = {};
+  if (formData.has("customerGroups")) policy.customerGroups = text(formData, "customerGroups");
+  if (formData.has("customerGrades")) policy.customerGrades = text(formData, "customerGrades");
+  if (formData.has("visitMotives")) policy.visitMotives = text(formData, "visitMotives");
+  if (formData.has("defaultSmsOptIn")) policy.defaultSmsOptIn = text(formData, "defaultSmsOptIn") !== "off";
+  if (formData.has("birthdayCalendar")) policy.birthdayCalendar = text(formData, "birthdayCalendar") || "solar";
+  const settings = Object.keys(policy).length ? store.saveSettings(policy, actor) : store.getSettings();
+  const group = text(formData, "bulkGroup") || text(formData, "customerGroups");
+  const grade = text(formData, "bulkGrade") || text(formData, "customerGrades");
+  for (const id of formData.getAll("customerIds")) {
+    if (typeof id !== "string" || !id) continue;
+    const customer = store.get("customers", id);
+    if (customer) store.save("customers", id, { ...objectValue(customer), ...(group ? { group } : {}), ...(grade ? { grade } : {}), operator: actor }, actor);
+  }
+  return settings;
 }
 
 function withStore<T>(operation: (store: SalonStore) => T) {

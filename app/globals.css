@@ -55,7 +55,32 @@ time {
   font-variant-numeric: tabular-nums;
 }
 
+.customer-print {
+  display: none;
+}
+
 @media print {
+  [data-app-shell-background],
+  .no-print {
+    display: none !important;
+  }
+
+  .customer-print {
+    display: block;
+  }
+
+  .customer-print table {
+    width: 100%;
+    border-collapse: collapse;
+  }
+
+  .customer-print th,
+  .customer-print td {
+    border: 1px solid #222;
+    padding: 8px;
+    text-align: left;
+  }
+
   body {
     font-family: var(--font-pretendard), system-ui, sans-serif;
   }
