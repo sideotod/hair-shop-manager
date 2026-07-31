@@ -6,7 +6,7 @@
 
 **Architecture:** Root App Router pages read a typed single-shop SQLite store built with Node 24 `node:sqlite`. Server Actions own validation and mutation; immutable ledger entries own financial records and corrections. Domain client components provide drawers, forms, tabs, calendars, and previews without adding a UI framework.
 
-**Tech Stack:** Next.js 16 App Router, React 19, TypeScript strict, Tailwind CSS 4, Node 24 `node:sqlite`, Recharts 3, Vitest, Playwright browser control.
+**Tech Stack:** Next.js 16 App Router, React 19, TypeScript strict, Tailwind CSS 4, Node 24 `node:sqlite`, Recharts 3, Tauri 2, Rust, Pretendard Variable, Vitest, Playwright browser control.
 
 ## Global Constraints
 
@@ -22,6 +22,10 @@
 - SMS and Naver do not call external services without credentials; expose dry-run/disabled verification states.
 - Preserve keyboard access, semantic HTML, visible focus, non-color status labels, Korean text alignment, and page-level no-horizontal-overflow at 1280px.
 - Use existing dependencies, platform APIs, and standard library before adding packages.
+- Keep browser web delivery and add a Windows Tauri v2 shell; do not convert the app to static export.
+- Tauri default window is 1440px wide and minimum window width is 1280px.
+- Default shop display name is `수원 본점`; UI owner display name comes from settings while immutable audit actor remains `원장`.
+- Bundle `Pretendard Variable` locally under SIL OFL 1.1; do not depend on a font CDN.
 
 ---
 
@@ -75,14 +79,27 @@ git add .gitignore lib docs/function-coverage-matrix.md
 git commit -m "feat(data): add owner salon store"
 ```
 
-### Task 2: Implement owner session, shared shell, search, and operational dashboard
+### Task 2: Add Tauri shell, local typography, owner session, shared shell, search, and operational dashboard
 
 **Files:**
+- Modify: `package.json`
+- Modify: `package-lock.json`
+- Create: `src-tauri/Cargo.toml`
+- Create: `src-tauri/build.rs`
+- Create: `src-tauri/src/main.rs`
+- Create: `src-tauri/tauri.conf.json`
+- Create: `src-tauri/capabilities/default.json`
+- Create: `app/fonts/PretendardVariable.woff2`
+- Create: `THIRD_PARTY_LICENSES/Pretendard-OFL-1.1.txt`
+- Modify: `app/layout.tsx`
+- Modify: `app/globals.css`
 - Create: `lib/auth.ts`
 - Create: `lib/auth.test.ts`
 - Create: `app/login/page.tsx`
 - Create: `app/auth-actions.ts`
 - Create: `proxy.ts`
+- Modify: `lib/salon-store.ts`
+- Modify: `lib/salon-store.test.ts`
 - Modify: `components/app-shell.tsx`
 - Modify: `components/dashboard/dashboard-page.tsx`
 - Modify: `components/dashboard/dashboard-page.test.tsx`
@@ -90,34 +107,57 @@ git commit -m "feat(data): add owner salon store"
 
 **Interfaces:**
 - Produces `verifyOwnerPassword(password, storedHash): boolean`, `createOwnerSession()`, `clearOwnerSession()`.
-- `AppShell` accepts `customers`, `smsRemaining`, and current `activeHref` while preserving `overlay` inert behavior.
+- `AppShell` accepts `customers`, `smsRemaining`, `shopName`, `ownerName`, and current `activeHref` while preserving `overlay` inert behavior.
 - `DashboardPage` consumes a `SalonSnapshot` and exposes working links to customer, waiting customer, booking, payment, and message flows.
+- Produces `npm run tauri:dev` and `npm run tauri:info`; production `tauri:build` sidecar packaging is completed in Task 9.
 
-- [ ] **Step 1: Write failing auth and dashboard tests**
+- [ ] **Step 1: Write failing store, auth, and dashboard tests**
 
-Assert password verification, invalid-session rejection, sidebar routes with no staff link, common customer search modes, logout, waiting list, day+0 through day+3 booking counts, SMS quota, automation states, notices, and quick-action hrefs.
+Assert seeded `shopName` is `수원 본점`, `ownerName` is `원장`, password verification, invalid-session rejection, sidebar routes with no staff link, common customer search modes, logout, configured shop/owner labels, waiting list, day+0 through day+3 booking counts, SMS quota, automation states, notices, and quick-action hrefs.
 
-Run: `npm test -- lib/auth.test.ts components/dashboard/dashboard-page.test.tsx`
+Run: `npm test -- lib/salon-store.test.ts lib/auth.test.ts components/dashboard/dashboard-page.test.tsx`
 
-- [ ] **Step 2: Implement owner-only session**
+- [ ] **Step 2: Install and verify the Tauri toolchain**
+
+Install the Windows Rust MSVC toolchain when `rustc` is absent. Add only `@tauri-apps/cli` as a development dependency. Add scripts `tauri`, `tauri:dev`, `tauri:info`, and `tauri:build`.
+
+Run: `rustc --version && cargo --version`
+
+- [ ] **Step 3: Scaffold the Tauri v2 development shell**
+
+Create a minimal Tauri app named `Hairhaeyo` with identifier `com.hairhaeyo.salon`. Configure `beforeDevCommand: "npm run dev"`, `devUrl: "http://localhost:3000"`, default width `1440`, height `1000`, minimum width `1280`, and minimum height `720`. Do not set Next `output: "export"`; server actions and SQLite remain server-owned.
+
+Run: `cargo check --manifest-path src-tauri/Cargo.toml`
+
+Run: `npm run tauri:info`
+
+- [ ] **Step 4: Bundle Pretendard Variable locally**
+
+Download the upstream `PretendardVariable.woff2` and SIL OFL 1.1 text from `orioncactus/pretendard`. Load it through `next/font/local` as CSS variable `--font-pretendard`, apply it to body/form/table/chart/print text, keep system sans-serif fallbacks, and preserve tabular numerals for money/time.
+
+- [ ] **Step 5: Implement owner-only session**
 
 Hash passwords with `crypto.scryptSync`, use an HTTP-only same-site cookie, protect application routes in `proxy.ts`, and leave `/login` and Next assets public. Seed login help text must state the local demo owner password without logging the password.
 
-- [ ] **Step 3: Extend AppShell**
+- [ ] **Step 6: Extend AppShell and settings identity**
 
-Replace `직원 · 설정` with `설정`. Add top customer search, search-mode select, help link, SMS remaining text, owner account, and logout form. Search result links go to `/customers?customer=<id>`.
+Replace `직원 · 설정` with `설정`. Render `수원 본점` from seeded settings and render `원장님` or `<ownerName> 원장님` from settings. Add top customer search, search-mode select, help link, SMS remaining text, owner account, and logout form. Search result links go to `/customers?customer=<id>`. Task 8 provides the editing form; Task 2 establishes the data flow.
 
-- [ ] **Step 4: Replace static dashboard data**
+- [ ] **Step 7: Replace static dashboard data**
 
 Remove designer status. Render today's sales, today's bookings, waiting customers, SMS quota, single-owner booking timeline, waiting list actions, automation queue, notices, and recent audit activity from `SalonSnapshot`.
 
-- [ ] **Step 5: Verify and commit**
+- [ ] **Step 8: Verify and commit**
 
-Run: `npm test -- lib/auth.test.ts components/dashboard/dashboard-page.test.tsx && npm run typecheck`
+Run: `npm test -- lib/salon-store.test.ts lib/auth.test.ts components/dashboard/dashboard-page.test.tsx`
+
+Run: `npm run typecheck`
+
+Run: `cargo check --manifest-path src-tauri/Cargo.toml`
 
 ```bash
-git add app components lib proxy.ts
-git commit -m "feat(shell): add owner operations dashboard"
+git add package.json package-lock.json src-tauri app components lib proxy.ts THIRD_PARTY_LICENSES
+git commit -m "feat(shell): add Tauri owner operations dashboard"
 ```
 
 ### Task 3: Implement customer management and waiting workflow
@@ -369,6 +409,12 @@ git commit -m "feat(settings): complete owner shop settings"
 
 **Files:**
 - Create: `docs/qa/hairhaeyo-owner-operations-qa.md`
+- Create: `scripts/prepare-tauri-sidecar.mjs`
+- Create: `next.config.ts`
+- Modify: `src-tauri/Cargo.toml`
+- Modify: `src-tauri/src/main.rs`
+- Modify: `src-tauri/tauri.conf.json`
+- Modify: `src-tauri/capabilities/default.json`
 - Modify: implementation files only for verified defects.
 
 **Interfaces:**
@@ -388,19 +434,29 @@ Run forbidden-brand scan; expected `0`.
 
 Run function count and coverage tests; expected top `253`, nested `10`, all `263`, unmapped `0`.
 
-- [ ] **Step 2: Run critical Playwright flows at 1280×900 and 1440×1000**
+- [ ] **Step 2: Package the production Tauri sidecar**
+
+Set Next `output: "standalone"`. `scripts/prepare-tauri-sidecar.mjs` copies `.next/static` and `public` into `.next/standalone`, copies the current Windows `node.exe` to the Tauri target-triple sidecar name, and leaves the Next server files as Tauri resources. Rust starts the Node sidecar on `127.0.0.1`, passes an app-data SQLite path, waits for readiness, opens the main window, and kills the child on exit. Mark the fixed loopback port ceiling with `ponytail: fixed local port; allocate dynamically if multi-instance desktop use is introduced`.
+
+Run: `npm run tauri:build`
+
+- [ ] **Step 3: Run critical Playwright flows at 1280×900 and 1440×1000**
 
 Exercise login/logout, global customer search, customer registration/edit/history, waiting→payment, booking create/edit/cancel/status/overlap, payment duplicate/correction/refund, coupon sale/deduction, product sale, expense correction, individual/group/scheduled message dry-run, automation settings, and Naver disabled state.
 
-- [ ] **Step 3: Verify simplified revenue visuals**
+- [ ] **Step 4: Verify simplified revenue visuals and typography**
 
-Check today/month/total cards, day/month arrows, trend motion, bar-end money labels without bar tooltips, pie tooltip, gender/new-returning views, settlement table, CSV, print, drawer, reduced motion, zero data, and no horizontal overflow or label clipping.
+Check today/month/total cards, day/month arrows, trend motion, bar-end money labels without bar tooltips, pie tooltip, gender/new-returning views, settlement table, CSV, print, drawer, reduced motion, zero data, Pretendard loading, Korean alignment, and no horizontal overflow or label clipping.
 
-- [ ] **Step 4: Request final code review**
+- [ ] **Step 5: Run Tauri smoke QA**
+
+Launch the built Windows app, verify `수원 본점`, configured owner display name, login/logout, local SQLite persistence after restart, keyboard navigation, print, and clean sidecar shutdown.
+
+- [ ] **Step 6: Request final code review**
 
 Fix every Critical and Important finding. Re-run focused tests after each fix and the full verification suite after the final fix.
 
-- [ ] **Step 5: Commit QA and push**
+- [ ] **Step 7: Commit QA and push**
 
 ```bash
 git add .
@@ -416,3 +472,5 @@ git push -u origin codex/full-salon-workflows
 - Revenue simplification, permanent bar-end values, and pie tooltip preservation have exact implementation and QA steps.
 - External SMS/Naver behavior is visible and testable without claiming a real send or sync.
 - The final gate checks counts and exact bullet mapping, not only route presence.
+- Tauri preserves the server-owned Next/SQLite architecture through a loopback sidecar instead of static export.
+- `수원 본점`, settings-owned owner display, and locally bundled Pretendard have implementation and QA steps.

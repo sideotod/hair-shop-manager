@@ -171,5 +171,14 @@
 
 - 참고 사이트의 랜딩페이지 애니메이션·화려한 3D 효과는 운영 콘솔에 필요하지 않아 제외
 - 모바일 전용 IA는 요청 범위가 웹앱이므로 제외
+
+## 10. Tauri·브랜딩 추가 방향
+
+- 브라우저 웹앱을 유지하고 Windows Tauri 셸을 함께 제공한다.
+- 개발 Tauri는 Next dev server를 열고, 배포 Tauri는 Next standalone server를 Node sidecar로 실행한다.
+- 기본 창 1440px, 최소 창 너비 1280px. 모바일 navigation은 만들지 않는다.
+- 기본 매장명은 `수원 본점`; 원장 표시명은 설정값을 사용한다.
+- 한글 UI는 로컬 번들한 `Pretendard Variable`을 사용하고 시스템 산세리프를 fallback으로 둔다.
+- 폰트는 본문·입력·표·차트·인쇄에 동일 적용하며, 금액과 시간은 tabular 숫자를 유지한다.
 - 새 UI 라이브러리 도입은 코드베이스와 기존 의존성 확인 후 결정
 - Tailwind CSS로 충분한 시각 효과를 위한 별도 CSS-in-JS 도입은 제외
