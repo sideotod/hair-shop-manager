@@ -78,4 +78,26 @@ describe("CustomersPage", () => {
     expect(html).toContain(">VIP2<");
     expect(html).toContain('list="visit-motives"');
   });
+
+  it("uses persisted power policy and KST current-month birthday scope", () => {
+    const store = createSalonStore(":memory:");
+    store.saveSettings({ powerCustomerMinPoints: 500 }, "원장");
+    store.save("customers", "birthday-august", { name: "팔월 생일", phone: "01022223333", telephone: "", phoneAbsent: false, smsOptIn: true, points: 200, birthday: "2000-08-10", operator: "원장" }, "원장");
+    store.save("customers", "birthday-september", { name: "구월 생일", phone: "01044445555", telephone: "", phoneAbsent: false, smsOptIn: true, points: 700, birthday: "2000-09-10", operator: "원장" }, "원장");
+
+    expect(listRows(page(store, { segment: "power" }))).toEqual(["birthday-september"]);
+    expect(listRows(page(store, { segment: "birthday", today: new Date("2026-08-05T00:00:00.000Z") }))).toEqual(["birthday-august"]);
+  });
+
+  it("applies registration SMS and calendar policies only to new customers", () => {
+    const store = createSalonStore(":memory:");
+    store.saveSettings({ defaultSmsOptIn: false, birthdayCalendar: "lunar" }, "원장");
+    const newHtml = page(store, { showNew: true });
+    const existingHtml = page(store, { selectedCustomerId: "customer-seed-1" });
+
+    expect(newHtml).toContain('<option value="off" selected="">수신 거부</option>');
+    expect(newHtml).toContain('type="radio" name="birthdayCalendar" checked="" value="lunar"');
+    expect(existingHtml).toContain('<option value="on" selected="">수신 동의</option>');
+    expect(existingHtml).toContain('type="radio" name="birthdayCalendar" checked="" value="solar"');
+  });
 });

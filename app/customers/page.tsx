@@ -30,6 +30,7 @@ export default async function Page({ searchParams }: { searchParams: Promise<Rec
       settings={snapshot.settings}
       showNew={value(params.new) === "1"}
       showWaiting={value(params.waiting) === "1"}
+      today={new Date()}
       waitingCustomers={snapshot.records["waiting-customers"] ?? []}
     />;
   } finally {

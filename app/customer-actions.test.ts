@@ -79,4 +79,25 @@ describe("customer actions", () => {
     expect(store.get<{ group: string; grade: string }>("customers", "customer-seed-1")?.value).toMatchObject({ group: "충성", grade: "VIP2" });
     expect(store.getSettings()).toMatchObject({ customerGroups: "기존 그룹", customerGrades: "기존 등급" });
   });
+
+  it("persists a non-negative integer power-customer point criterion", () => {
+    saveCustomerPolicyRecord(store, form({ powerCustomerMinPoints: "500" }));
+    expect(store.getSettings()).toMatchObject({ powerCustomerMinPoints: 500 });
+
+    expect(() => saveCustomerPolicyRecord(store, form({ powerCustomerMinPoints: "10.5" }))).toThrow("파워 고객");
+    expect(() => saveCustomerPolicyRecord(store, form({ powerCustomerMinPoints: "-1" }))).toThrow("파워 고객");
+  });
+
+  it("rejects impossible values for every customer date and initial booking time", () => {
+    const invalidCustomerDates = ["birthday", "firstMetAt", "joinedAt"] as const;
+
+    for (const field of invalidCustomerDates) {
+      const name = `날짜 검증 ${field}`;
+      expect(() => saveCustomerRecord(store, form({ name, phone: `010-1000-${String(invalidCustomerDates.indexOf(field)).padStart(4, "0")}`, [field]: "2026-02-30" }))).toThrow("확인하세요");
+      expect(store.list<{ name: string }>("customers").some(({ value }) => value.name === name)).toBe(false);
+    }
+
+    expect(() => saveCustomerRecord(store, form({ name: "시간 검증 고객", phone: "010-1000-0003", initialBookingDate: "2026-08-10", initialBookingTime: "24:00" }))).toThrow("초기 예약 날짜와 시간을 확인하세요.");
+    expect(store.list<{ name: string }>("customers").some(({ value }) => value.name === "시간 검증 고객")).toBe(false);
+  });
 });

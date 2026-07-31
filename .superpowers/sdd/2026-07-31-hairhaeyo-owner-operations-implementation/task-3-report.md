@@ -69,3 +69,40 @@ None. The Task 3 brief asks for a four-layout selector; browser print rendering/
 - Behavioral page tests now assert linked histories, selected-value segments, ledger sales, timestamp-based recent/nonvisit, policy controls, and distinct print layouts. Transaction-page coverage asserts payment customer preselection.
 - Final focused command: `npm test -- app/customer-actions.test.ts components/customers/customers-page.test.tsx app/sales/transactions/page.test.tsx lib/salon-store.test.ts` — 27/27 passed.
 - `npm run typecheck` and `git diff --check` passed.
+
+## Fix round 2
+
+### Behavior mapping
+
+| FUNCTION.md section | Corrected workflow | Behavioral verification |
+|---|---|---|
+| 2.3 고객 분류/마케팅 | `파워 고객` reads the persisted non-negative integer `powerCustomerMinPoints` policy (fallback 100); `생일 대상` is scoped to the current KST month supplied by the server route. | Customer list test saves a 500-point policy, verifies only the 700-point record is power, and verifies an August KST scope excludes a September birthday. |
+| 2.1 고객 등록 / 2.5 고객 설정 | A new registration uses the persisted SMS and birthday-calendar defaults. An existing registration reads its own stored opt-in and calendar value, so policy changes do not overwrite it on edit. | Rendered form test verifies new SMS-off/lunar defaults and existing SMS-on/solar values separately. |
+| 2.3 고객 분류/인쇄 | The client print boundary delegates to native `window.print()` after the query-selected printable layout has been rendered. | `triggerCustomerPrint` is invoked with a `print` spy and asserts exactly one native call. |
+| 2.1 고객 등록 | Server validation rejects impossible birthday, first-meet, joined, and initial-booking dates before write; it rejects invalid booking times including `24:00`. | Action test tries every customer date field plus the time boundary and verifies no customer is saved. |
+
+### TDD evidence
+
+- RED: `npm test -- app/customer-actions.test.ts components/customers/customers-page.test.tsx components/customers/customer-print-button.test.tsx` produced four expected failures: missing persisted power criterion, absent print boundary, hard-coded power/birthday selection, and new form defaults ignoring persisted policy.
+- GREEN: the same focused command passed 15/15 after the minimal policy, KST scope, form-default, and print-boundary changes.
+- The exact date/time guards were implemented in Fix round 1. This round added behavioral coverage for every customer date field and `24:00`; the focused action test passed 9/9 because the existing server guards already reject each value before mutation.
+
+### Commands and output
+
+- `npm test -- app/customer-actions.test.ts components/customers/customers-page.test.tsx components/customers/customer-print-button.test.tsx` — 3 files, 15 tests passed.
+- `npm test -- app/customer-actions.test.ts components/customers/customers-page.test.tsx components/customers/customer-print-button.test.tsx app/sales/transactions/page.test.tsx lib/salon-store.test.ts` — 5 files, 32 tests passed.
+- `npm run typecheck` — passed (`tsc --noEmit`).
+- `git diff --check` — passed.
+
+### Files
+
+- Modified `app/customer-actions.ts` and `app/customer-actions.test.ts`: persisted/validated power criterion and exhaustive date/time mutation prevention coverage.
+- Modified `app/customers/page.tsx`: passes the current server time to the customer page.
+- Modified `components/customers/customers-page.tsx` and its test: persisted power policy, KST current-month birthday targeting, and new-versus-existing registration defaults.
+- Created `components/customers/customer-print-button.test.tsx` and modified its component: an injectable boundary verifies native print invocation.
+
+### Self-review and concerns
+
+- Power, SMS default, and birthday-calendar policy values remain server-owned through `SalonStore`; no client-only policy state was introduced.
+- All customer mutations retain the exact `원장` actor. Existing values take precedence only for an edit; defaults apply only to a new form.
+- Native-print invocation and layout selection are behaviorally covered. Visual print output and actual browser rendering remain Task 9 browser QA.

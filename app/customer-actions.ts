@@ -135,6 +135,11 @@ export function saveCustomerPolicyRecord(store: SalonStore, formData: FormData) 
   if (formData.has("visitMotives")) policy.visitMotives = text(formData, "visitMotives");
   if (formData.has("defaultSmsOptIn")) policy.defaultSmsOptIn = text(formData, "defaultSmsOptIn") !== "off";
   if (formData.has("birthdayCalendar")) policy.birthdayCalendar = text(formData, "birthdayCalendar") || "solar";
+  if (formData.has("powerCustomerMinPoints")) {
+    const points = Number(text(formData, "powerCustomerMinPoints"));
+    if (!Number.isSafeInteger(points) || points < 0) throw new Error("파워 고객 포인트 기준을 확인하세요.");
+    policy.powerCustomerMinPoints = points;
+  }
   const settings = Object.keys(policy).length ? store.saveSettings(policy, actor) : store.getSettings();
   const group = text(formData, "bulkGroup") || text(formData, "customerGroups");
   const grade = text(formData, "bulkGrade") || text(formData, "customerGrades");
