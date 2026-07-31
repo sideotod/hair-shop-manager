@@ -20,31 +20,21 @@ vi.mock("recharts", async (importOriginal) => {
   };
 });
 
-import { focusChartSurface, nextRevenueQuery, replaceRevenueQuery, resolveRevenueSelection, restoreRevenueDrawerFocus, RevenueDashboard } from "./revenue-dashboard";
+import { focusChartSurface, nextRevenueQuery, replaceRevenueQuery, resolveRevenueSelection, restoreRevenueDrawerFocus, revenueChartMotion, revenueChartMotions, RevenueDashboard } from "./revenue-dashboard";
 import { revenueAnalytics } from "../../lib/revenue-data";
 import { AppShell } from "../app-shell";
 import { RevenueDetailDrawer, dismissRevenueDrawer, revenueDrawerFocusTarget } from "./revenue-detail-drawer";
 import { DEFAULT_REVENUE_QUERY } from "./revenue-query";
 
 describe("RevenueDashboard", () => {
-  it("enables chart motion unless the user requests reduced motion", async () => {
-    const motion = (await import("./revenue-dashboard") as typeof import("./revenue-dashboard") & {
-      revenueChartMotion?: (reduced: boolean, begin: number, duration: number) => {
-        isAnimationActive: boolean;
-        animationBegin: number;
-        animationDuration: number;
-        animationEasing: "ease-out";
-      };
-    }).revenueChartMotion;
-
-    expect(motion).toBeTypeOf("function");
-    expect(motion?.(false, 80, 520)).toEqual({
+  it("enables chart motion unless the user requests reduced motion", () => {
+    expect(revenueChartMotion(false, 80, 520)).toEqual({
       isAnimationActive: true,
       animationBegin: 80,
       animationDuration: 520,
       animationEasing: "ease-out",
     });
-    expect(motion?.(true, 80, 520)).toEqual({
+    expect(revenueChartMotion(true, 80, 520)).toEqual({
       isAnimationActive: false,
       animationBegin: 0,
       animationDuration: 0,
@@ -52,18 +42,8 @@ describe("RevenueDashboard", () => {
     });
   });
 
-  it("uses restrained motion timings for every revenue chart", async () => {
-    const presets = (await import("./revenue-dashboard") as typeof import("./revenue-dashboard") & {
-      revenueChartMotions?: (reduced: boolean) => Record<string, {
-        isAnimationActive: boolean;
-        animationBegin: number;
-        animationDuration: number;
-        animationEasing: "ease-out";
-      }>;
-    }).revenueChartMotions;
-
-    expect(presets).toBeTypeOf("function");
-    expect(presets?.(false)).toEqual({
+  it("uses restrained motion timings for every revenue chart", () => {
+    expect(revenueChartMotions(false)).toEqual({
       daily: { isAnimationActive: true, animationBegin: 0, animationDuration: 560, animationEasing: "ease-out" },
       payment: { isAnimationActive: true, animationBegin: 80, animationDuration: 520, animationEasing: "ease-out" },
       service: { isAnimationActive: true, animationBegin: 0, animationDuration: 500, animationEasing: "ease-out" },
@@ -71,7 +51,7 @@ describe("RevenueDashboard", () => {
       staffProfit: { isAnimationActive: true, animationBegin: 80, animationDuration: 480, animationEasing: "ease-out" },
       deduction: { isAnimationActive: true, animationBegin: 0, animationDuration: 520, animationEasing: "ease-out" },
     });
-    expect(Object.values(presets?.(true) ?? {}).every((motion) => !motion.isAnimationActive && motion.animationDuration === 0)).toBe(true);
+    expect(Object.values(revenueChartMotions(true)).every((motion) => !motion.isAnimationActive && motion.animationDuration === 0)).toBe(true);
   });
 
   it("renders decision-focused sales visualizations and accessible values", () => {
