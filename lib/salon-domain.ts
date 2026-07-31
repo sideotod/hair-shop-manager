@@ -32,13 +32,17 @@ export type LedgerInput = {
   occurredAt?: string;
   correctionOf?: string;
   customerId?: string;
+  grossWon?: number;
   amountWon: number;
+  discountWon?: number;
   vatWon?: number;
   feeWon?: number;
+  expenseWon?: number;
   incentiveWon?: number;
   pointsWon?: number;
   couponWon?: number;
   profitWon?: number;
+  details?: JsonObject;
 };
 
 export type LedgerEntry = {
@@ -48,13 +52,17 @@ export type LedgerEntry = {
   occurredAt: string;
   correctionOf: string | null;
   customerId?: string | null;
+  grossWon: number;
   amountWon: number;
+  discountWon: number;
   vatWon: number;
   feeWon: number;
+  expenseWon: number;
   incentiveWon: number;
   pointsWon: number;
   couponWon: number;
   profitWon: number;
+  details: JsonObject;
 };
 
 export type AuditEvent = {

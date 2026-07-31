@@ -1,15 +1,16 @@
+import { renderToStaticMarkup } from "react-dom/server";
 import { describe, expect, it } from "vitest";
 
 import SalesPage from "./page";
 
 describe("SalesPage", () => {
-  it("passes searchParams-filtered server analytics to the client dashboard", async () => {
-    const page = await SalesPage({
-      searchParams: Promise.resolve({ preset: "week", start: "2026-07-25", end: "2026-07-25", compare: "false", staff: "harin", service: "perm", payment: "cash" }),
-    });
-
-    expect(page.props.analytics.metrics[0][1]).toBe("₩8,640,000");
-    expect(page.props.analytics.metrics[2][1]).toBe("42건");
-    expect(page.props.query).toMatchObject({ start: "2026-07-25", end: "2026-07-25", staff: "harin", service: "perm", payment: "cash" });
+  it("builds server analytics from the immutable ledger for a simple view", async () => {
+    const page = await SalesPage({ searchParams: Promise.resolve({ view: "month", cursor: "2026-07-31" }) });
+    expect(page.props.analytics.totals).toEqual({ today: 0, month: 29960000, total: 29960000 });
+    expect(page.props.analytics.transactions.every((row: { status: string }) => row.status === "결제")).toBe(true);
+  });
+  it("opens payment registration on the sales tab with a preselected customer", async () => {
+    const page = await SalesPage({ searchParams: Promise.resolve({ tab: "payment", customer: "customer-seed-2" }) });
+    expect(renderToStaticMarkup(page)).toContain('value="customer-seed-2" selected=""');
   });
 });

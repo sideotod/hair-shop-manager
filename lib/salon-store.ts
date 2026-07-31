@@ -24,13 +24,17 @@ type LedgerRow = {
   occurred_at: string;
   correction_of: string | null;
   customer_id: string | null;
+  gross_won: number;
   amount_won: number;
+  discount_won: number;
   vat_won: number;
   fee_won: number;
+  expense_won: number;
   incentive_won: number;
   points_won: number;
   coupon_won: number;
   profit_won: number;
+  details: string;
 };
 
 type AuditRow = {
@@ -89,13 +93,17 @@ function ledgerFromRow(row: LedgerRow): LedgerEntry {
     occurredAt: row.occurred_at,
     correctionOf: row.correction_of,
     customerId: row.customer_id,
+    grossWon: row.gross_won,
     amountWon: row.amount_won,
+    discountWon: row.discount_won,
     vatWon: row.vat_won,
     feeWon: row.fee_won,
+    expenseWon: row.expense_won,
     incentiveWon: row.incentive_won,
     pointsWon: row.points_won,
     couponWon: row.coupon_won,
     profitWon: row.profit_won,
+    details: parseJson<JsonObject>(row.details),
   };
 }
 
@@ -154,13 +162,17 @@ function createSchema(db: DatabaseSync) {
       occurred_at TEXT NOT NULL,
       correction_of TEXT REFERENCES ledger(id),
       customer_id TEXT,
+      gross_won INTEGER NOT NULL DEFAULT 0,
       amount_won INTEGER NOT NULL,
+      discount_won INTEGER NOT NULL DEFAULT 0,
       vat_won INTEGER NOT NULL,
       fee_won INTEGER NOT NULL,
+      expense_won INTEGER NOT NULL DEFAULT 0,
       incentive_won INTEGER NOT NULL,
       points_won INTEGER NOT NULL,
       coupon_won INTEGER NOT NULL,
-      profit_won INTEGER NOT NULL
+      profit_won INTEGER NOT NULL,
+      details TEXT NOT NULL DEFAULT '{}'
     );
     CREATE TABLE IF NOT EXISTS settings (
       id INTEGER PRIMARY KEY CHECK (id = 1),
@@ -177,8 +189,25 @@ function createSchema(db: DatabaseSync) {
       payload TEXT NOT NULL
     );
   `);
-  const ledgerColumns = db.prepare("PRAGMA table_info(ledger)").all() as { name: string }[];
-  if (!ledgerColumns.some(({ name }) => name === "customer_id")) db.exec("ALTER TABLE ledger ADD COLUMN customer_id TEXT");
+  const ledgerColumns = new Set((db.prepare("PRAGMA table_info(ledger)").all() as { name: string }[]).map(({ name }) => name));
+  if (!ledgerColumns.has("customer_id")) db.exec("ALTER TABLE ledger ADD COLUMN customer_id TEXT");
+  if (!ledgerColumns.has("gross_won")) db.exec("ALTER TABLE ledger ADD COLUMN gross_won INTEGER NOT NULL DEFAULT 0");
+  if (!ledgerColumns.has("discount_won")) db.exec("ALTER TABLE ledger ADD COLUMN discount_won INTEGER NOT NULL DEFAULT 0");
+  if (!ledgerColumns.has("expense_won")) db.exec("ALTER TABLE ledger ADD COLUMN expense_won INTEGER NOT NULL DEFAULT 0");
+  if (!ledgerColumns.has("details")) db.exec("ALTER TABLE ledger ADD COLUMN details TEXT NOT NULL DEFAULT '{}'");
+  db.exec("UPDATE ledger SET gross_won = amount_won WHERE gross_won = 0");
+  db.exec(`UPDATE ledger SET details = CASE id
+    WHEN 'ledger-seed-1' THEN '{"operator":"원장","serviceMajor":"컬러","gender":"female","visitType":"repeat","paymentMethods":{"card":10480000}}'
+    WHEN 'ledger-seed-2' THEN '{"operator":"원장","serviceMajor":"펌","gender":"male","visitType":"first","paymentMethods":{"cash":8640000}}'
+    WHEN 'ledger-seed-3' THEN '{"operator":"원장","serviceMajor":"클리닉","gender":"female","visitType":"repeat","paymentMethods":{"prepaid":6120000}}'
+    WHEN 'ledger-seed-4' THEN '{"operator":"원장","serviceMajor":"커트","gender":"male","visitType":"repeat","paymentMethods":{"other":4720000}}'
+    ELSE details END WHERE details = '{}'`);
+  db.exec(`UPDATE ledger SET
+    customer_id = CASE id WHEN 'ledger-seed-1' THEN 'customer-seed-1' WHEN 'ledger-seed-2' THEN 'customer-seed-2' WHEN 'ledger-seed-3' THEN 'customer-seed-1' WHEN 'ledger-seed-4' THEN 'customer-seed-2' ELSE customer_id END,
+    expense_won = CASE id WHEN 'ledger-seed-1' THEN 3100000 WHEN 'ledger-seed-2' THEN 2580000 WHEN 'ledger-seed-3' THEN 1820000 WHEN 'ledger-seed-4' THEN 1440000 ELSE expense_won END,
+    incentive_won = CASE id WHEN 'ledger-seed-1' THEN 2200000 WHEN 'ledger-seed-2' THEN 1800000 WHEN 'ledger-seed-3' THEN 1250000 WHEN 'ledger-seed-4' THEN 830000 ELSE incentive_won END,
+    points_won = CASE id WHEN 'ledger-seed-1' THEN 1000 WHEN 'ledger-seed-2' THEN 0 WHEN 'ledger-seed-3' THEN 0 WHEN 'ledger-seed-4' THEN 0 ELSE points_won END
+    WHERE id IN ('ledger-seed-1', 'ledger-seed-2', 'ledger-seed-3', 'ledger-seed-4')`);
 }
 
 function seed(db: DatabaseSync) {
@@ -224,15 +253,16 @@ function seed(db: DatabaseSync) {
     addAudit(db, "seed-settings", "settings", "1", "원장", { before: null, after: parseJson<JsonObject>(seedSettings.payload) }, seededAt);
 
     const ledger = [
-      ["ledger-seed-1", "seed-revenue-20260724", "2026-07-24T12:00:00.000Z", 10480000, 1000000, 300000, 2200000, 1000, 0, 6080000, "customer-seed-1"],
-      ["ledger-seed-2", "seed-revenue-20260725", "2026-07-25T12:00:00.000Z", 8640000, 800000, 250000, 1800000, 0, 0, 5010000, "customer-seed-2"],
-      ["ledger-seed-3", "seed-revenue-20260726", "2026-07-26T12:00:00.000Z", 6120000, 550000, 200000, 1250000, 0, 0, 3550000, "customer-seed-1"],
-      ["ledger-seed-4", "seed-revenue-20260727", "2026-07-27T12:00:00.000Z", 4720000, 370000, 160000, 830000, 0, 0, 2750000, "customer-seed-2"],
+      ["ledger-seed-1", "seed-revenue-20260724", "2026-07-24T12:00:00.000Z", 10480000, 1000000, 300000, 3100000, 2200000, 1000, 6080000, "customer-seed-1", { operator: "원장", serviceMajor: "컬러", serviceDetail: "전체 염색", styleName: "브라운", gender: "female", visitType: "repeat", paymentMethods: { card: 10480000 } }],
+      ["ledger-seed-2", "seed-revenue-20260725", "2026-07-25T12:00:00.000Z", 8640000, 800000, 250000, 2580000, 1800000, 0, 5010000, "customer-seed-2", { operator: "원장", serviceMajor: "펌", serviceDetail: "디지털 펌", styleName: "웨이브", gender: "male", visitType: "first", paymentMethods: { cash: 8640000 } }],
+      ["ledger-seed-3", "seed-revenue-20260726", "2026-07-26T12:00:00.000Z", 6120000, 550000, 200000, 1820000, 1250000, 0, 3550000, "customer-seed-1", { operator: "원장", serviceMajor: "클리닉", serviceDetail: "집중 클리닉", styleName: "손상 케어", gender: "female", visitType: "repeat", paymentMethods: { prepaid: 6120000 } }],
+      ["ledger-seed-4", "seed-revenue-20260727", "2026-07-27T12:00:00.000Z", 4720000, 370000, 160000, 1440000, 830000, 0, 2750000, "customer-seed-2", { operator: "원장", serviceMajor: "커트", serviceDetail: "남성 커트", styleName: "댄디", gender: "male", visitType: "repeat", paymentMethods: { other: 4720000 } }],
     ] as const;
-    const insertLedger = db.prepare("INSERT INTO ledger (id, request_key, kind, occurred_at, correction_of, customer_id, amount_won, vat_won, fee_won, incentive_won, points_won, coupon_won, profit_won) VALUES (?, ?, 'payment', ?, NULL, ?, ?, ?, ?, ?, ?, ?, ?)");
-    for (const [id, requestKey, occurredAt, amountWon, vatWon, feeWon, incentiveWon, pointsWon, couponWon, profitWon, customerId] of ledger) {
-      insertLedger.run(id, requestKey, occurredAt, customerId, amountWon, vatWon, feeWon, incentiveWon, pointsWon, couponWon, profitWon);
-      addAudit(db, "seed-ledger", "ledger", id, "원장", { before: null, after: { id, requestKey, kind: "payment", occurredAt, correctionOf: null, customerId, amountWon, vatWon, feeWon, incentiveWon, pointsWon, couponWon, profitWon } }, occurredAt);
+    const insertLedger = db.prepare("INSERT INTO ledger (id, request_key, kind, occurred_at, correction_of, customer_id, gross_won, amount_won, discount_won, vat_won, fee_won, expense_won, incentive_won, points_won, coupon_won, profit_won, details) VALUES (?, ?, 'payment', ?, NULL, ?, ?, ?, 0, ?, ?, ?, ?, ?, 0, ?, ?)");
+    for (const [id, requestKey, occurredAt, amountWon, vatWon, feeWon, expenseWon, incentiveWon, pointsWon, profitWon, customerId, details] of ledger) {
+      const detailsJson = stringifyJson(details, `ledger details:${id}`);
+      insertLedger.run(id, requestKey, occurredAt, customerId, amountWon, amountWon, vatWon, feeWon, expenseWon, incentiveWon, pointsWon, profitWon, detailsJson);
+      addAudit(db, "seed-ledger", "ledger", id, "원장", { before: null, after: { id, requestKey, kind: "payment", occurredAt, correctionOf: null, customerId, grossWon: amountWon, amountWon, discountWon: 0, vatWon, feeWon, expenseWon, incentiveWon, pointsWon, couponWon: 0, profitWon, details } }, occurredAt);
     }
   });
 }
@@ -306,16 +336,21 @@ export function createSalonStore(filename = join(process.cwd(), ".data", "hairha
         occurredAt: input.occurredAt ?? now(),
         correctionOf: input.correctionOf ?? null,
         customerId: input.customerId ?? null,
+        grossWon: input.grossWon ?? input.amountWon,
         amountWon: input.amountWon,
+        discountWon: input.discountWon ?? 0,
         vatWon: input.vatWon ?? 0,
         feeWon: input.feeWon ?? 0,
+        expenseWon: input.expenseWon ?? 0,
         incentiveWon: input.incentiveWon ?? 0,
         pointsWon: input.pointsWon ?? 0,
         couponWon: input.couponWon ?? 0,
         profitWon: input.profitWon ?? 0,
+        details: input.details ?? {},
       };
       assertText(entry.id, "id");
       for (const [field, value] of Object.entries(entry)) if (field.endsWith("Won")) assertWon(value as number, field);
+      const details = stringifyJson(entry.details, "ledger details");
 
       return transaction(db, () => {
         if (db.prepare("SELECT 1 FROM ledger WHERE request_key = ?").get(entry.requestKey)) {
@@ -327,21 +362,35 @@ export function createSalonStore(filename = join(process.cwd(), ".data", "hairha
         if (entry.correctionOf && !db.prepare("SELECT 1 FROM ledger WHERE id = ?").get(entry.correctionOf)) {
           throw new Error(`Unknown correctionOf ledger entry: ${entry.correctionOf}`);
         }
-        if (entry.customerId && !findRecord("customers", entry.customerId)) throw new Error(`Unknown customerId ledger entry: ${entry.customerId}`);
-        db.prepare("INSERT INTO ledger (id, request_key, kind, occurred_at, correction_of, customer_id, amount_won, vat_won, fee_won, incentive_won, points_won, coupon_won, profit_won) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)").run(
+        const customer = entry.customerId ? findRecord<JsonObject>("customers", entry.customerId) : null;
+        if (entry.customerId && !customer) throw new Error(`Unknown customerId ledger entry: ${entry.customerId}`);
+        if (customer && entry.pointsWon !== 0) {
+          const currentPoints = typeof customer.value.points === "number" && Number.isSafeInteger(customer.value.points) ? customer.value.points : 0;
+          const nextPoints = currentPoints + entry.pointsWon;
+          if (nextPoints < 0) throw new Error("Customer points cannot be negative");
+          const timestamp = now();
+          const after = { ...customer, value: { ...customer.value, points: nextPoints }, updatedAt: timestamp };
+          db.prepare("UPDATE records SET payload = ?, updated_at = ? WHERE kind = 'customers' AND id = ?").run(stringifyJson(after.value, "customer points"), timestamp, customer.id);
+          addAudit(db, "ledger-points", "customers", customer.id, actor, { before: customer, after }, timestamp);
+        }
+        db.prepare("INSERT INTO ledger (id, request_key, kind, occurred_at, correction_of, customer_id, gross_won, amount_won, discount_won, vat_won, fee_won, expense_won, incentive_won, points_won, coupon_won, profit_won, details) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)").run(
           entry.id,
           entry.requestKey,
           entry.kind,
           entry.occurredAt,
           entry.correctionOf,
           entry.customerId ?? null,
+          entry.grossWon,
           entry.amountWon,
+          entry.discountWon,
           entry.vatWon,
           entry.feeWon,
+          entry.expenseWon,
           entry.incentiveWon,
           entry.pointsWon,
           entry.couponWon,
           entry.profitWon,
+          details,
         );
         addAudit(db, "append-ledger", "ledger", entry.id, actor, { before: null, after: entry }, entry.occurredAt);
         return entry;

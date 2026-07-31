@@ -1,31 +1,31 @@
 import { describe, expect, it } from "vitest";
 
-import { DEFAULT_REVENUE_QUERY, parseRevenueQuery, revenuePresetRange, serializeRevenueQuery } from "./revenue-query";
+import { DEFAULT_REVENUE_QUERY, nextRevenueQuery, parseRevenueQuery, previousRevenueQuery, revenueRange, serializeRevenueQuery } from "./revenue-query";
 
 describe("revenue query", () => {
-  it("round-trips supported analytics filters", () => {
-    const query = {
-      preset: "week",
-      start: "2026-07-24",
-      end: "2026-07-30",
-      compare: true,
-      staff: "all",
-      service: "color",
-      payment: "card",
-    } as const;
+  it.each(["day", "month", "total"] as const)("round-trips the %s view without legacy filters", (view) => {
+    const query = { view, cursor: "2026-07-31" } as const;
 
     expect(parseRevenueQuery(serializeRevenueQuery(query))).toEqual(query);
+    expect(serializeRevenueQuery(query)).toBe(`view=${view}&cursor=2026-07-31`);
   });
 
-  it("returns stable defaults for invalid dates and presets", () => {
-    expect(parseRevenueQuery("preset=year&start=2026-99-40")).toEqual(DEFAULT_REVENUE_QUERY);
-    expect(parseRevenueQuery("preset=week&start=2026-07-30&end=2026-07-24&staff=unknown&service=unknown&payment=unknown")).toEqual(DEFAULT_REVENUE_QUERY);
+  it("returns stable defaults for invalid views and dates", () => {
+    expect(parseRevenueQuery("view=week&cursor=2026-07-31")).toEqual(DEFAULT_REVENUE_QUERY);
+    expect(parseRevenueQuery("view=day&cursor=2026-02-30")).toEqual(DEFAULT_REVENUE_QUERY);
   });
 
-  it("returns fixed ranges for every supported preset", () => {
-    expect(revenuePresetRange("today")).toEqual({ start: "2026-07-30", end: "2026-07-30" });
-    expect(revenuePresetRange("week")).toEqual({ start: "2026-07-24", end: "2026-07-30" });
-    expect(revenuePresetRange("month")).toEqual({ start: "2026-07-01", end: "2026-07-30" });
-    expect(revenuePresetRange("previous")).toEqual({ start: "2026-06-01", end: "2026-06-30" });
+  it("moves day and month cursors with calendar-safe previous and next helpers", () => {
+    expect(previousRevenueQuery({ view: "day", cursor: "2026-03-01" })).toEqual({ view: "day", cursor: "2026-02-28" });
+    expect(nextRevenueQuery({ view: "day", cursor: "2026-02-28" })).toEqual({ view: "day", cursor: "2026-03-01" });
+    expect(previousRevenueQuery({ view: "month", cursor: "2026-03-31" })).toEqual({ view: "month", cursor: "2026-02-01" });
+    expect(nextRevenueQuery({ view: "month", cursor: "2026-12-15" })).toEqual({ view: "month", cursor: "2027-01-01" });
+    expect(nextRevenueQuery({ view: "total", cursor: "2026-07-31" })).toEqual({ view: "total", cursor: "2026-07-31" });
+  });
+
+  it("resolves intuitive day, month, and total ranges", () => {
+    expect(revenueRange({ view: "day", cursor: "2026-07-31" })).toEqual({ start: "2026-07-31", end: "2026-07-31", label: "2026년 7월 31일" });
+    expect(revenueRange({ view: "month", cursor: "2026-02-18" })).toEqual({ start: "2026-02-01", end: "2026-02-28", label: "2026년 2월" });
+    expect(revenueRange({ view: "total", cursor: "2026-07-31" })).toEqual({ start: "0000-01-01", end: "9999-12-31", label: "누적" });
   });
 });

@@ -1,74 +1,85 @@
 import { describe, expect, it } from "vitest";
 
-import { buildRevenueAnalytics, filterRevenueTransactions, revenueAnalytics, revenueTransactions } from "./revenue-data";
-import type { RevenueQuery } from "../components/sales/revenue-query";
+import { buildRevenueAnalytics, buildRevenueTransactions, filterRevenueSelection, filterRevenueTransactions } from "./revenue-data";
+import { createSalonStore } from "./salon-store";
 
-describe("server revenue data", () => {
-  it("expands immutable individual records and preserves every aggregate exactly", () => {
-    expect(revenueTransactions).toHaveLength(246);
-    expect(Object.isFrozen(revenueTransactions)).toBe(true);
-    expect(revenueTransactions.every(Object.isFrozen)).toBe(true);
-    expect(revenueTransactions[0]).toMatchObject({
-      id: "TX-20260724-001",
-      customerIdentifier: "C-0724-001",
-      gross: 69867,
-      profit: 40533,
-      service: "컬러",
-      staff: "서윤",
-      payment: "카드",
-    });
+describe("server revenue aggregate", () => {
+  it("builds every KPI, chart, table, CSV source, and transaction row from the same immutable ledger", () => {
+    const store = createSalonStore(":memory:");
+    try {
+      const snapshot = store.snapshot();
+      const transactions = buildRevenueTransactions(snapshot.ledger, snapshot.records.customers ?? []);
+      const analytics = buildRevenueAnalytics(transactions, { view: "month", cursor: "2026-07-31" }, "2026-07-31");
 
-    expect(revenueTransactions.reduce((sum, row) => sum + row.gross, 0)).toBe(29960000);
-    expect(revenueTransactions.reduce((sum, row) => sum + row.profit, 0)).toBe(17390000);
-    expect(revenueTransactions.filter((row) => row.date === "2026-07-24")).toHaveLength(150);
-    expect(revenueTransactions.filter((row) => row.payment === "현금")).toHaveLength(42);
-    expect(revenueTransactions.filter((row) => row.service === "클리닉").reduce((sum, row) => sum + row.gross, 0)).toBe(6120000);
-    expect(revenueTransactions.filter((row) => row.staff === "민아").reduce((sum, row) => sum + row.profit, 0)).toBe(2750000);
-    expect(revenueTransactions.flatMap((row) => row.deductions).filter((item) => item.name === "환불").reduce((sum, item) => sum + item.value, 0)).toBe(820000);
-    expect(revenueTransactions.every((row) => row.gross - row.deductions.reduce((sum, item) => sum + item.value, 0) === row.profit)).toBe(true);
+      expect(transactions).toHaveLength(4);
+      expect(Object.isFrozen(transactions)).toBe(true);
+      expect(transactions.every(Object.isFrozen)).toBe(true);
+      expect(transactions[0]).toMatchObject({ id: "ledger-seed-1", status: "결제", date: "2026-07-24", service: "컬러", payment: "카드", gross: 10480000, profit: 6080000 });
+      expect(transactions.every((row) => !("staff" in row))).toBe(true);
 
-    expect(revenueAnalytics.daily[0]).toEqual({ date: "7/24", gross: 10480000, profit: 6080000 });
-    expect(revenueAnalytics.payments.map(({ name, value, count }) => ({ name, value, count }))).toEqual([
-      { name: "카드", value: 61, count: 150 },
-      { name: "현금", value: 17, count: 42 },
-      { name: "선불권", value: 14, count: 34 },
-      { name: "기타", value: 8, count: 20 },
-    ]);
-    expect(revenueAnalytics.metrics[0]?.[1]).toBe("₩29,960,000");
-    expect(revenueAnalytics.metrics[1]?.[1]).toBe("₩17,390,000");
-    expect(revenueAnalytics.metrics[2]?.[1]).toBe("246건");
-
-    for (const item of revenueAnalytics.daily) {
-      const rows = revenueTransactions.filter((record) => record.dateLabel === item.date);
-      expect(rows.reduce((sum, record) => sum + record.gross, 0)).toBe(item.gross);
-      expect(rows.reduce((sum, record) => sum + record.profit, 0)).toBe(item.profit);
-    }
-    for (const item of revenueAnalytics.services) {
-      expect(revenueTransactions.filter((record) => record.service === item.name).reduce((sum, record) => sum + record.gross, 0)).toBe(item.sales);
-    }
-    for (const item of revenueAnalytics.staff) {
-      const rows = revenueTransactions.filter((record) => record.staff === item.name);
-      expect(rows.reduce((sum, record) => sum + record.gross, 0)).toBe(item.sales);
-      expect(rows.reduce((sum, record) => sum + record.profit, 0)).toBe(item.profit);
-    }
-    for (const item of revenueAnalytics.deductions.slice(1, -1)) {
-      expect(revenueTransactions.flatMap((record) => record.deductions).filter((deduction) => deduction.name === item.name).reduce((sum, deduction) => sum + deduction.value, 0)).toBe(item.value);
+      expect(analytics.totals).toEqual({ today: 0, month: 29960000, total: 29960000 });
+      expect(analytics.trend[0]).toEqual({ date: "7/24", gross: 10480000, profit: 6080000 });
+      expect(analytics.services[0]).toEqual({ name: "컬러", sales: 10480000 });
+      expect(analytics.payments.map(({ name, amount, value }) => ({ name, amount, value }))).toEqual([
+        { name: "카드", amount: 10480000, value: 35 },
+        { name: "현금", amount: 8640000, value: 29 },
+        { name: "선불권", amount: 6120000, value: 20 },
+        { name: "기타", amount: 4720000, value: 16 },
+      ]);
+      expect(analytics.genders).toEqual([{ name: "여성", sales: 16600000 }, { name: "남성", sales: 13360000 }]);
+      expect(analytics.visitTypes).toEqual([{ name: "재방문", sales: 21320000 }, { name: "신규", sales: 8640000 }]);
+      expect(analytics.settlement).toEqual([
+        { name: "총 시술금액", value: 29960000 },
+        { name: "할인", value: 0 },
+        { name: "포인트 사용", value: 0 },
+        { name: "실결제", value: 29960000 },
+        { name: "VAT", value: 2720000 },
+        { name: "결제 수수료", value: 910000 },
+        { name: "지출", value: 8940000 },
+        { name: "샵 수익", value: 17390000 },
+      ]);
+      expect(analytics.transactions).toEqual(transactions);
+      expect(analytics.trend.reduce((sum, row) => sum + row.gross, 0)).toBe(analytics.transactions.reduce((sum, row) => sum + row.gross, 0));
+      expect(analytics.settlement.at(-1)?.value).toBe(analytics.transactions.reduce((sum, row) => sum + row.profit, 0));
+    } finally {
+      store.close();
     }
   });
 
-  it("filters records and rebuilds every aggregate from the filtered subset", () => {
-    const query: RevenueQuery = { preset: "week", start: "2026-07-25", end: "2026-07-25", compare: false, staff: "harin", service: "perm", payment: "cash" };
-    const records = filterRevenueTransactions(revenueTransactions, query);
-    const analytics = buildRevenueAnalytics(records, query);
+  it("keeps today/month/total cards visible while the selected day has no data", () => {
+    const store = createSalonStore(":memory:");
+    try {
+      const snapshot = store.snapshot();
+      const transactions = buildRevenueTransactions(snapshot.ledger, snapshot.records.customers ?? []);
+      const analytics = buildRevenueAnalytics(transactions, { view: "day", cursor: "2026-07-31" }, "2026-07-31");
 
-    expect(records).toHaveLength(42);
-    expect(analytics.selectedPeriod).toEqual({ start: "2026-07-25", end: "2026-07-25", label: "2026년 7월 25일" });
-    expect(analytics.metrics[0]?.[1]).toBe("₩8,640,000");
-    expect(analytics.metrics[1]?.[1]).toBe("₩5,010,000");
-    expect(analytics.metrics[2]?.[1]).toBe("42건");
-    expect(analytics.daily).toEqual([{ date: "7/25", gross: 8640000, profit: 5010000 }]);
-    expect(analytics.payments.find((item) => item.name === "현금")).toMatchObject({ value: 100, count: 42 });
-    expect(analytics.services.find((item) => item.name === "펌")?.sales).toBe(8640000);
-    expect(analytics.staff.find((item) => item.name === "하린")).toMatchObject({ sales: 8640000, profit: 5010000 });
+      expect(analytics.totals).toEqual({ today: 0, month: 29960000, total: 29960000 });
+      expect(analytics.transactions).toEqual([]);
+      expect(analytics.trend).toEqual([]);
+      expect(analytics.services).toEqual([]);
+      expect(analytics.payments).toEqual([]);
+      expect(analytics.genders).toEqual([]);
+      expect(analytics.visitTypes).toEqual([]);
+      expect(analytics.settlement.every(({ value }) => value === 0)).toBe(true);
+    } finally {
+      store.close();
+    }
+  });
+
+  it("filters day, month, total, and accessible chart selections without staff filters", () => {
+    const store = createSalonStore(":memory:");
+    try {
+      const snapshot = store.snapshot();
+      const transactions = buildRevenueTransactions(snapshot.ledger, snapshot.records.customers ?? []);
+
+      expect(filterRevenueTransactions(transactions, { view: "day", cursor: "2026-07-25" })).toHaveLength(1);
+      expect(filterRevenueTransactions(transactions, { view: "month", cursor: "2026-07-31" })).toHaveLength(4);
+      expect(filterRevenueTransactions(transactions, { view: "total", cursor: "2026-07-31" })).toHaveLength(4);
+      expect(filterRevenueSelection(transactions, { kind: "payment", key: "현금" })).toHaveLength(1);
+      expect(filterRevenueSelection(transactions, { kind: "gender", key: "여성" })).toHaveLength(2);
+      expect(filterRevenueSelection(transactions, { kind: "visitType", key: "신규" })).toHaveLength(1);
+    } finally {
+      store.close();
+    }
   });
 });
