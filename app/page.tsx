@@ -4,5 +4,10 @@ import { connection } from "next/server";
 
 export default async function Page() {
   await connection();
-  return <DashboardPage snapshot={createSalonStore().snapshot()} />;
+  const store = createSalonStore();
+  try {
+    return <DashboardPage snapshot={store.snapshot()} />;
+  } finally {
+    store.close();
+  }
 }

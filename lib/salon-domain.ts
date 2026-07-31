@@ -61,6 +61,7 @@ export type SalonSnapshot = {
 };
 
 export type SalonStore = {
+  close(): void;
   list<T extends JsonValue = JsonValue>(kind: RecordKind): readonly SalonRecord<T>[];
   get<T extends JsonValue = JsonValue>(kind: RecordKind, id: string): SalonRecord<T> | null;
   save<T extends JsonValue>(kind: RecordKind, id: string, value: T, actor: string): SalonRecord<T>;

@@ -71,6 +71,61 @@ describe("DashboardPage", () => {
     expect(html).toContain("감사 이력이 없습니다.");
   });
 
+  it("excludes malformed dates and renders an explicit correction warning", () => {
+    const seeded = createSalonStore(":memory:").snapshot();
+    const snapshot = {
+      ...seeded,
+      records: {
+        ...seeded.records,
+        bookings: [
+          ...(seeded.records.bookings ?? []),
+          {
+            id: "booking-malformed",
+            kind: "bookings",
+            value: { customerId: "customer-seed-1", startsAt: "not-a-date", service: "깨진 날짜 예약", status: "confirmed" },
+            createdAt: "2026-07-31T00:00:00.000Z",
+            updatedAt: "2026-07-31T00:00:00.000Z",
+            archivedAt: null,
+          },
+        ],
+      },
+      ledger: [{
+        id: "ledger-malformed",
+        requestKey: "malformed-ledger-date",
+        kind: "payment",
+        occurredAt: "not-a-date",
+        correctionOf: null,
+        amountWon: 999999999,
+        vatWon: 0,
+        feeWon: 0,
+        incentiveWon: 0,
+        pointsWon: 0,
+        couponWon: 0,
+        profitWon: 999999999,
+      }],
+      auditEvents: [{
+        id: "audit-malformed",
+        occurredAt: "not-a-date",
+        actor: "원장",
+        action: "malformed-audit",
+        kind: "audit",
+        recordId: null,
+        payload: null,
+      }],
+    };
+
+    const html = renderToStaticMarkup(<DashboardPage snapshot={snapshot} today={today} />);
+
+    expect(html).toContain("날짜 확인 필요: 3건");
+    expect(html).toContain("오늘 1건");
+    expect(html).not.toContain("오늘 2건");
+    expect(html).not.toContain("깨진 날짜 예약");
+    expect(html).toContain("₩0");
+    expect(html).not.toContain("₩999,999,999");
+    expect(html).toContain("원장 · malformed-audit");
+    expect(html).toContain("audit · 날짜 확인 필요");
+  });
+
   it("preserves inert background behavior while an overlay is open", () => {
     const html = renderToStaticMarkup(
       <AppShell

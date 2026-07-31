@@ -4,6 +4,14 @@ import type { JsonValue } from "./salon-domain";
 import { createSalonStore } from "./salon-store";
 
 describe("SalonStore", () => {
+  it("closes its SQLite connection", () => {
+    const store = createSalonStore(":memory:");
+
+    store.close();
+
+    expect(() => store.list("customers")).toThrow();
+  });
+
   it("saves, updates, and archives records with one audit event per mutation", () => {
     const store = createSalonStore(":memory:");
     const customerCount = store.list("customers").length;

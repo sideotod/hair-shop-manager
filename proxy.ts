@@ -3,8 +3,17 @@ import { NextResponse } from "next/server";
 
 import { isValidOwnerSession, OWNER_SESSION_COOKIE } from "./lib/auth";
 
+const publicFiles = new Set(["/favicon.ico", "/icon.svg", "/robots.txt", "/sitemap.xml"]);
+
+export function isPublicPath(pathname: string): boolean {
+  return pathname === "/login"
+    || pathname.startsWith("/_next/static/")
+    || pathname.startsWith("/_next/image/")
+    || publicFiles.has(pathname);
+}
+
 export function proxy(request: NextRequest) {
-  if (request.nextUrl.pathname === "/login") return NextResponse.next();
+  if (isPublicPath(request.nextUrl.pathname)) return NextResponse.next();
   if (isValidOwnerSession(request.cookies.get(OWNER_SESSION_COOKIE)?.value)) return NextResponse.next();
 
   const login = new URL("/login", request.url);
@@ -13,5 +22,5 @@ export function proxy(request: NextRequest) {
 }
 
 export const config = {
-  matcher: ["/((?!_next/static|_next/image|favicon.ico|.*\\..*).*)"],
+  matcher: ["/:path*"],
 };

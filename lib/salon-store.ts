@@ -242,6 +242,9 @@ export function createSalonStore(filename = join(process.cwd(), ".data", "hairha
   };
 
   return {
+    close() {
+      db.close();
+    },
     list<T extends JsonValue = JsonValue>(kind: RecordKind) {
       return (db.prepare("SELECT * FROM records WHERE kind = ? AND archived_at IS NULL ORDER BY created_at, id").all(kind) as RecordRow[]).map(recordFromRow<T>);
     },

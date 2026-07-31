@@ -111,6 +111,14 @@ git commit -m "feat(data): add owner salon store"
 - `DashboardPage` consumes a `SalonSnapshot` and exposes working links to customer, waiting customer, booking, payment, and message flows.
 - Produces `npm run tauri:dev` and `npm run tauri:info`; production `tauri:build` sidecar packaging is completed in Task 9.
 
+**FUNCTION.md mappings:**
+- `FUNCTION.md §0 공통 기능`: owner authentication, shared desktop shell, navigation, help, logout, and common customer search entry point.
+- `FUNCTION.md §1.1 운영 현황`: snapshot-driven sales, booking, waiting, SMS, automation, and audit dashboard status.
+- `FUNCTION.md §1.2 안내`: operational notices displayed from persisted salon records.
+- `FUNCTION.md §2.2 고객 검색/조회`: ten-mode customer search and customer-detail links in the shared shell.
+- `FUNCTION.md §2.4 대기 고객`: waiting-customer count, list, registration, customer, and payment links.
+- `FUNCTION.md §8 매장 설정`: persisted shop name, owner label, and SMS quota surfaced throughout the shell.
+
 - [ ] **Step 1: Write failing store, auth, and dashboard tests**
 
 Assert seeded `shopName` is `수원 본점`, `ownerName` is `원장`, password verification, invalid-session rejection, sidebar routes with no staff link, common customer search modes, logout, configured shop/owner labels, waiting list, day+0 through day+3 booking counts, SMS quota, automation states, notices, and quick-action hrefs.

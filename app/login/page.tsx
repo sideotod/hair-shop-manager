@@ -1,8 +1,9 @@
 import { loginOwner } from "../auth-actions";
-import { DEMO_OWNER_PASSWORD } from "../../lib/auth";
+import { DEMO_OWNER_PASSWORD, isDemoMode } from "../../lib/auth";
 
 export default async function LoginPage({ searchParams }: { searchParams: Promise<{ error?: string }> }) {
   const invalid = (await searchParams).error === "1";
+  const demoMode = isDemoMode();
 
   return (
     <main className="grid min-h-screen place-items-center bg-[var(--background)] px-8">
@@ -20,7 +21,7 @@ export default async function LoginPage({ searchParams }: { searchParams: Promis
           <button className="h-12 w-full rounded-[10px] bg-[var(--brand)] font-medium text-white" type="submit">로그인</button>
         </form>
 
-        <p className="mt-6 rounded-[10px] bg-[var(--brand-soft)] p-3 text-xs leading-5 text-[var(--brand)]">로컬 데모 원장 비밀번호: <strong>{DEMO_OWNER_PASSWORD}</strong></p>
+        {demoMode && <p className="mt-6 rounded-[10px] bg-[var(--brand-soft)] p-3 text-xs leading-5 text-[var(--brand)]">로컬 데모 원장 비밀번호: <strong>{DEMO_OWNER_PASSWORD}</strong></p>}
       </section>
     </main>
   );
