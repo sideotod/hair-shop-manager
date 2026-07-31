@@ -39,6 +39,46 @@ describe("booking actions", () => {
     expect(saveBookingRecord(store, form({ ...first, bookingId: "overlap", startTime: "10:30", endTime: "11:30" })).value).toMatchObject({ status: "confirmed", operator: "원장" });
   });
 
+  it("rejects invalid slots before persisting a crafted new customer", () => {
+    const store = createSalonStore(":memory:");
+    const customers = store.list("customers");
+
+    expect(() => saveBookingRecord(store, form({ newCustomerId: "customer-seed-1", newCustomerName: "덮어쓰기", newCustomerPhone: "010-1234-5678", service: "커트", date: "2026-08-03", startTime: "10:15", endTime: "10:45", status: "confirmed" }))).toThrow("예약 시간 단위");
+
+    expect(store.list("customers")).toHaveLength(customers.length);
+    expect(store.get("customers", "customer-seed-1")?.value).toMatchObject({ name: "김하늘" });
+  });
+
+  it("rejects an overlap before persisting a new customer", () => {
+    const store = createSalonStore(":memory:");
+    saveBookingRecord(store, form({ bookingId: "existing-overlap", customerId: "customer-seed-1", service: "커트", date: "2026-08-03", startTime: "14:00", endTime: "15:00", status: "confirmed" }));
+    const customers = store.list("customers");
+
+    expect(() => saveBookingRecord(store, form({ newCustomerName: "새 고객", newCustomerPhone: "010-1234-5678", service: "커트", date: "2026-08-03", startTime: "14:30", endTime: "15:00", status: "confirmed" }))).toThrow("겹칩니다");
+
+    expect(store.list("customers")).toHaveLength(customers.length);
+  });
+
+  it("rejects invalid booking settings without changing stored settings", () => {
+    const store = createSalonStore(":memory:");
+    const before = store.getSettings();
+
+    expect(() => saveBookingSettingsRecord(store, form({ bookingOpen: "09:45", bookingClose: "21:00", bookingSlotMinutes: "30" }))).toThrow("영업 시간");
+
+    expect(store.getSettings()).toEqual(before);
+  });
+
+  it("does not resurrect cancelled or archived bookings through edit or status actions", () => {
+    const store = createSalonStore(":memory:");
+    const booking = { bookingId: "booking-archive", customerId: "customer-seed-1", service: "커트", date: "2026-08-03", startTime: "10:00", endTime: "10:30", status: "confirmed" };
+
+    saveBookingRecord(store, form(booking));
+    cancelBookingRecord(store, form({ bookingId: "booking-archive" }));
+    expect(() => saveBookingRecord(store, form(booking))).toThrow("취소된 예약");
+    expect(() => changeBookingStatusRecord(store, form({ bookingId: "booking-archive", status: "completed" }))).toThrow("취소된 예약");
+    expect(store.get("bookings", "booking-archive")?.archivedAt).toBeTruthy();
+  });
+
   it("validates reminders and records Naver disabled dry-runs with retry history without credentials", () => {
     const store = createSalonStore(":memory:");
     expect(() => saveBookingRecord(store, form({ customerId: "customer-seed-1", service: "커트", date: "2026-08-03", startTime: "10:15", endTime: "11:00", status: "confirmed", reminderDayBefore: "not-a-flag" }))).toThrow("예약 알림 설정");

@@ -33,5 +33,34 @@
 
 ## Concerns
 
-- Production build remains blocked by the unrelated legacy `app/customer-actions.ts` Server Action export structure. Task 4 avoids that issue by keeping synchronous record operations in `lib/booking.ts` and exporting only async actions from `app/booking-actions.ts`.
+- The earlier `app/customer-actions.ts` Server Action build blocker is resolved by the preserved Task 3 base fix; this round's fresh production build passes. Task 4 continues to keep synchronous record operations in `lib/booking.ts` and exports only async actions from `app/booking-actions.ts`.
 - Naver is intentionally a settings and dry-run boundary; actual API contract, credentials, schedule, and conflict resolution require product/API authorization.
+
+## Fix round 1 — booking workflow hardening
+
+### Mappings
+
+- `FUNCTION.md` §5.1 reservation registration and overlap/operating-hour/time-unit rules now complete all booking validation and overlap checks before a new-customer record is saved. Client-provided `newCustomerId` is ignored and the server generates the customer ID.
+- `FUNCTION.md` §5.1 status/correction/cancellation behavior now rejects cancelled or archived records in edit, status, and repeat-cancel flows, preventing `SalonStore.save()` from clearing an archived booking.
+- `FUNCTION.md` §5.1 month view/date navigation uses calendar-month arithmetic (including month-end and leap-year clamping), and default/today dates use `Asia/Seoul`.
+- `FUNCTION.md` §5.1 booking/settings correction states now redirect safely back to the original `/bookings` query context with an accessible error message and the applicable create/edit form kept visible.
+
+### TDD evidence
+
+- Added mutation tests before changing production code for invalid slot + crafted new-customer ID, rejected overlap + no customer persistence, invalid settings + no settings change, and archived/cancelled edit/status rejection. The initial run failed exactly as expected: the crafted ID overwrote `customer-seed-1`, the overlap created a customer, and a cancelled booking was saved again.
+- Added Seoul/date tests before the implementation. The initial run failed because `todayInSeoul` did not exist; it now verifies the UTC-to-KST midnight edge, January 31 → February 28, leap-year January 31 → February 29, and month-nav URLs.
+
+### Fix-round verification
+
+| Command | Result |
+| --- | --- |
+| `npm test -- lib/booking.test.ts app/booking-actions.test.ts components/bookings/bookings-page.test.tsx` | 3 files, 14 tests passed |
+| `npm run typecheck` | passed (`tsc --noEmit`) |
+| `npm run build` | passed; all 8 routes generated/compiled |
+| `npm test` | 17 files, 89 tests passed |
+
+### Fix-round self-review
+
+- Error redirects accept only `/bookings` return paths and retain date/view/period/new/edit query state.
+- The error is rendered with `role="alert"`; booking-edit correction redirects reopen the affected details panel.
+- The Task 3 build fix is untouched; the fresh production build confirms it remains effective.

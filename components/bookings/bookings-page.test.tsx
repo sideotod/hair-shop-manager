@@ -2,7 +2,7 @@ import { renderToStaticMarkup } from "react-dom/server";
 import { describe, expect, it } from "vitest";
 
 import { createSalonStore } from "../../lib/salon-store";
-import { BookingsPage } from "./bookings-page";
+import { addCalendarMonths, BookingsPage, todayInSeoul } from "./bookings-page";
 
 function page(props: Partial<React.ComponentProps<typeof BookingsPage>> = {}) {
   const store = createSalonStore(":memory:");
@@ -42,5 +42,22 @@ describe("BookingsPage", () => {
     expect(html).toContain("disabled / dry-run");
     expect(html).not.toContain('name="designer"');
     expect(html).not.toContain('name="staff"');
+  });
+
+  it("uses Seoul's calendar date and calendar-month navigation at month ends", () => {
+    expect(todayInSeoul(new Date("2026-07-31T15:30:00.000Z"))).toBe("2026-08-01");
+    expect(addCalendarMonths("2026-01-31", 1)).toBe("2026-02-28");
+    expect(addCalendarMonths("2024-01-31", 1)).toBe("2024-02-29");
+    expect(page({ date: "2026-01-31", view: "month" })).toContain("/bookings?date=2025-12-31&amp;view=month&amp;period=7");
+    expect(page({ date: "2026-01-31", view: "month" })).toContain("/bookings?date=2026-02-28&amp;view=month&amp;period=7");
+  });
+
+  it("renders a correction state while preserving the booking query context", () => {
+    const html = page({ error: "영업 시간을 확인하세요.", showNew: true, view: "period", period: "14" });
+
+    expect(html).toContain('role="alert"');
+    expect(html).toContain("입력 내용을 수정하세요: 영업 시간을 확인하세요.");
+    expect(html).toContain('name="returnTo"');
+    expect(html).toContain("/bookings?date=2026-07-31&amp;view=period&amp;period=14&amp;new=1");
   });
 });

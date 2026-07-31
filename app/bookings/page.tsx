@@ -15,6 +15,8 @@ export default async function Page({ searchParams }: { searchParams: Promise<Rec
       bookings={snapshot.records.bookings ?? []}
       customers={snapshot.records.customers ?? []}
       date={value(params.date)}
+      edit={value(params.edit)}
+      error={value(params.error)}
       period={value(params.period)}
       settings={snapshot.settings}
       showNew={value(params.new) === "1"}
