@@ -413,7 +413,7 @@ git add app/settings app/settings-actions.ts components/settings components/app-
 git commit -m "feat(settings): complete owner shop settings"
 ```
 
-### Task 9: Full verification, Playwright QA, review, and push
+### Task 9: Full verification, Playwright QA, review, and first main push
 
 **Files:**
 - Create: `docs/qa/hairhaeyo-owner-operations-qa.md`
@@ -464,12 +464,83 @@ Launch the built Windows app, verify `수원 본점`, configured owner display n
 
 Fix every Critical and Important finding. Re-run focused tests after each fix and the full verification suite after the final fix.
 
-- [ ] **Step 7: Commit QA and push**
+- [ ] **Step 7: Commit QA, integrate to main, and push**
 
 ```bash
 git add .
 git commit -m "test: verify complete owner operations"
-git push -u origin codex/full-salon-workflows
+git checkout main
+git merge --ff-only codex/full-salon-workflows
+git push origin main
+```
+
+### Task 10: Implement Naver booking email IMAP synchronization and second main push
+
+**Files:**
+- Create: `lib/naver-mail.ts`
+- Create: `lib/naver-mail.test.ts`
+- Create: `lib/windows-credential.ts`
+- Create: `lib/windows-credential.test.ts`
+- Create: `scripts/windows-credential.ps1`
+- Create: `app/naver-mail-actions.ts`
+- Create: `components/bookings/naver-mail-connection.tsx`
+- Create: `components/bookings/naver-mail-connection.test.tsx`
+- Modify: `app/bookings/page.tsx`
+- Modify: `components/bookings/bookings-page.tsx`
+- Modify: `lib/salon-store.ts`
+- Modify: `lib/salon-domain.ts`
+- Modify: `package.json`
+- Modify: `package-lock.json`
+- Modify: `docs/qa/hairhaeyo-owner-operations-qa.md`
+
+**Interfaces:**
+- Produces `testNaverMailConnection(input)`, `connectNaverMail(formData)`, `importInitialNaverBookings(formData)`, and `syncNewNaverBookings()`.
+- Produces `classifyNaverBookingMail(message): "requested" | "confirmed" | "changed" | "cancelled" | null` and `mergeNaverBookingMail(existing, message)` using the Naver reservation number as the idempotency key.
+- Produces `writeWindowsCredential(target, username, secret)`, `readWindowsCredential(target)`, and `deleteWindowsCredential(target)` without placing the application password in command-line arguments, SQLite, logs, audit payloads, or rendered HTML.
+- Persists only non-secret connection metadata: `{ email, provider: "naver", connected, lastSyncUid, lastSyncAt }`.
+
+- [ ] **Step 1: Add IMAP and mail parsing dependencies**
+
+Add only `imapflow` and `mailparser` plus their required TypeScript types. Use `imap.naver.com:993` with TLS. Do not implement SMTP or outbound mail.
+
+- [ ] **Step 2: Implement Windows Credential Manager boundary**
+
+Use the native Windows Credential Manager `CredWriteW`, `CredReadW`, and `CredDeleteW` APIs from `Advapi32.dll` through `scripts/windows-credential.ps1`. Pass request JSON through stdin and return response JSON through stdout so the application password never appears in the process command line. The credential target is `Hairhaeyo:NaverBookingMail`; zero secret buffers after use where supported.
+
+Test the TypeScript boundary with an injected process runner. Test write/read/delete commands, malformed helper output, helper failure, and secret redaction. Run: `npm test -- lib/windows-credential.test.ts`.
+
+- [ ] **Step 3: Implement Naver reservation mail parsing and merge rules**
+
+Parse subject, sender, HTML/text body, UID, received time, reservation number, customer name/phone, service, start/end, and reservation status. Classify reservation request, confirmation, change, and cancellation. Merge by reservation number; ignore the same/lower UID; apply a higher UID as the newest state; archive the local booking on cancellation while preserving status history and audit actor `원장`.
+
+Use TDD for parser classification, UID idempotency, duplicate removal, change ordering, cancellation, malformed mail, and no-reservation-number cases. Run: `npm test -- lib/naver-mail.test.ts`.
+
+- [ ] **Step 4: Implement connection, initial import, and incremental sync actions**
+
+The connection flow is exact: `네이버 예약 메일 연동` → method/privacy notice → Naver email → application password → connection test → reservation-mail discovery → initial import. On success, store the password only in Windows Credential Manager and persist metadata with `provider: "naver"`, `connected: true`, the highest imported UID, and KST `lastSyncAt`.
+
+On later app launches, load the stored credential, read `lastSyncUid`, query only higher UIDs, deduplicate by UID and reservation number, update local booking states, and advance the checkpoint only after the database writes succeed. Authentication/search/parse failures must leave the prior checkpoint unchanged and render a non-secret correction message.
+
+- [ ] **Step 5: Add the bookings-page connection workflow**
+
+Replace the old generic Naver credential fields with a staged desktop web form for the exact eight-step flow. Show application-password creation guidance, privacy/storage notice, connection status, last sync UID/time, initial-import count, incremental-sync result, retry history, and disconnect action. Browser-only delivery may show `Windows Credential Manager 사용 가능 환경에서 연결` when the native credential helper is unavailable; it must not fall back to plaintext storage.
+
+- [ ] **Step 6: Add startup incremental synchronization**
+
+When the local Next server first serves the bookings/dashboard flow for an authenticated owner session, run one guarded incremental sync per process. Prevent concurrent duplicate sync with a module-level promise; release it after completion. Mark the ceiling with `ponytail: single-process startup sync; use a DB lease if multi-process desktop instances are introduced`.
+
+- [ ] **Step 7: Verify, review, and push main again**
+
+Run: `npm test -- lib/naver-mail.test.ts lib/windows-credential.test.ts components/bookings/naver-mail-connection.test.tsx app/booking-actions.test.ts lib/booking.test.ts`
+
+Run: `npm test && npm run typecheck && npm run build && npm audit --omit=dev`.
+
+Run Playwright at 1280×900 and 1440×1000 for notice, validation, failed authentication, successful mocked connection, initial import, duplicate suppression, changed/cancelled mail, restart checkpoint, secret redaction, and disconnect. Run a real Windows Credential Manager write/read/delete smoke check with a disposable credential target; never use or print the user's actual password.
+
+```bash
+git add app components lib scripts package.json package-lock.json docs/qa
+git commit -m "feat(bookings): sync Naver reservation mail"
+git push origin main
 ```
 
 ## Plan self-review
@@ -482,3 +553,4 @@ git push -u origin codex/full-salon-workflows
 - The final gate checks counts and exact bullet mapping, not only route presence.
 - Tauri preserves the server-owned Next/SQLite architecture through a loopback sidecar instead of static export.
 - `수원 본점`, settings-owned owner display, and locally bundled Pretendard have implementation and QA steps.
+- Naver booking synchronization uses inbound IMAP only, stores its application password in Windows Credential Manager, merges by reservation number and UID, and advances its checkpoint only after successful local database writes.
