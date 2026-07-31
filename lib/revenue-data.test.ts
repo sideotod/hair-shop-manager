@@ -1,7 +1,19 @@
 import { describe, expect, it } from "vitest";
 
 import { buildRevenueAnalytics, buildRevenueTransactions, filterRevenueSelection, filterRevenueTransactions } from "./revenue-data";
+import type { LedgerEntry } from "./salon-domain";
 import { createSalonStore } from "./salon-store";
+import { recordPayment, refundPaymentRecord } from "./finance";
+
+function form(values: Record<string, string>) {
+  const data = new FormData();
+  for (const [key, value] of Object.entries(values)) data.set(key, value);
+  return data;
+}
+
+const splitPayment = {
+  requestKey: "split-payment", memberType: "member", customerId: "customer-seed-1", serviceMajor: "커트", serviceDetail: "", styleName: "", grossWon: "11000", discountWon: "0", pointsUsedWon: "0", pointsEarnedWon: "0", expenseWon: "0", cardFeeRate: "0", vatMode: "included", payment_cash: "5000", payment_card: "6000", occurredDate: "2026-07-31", occurredTime: "10:00", generalNote: "", medicineNote: "", scalpNote: "", hairNote: "", gender: "female", visitType: "repeat",
+} as const;
 
 describe("server revenue aggregate", () => {
   it("builds every KPI, chart, table, CSV source, and transaction row from the same immutable ledger", () => {
@@ -81,5 +93,38 @@ describe("server revenue aggregate", () => {
     } finally {
       store.close();
     }
+  });
+
+  it("aggregates signed split-payment details by method and signed point use in settlement", () => {
+    const store = createSalonStore(":memory:");
+    try {
+      const customer = store.get<Record<string, string | number>>("customers", "customer-seed-1");
+      store.save("customers", "customer-seed-1", { ...customer?.value, points: 1000 }, "원장");
+      const payment = recordPayment(store, form({ ...splitPayment, pointsUsedWon: "1000", payment_cash: "5000", payment_card: "5000" }));
+      const beforeRefund = buildRevenueAnalytics(buildRevenueTransactions([payment]), { view: "month", cursor: "2026-07-31" }, "2026-07-31");
+      expect(beforeRefund.payments).toEqual(expect.arrayContaining([
+        expect.objectContaining({ name: "현금", amount: 5000 }),
+        expect.objectContaining({ name: "카드", amount: 5000 }),
+      ]));
+      expect(beforeRefund.settlement.find(({ name }) => name === "포인트 사용")).toEqual({ name: "포인트 사용", value: 1000 });
+
+      const refund = refundPaymentRecord(store, form({ targetId: payment.id, requestKey: "refund-split", reason: "환불" }));
+      const afterRefund = buildRevenueAnalytics(buildRevenueTransactions([payment, refund]), { view: "month", cursor: "2026-07-31" }, "2026-07-31");
+      expect(afterRefund.payments.filter(({ name }) => name === "현금" || name === "카드").every(({ amount }) => amount === 0)).toBe(true);
+      expect(afterRefund.settlement.find(({ name }) => name === "포인트 사용")).toEqual({ name: "포인트 사용", value: 0 });
+    } finally {
+      store.close();
+    }
+  });
+
+  it("uses the 09:00 Asia/Seoul business-day boundary for date and month filters", () => {
+    const ledger = [
+      { id: "before-nine", requestKey: "before-nine", kind: "payment", occurredAt: "2026-08-01T08:59:00+09:00", correctionOf: null, grossWon: 1000, amountWon: 1000, discountWon: 0, vatWon: 0, feeWon: 0, expenseWon: 0, incentiveWon: 0, pointsWon: 0, couponWon: 0, profitWon: 1000, details: {} },
+      { id: "at-nine", requestKey: "at-nine", kind: "payment", occurredAt: "2026-08-01T09:00:00+09:00", correctionOf: null, grossWon: 2000, amountWon: 2000, discountWon: 0, vatWon: 0, feeWon: 0, expenseWon: 0, incentiveWon: 0, pointsWon: 0, couponWon: 0, profitWon: 2000, details: {} },
+    ] satisfies LedgerEntry[];
+    const transactions = buildRevenueTransactions(ledger);
+
+    expect(transactions.map(({ id, date }) => ({ id, date }))).toEqual([{ id: "before-nine", date: "2026-07-31" }, { id: "at-nine", date: "2026-08-01" }]);
+    expect(filterRevenueTransactions(transactions, { view: "month", cursor: "2026-08-01" }).map(({ id }) => id)).toEqual(["at-nine"]);
   });
 });

@@ -28,6 +28,9 @@ describe("CustomersPage", () => {
   it("renders linked booking, ledger, product, point, coupon, and message histories", () => {
     const html = page(undefined, { selectedCustomerId: "customer-seed-1" });
 
+    expect(html).toContain('data-selected-customer-payment="customer-seed-1"');
+    expect(html).toContain('/sales?tab=payment&amp;customer=customer-seed-1');
+
     expect(html).toContain("2026-07-31T10:00:00.000Z · 커트 · confirmed");
     expect(html).toContain("2026-07-24 · 결제 · ₩10,480,000");
     expect(html).toContain("헤어 오일 · ₩28,000");

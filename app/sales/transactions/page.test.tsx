@@ -22,4 +22,13 @@ describe("TransactionsPage", () => {
     expect(html.match(/data-revenue-transaction=/g)).toHaveLength(1);
     expect(html).toContain("ledger-seed-2");
   });
+
+  it("renders refund and correction callers plus an accessible preserved-context action error", async () => {
+    const html = renderToStaticMarkup(await TransactionsPage({ searchParams: Promise.resolve({ view: "month", cursor: "2026-07-31", customer: "customer-seed-2", error: "이미 환불된 결제입니다." }) }));
+    expect(html).toContain('data-refund-payment="ledger-seed-1"');
+    expect(html).toContain('data-correct-payment="ledger-seed-1"');
+    expect(html).toContain('role="alert"');
+    expect(html).toContain("이미 환불된 결제입니다.");
+    expect(html).toContain("customer=customer-seed-2");
+  });
 });

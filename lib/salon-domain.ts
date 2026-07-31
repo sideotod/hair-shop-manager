@@ -11,6 +11,7 @@ export type CustomerValue = JsonObject & {
   phoneAbsent: boolean;
   smsOptIn: boolean;
   points: number;
+  pointDebtWon?: number;
   operator: "원장";
 };
 
@@ -89,6 +90,7 @@ export type SalonStore = {
   save<T extends JsonValue>(kind: RecordKind, id: string, value: T, actor: string): SalonRecord<T>;
   archive(kind: RecordKind, id: string, actor: string): SalonRecord<JsonValue>;
   appendLedger(input: LedgerInput, actor: string): LedgerEntry;
+  appendLedgerBatch(inputs: readonly LedgerInput[], actor: string): readonly LedgerEntry[];
   listLedger(): readonly LedgerEntry[];
   getSettings(): JsonObject;
   saveSettings(values: JsonObject, actor: string): JsonObject;

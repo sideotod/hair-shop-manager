@@ -1,18 +1,20 @@
 import { describe, expect, it } from "vitest";
 
-import { DEFAULT_REVENUE_QUERY, nextRevenueQuery, parseRevenueQuery, previousRevenueQuery, revenueRange, serializeRevenueQuery } from "./revenue-query";
+import { defaultRevenueQuery, nextRevenueQuery, parseRevenueQuery, previousRevenueQuery, revenueRange, serializeRevenueQuery } from "./revenue-query";
 
 describe("revenue query", () => {
   it.each(["day", "month", "total"] as const)("round-trips the %s view without legacy filters", (view) => {
     const query = { view, cursor: "2026-07-31" } as const;
 
-    expect(parseRevenueQuery(serializeRevenueQuery(query))).toEqual(query);
+    expect(parseRevenueQuery(serializeRevenueQuery(query), "2026-08-01")).toEqual(query);
     expect(serializeRevenueQuery(query)).toBe(`view=${view}&cursor=2026-07-31`);
   });
 
   it("returns stable defaults for invalid views and dates", () => {
-    expect(parseRevenueQuery("view=week&cursor=2026-07-31")).toEqual(DEFAULT_REVENUE_QUERY);
-    expect(parseRevenueQuery("view=day&cursor=2026-02-30")).toEqual(DEFAULT_REVENUE_QUERY);
+    const currentSeoulDate = "2026-08-01";
+    expect(defaultRevenueQuery(currentSeoulDate)).toEqual({ view: "month", cursor: currentSeoulDate });
+    expect(parseRevenueQuery("view=week&cursor=2026-07-31", currentSeoulDate)).toEqual(defaultRevenueQuery(currentSeoulDate));
+    expect(parseRevenueQuery("view=day&cursor=2026-02-30", currentSeoulDate)).toEqual(defaultRevenueQuery(currentSeoulDate));
   });
 
   it("moves day and month cursors with calendar-safe previous and next helpers", () => {

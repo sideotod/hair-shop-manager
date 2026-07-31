@@ -7,6 +7,7 @@ export type RevenueTransaction = {
   readonly customerIdentifier: string;
   readonly service: string;
   readonly payment: string;
+  readonly paymentAmounts: Readonly<Record<string, number>>;
   readonly gross: number;
   readonly netPaid: number;
   readonly profit: number;

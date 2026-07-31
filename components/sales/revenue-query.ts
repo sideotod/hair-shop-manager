@@ -1,7 +1,9 @@
 export type RevenueView = "day" | "month" | "total";
 export type RevenueQuery = { view: RevenueView; cursor: string };
 
-export const DEFAULT_REVENUE_QUERY: RevenueQuery = { view: "month", cursor: "2026-07-31" };
+export function defaultRevenueQuery(currentSeoulDate: string): RevenueQuery {
+  return { view: "month", cursor: currentSeoulDate };
+}
 
 const views = new Set<RevenueView>(["day", "month", "total"]);
 
@@ -45,17 +47,17 @@ export function revenueRange(query: RevenueQuery) {
   return { start: iso(start), end: iso(end), label: `${year}년 ${month + 1}월` };
 }
 
-export function parseRevenueQuery(input: string | URLSearchParams): RevenueQuery {
+export function parseRevenueQuery(input: string | URLSearchParams, currentSeoulDate: string): RevenueQuery {
   const params = typeof input === "string" ? new URLSearchParams(input) : input;
   const view = params.get("view") as RevenueView | null;
   const cursor = params.get("cursor");
-  return view && views.has(view) && isDate(cursor) ? { view, cursor } : DEFAULT_REVENUE_QUERY;
+  return view && views.has(view) && isDate(cursor) ? { view, cursor } : defaultRevenueQuery(currentSeoulDate);
 }
 
-export function parseRevenueSearchParams(input: Record<string, string | string[] | undefined>) {
+export function parseRevenueSearchParams(input: Record<string, string | string[] | undefined>, currentSeoulDate: string) {
   const params = new URLSearchParams();
   for (const [key, value] of Object.entries(input)) if (typeof value === "string") params.set(key, value);
-  return parseRevenueQuery(params);
+  return parseRevenueQuery(params, currentSeoulDate);
 }
 
 export function serializeRevenueQuery(query: RevenueQuery) {

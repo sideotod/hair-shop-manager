@@ -278,6 +278,72 @@ export function createSalonStore(filename = join(process.cwd(), ".data", "hairha
     return row ? recordFromRow<T>(row) : null;
   };
 
+  const appendLedgerBatch = (inputs: readonly LedgerInput[], actor: string) => {
+    if (inputs.length === 0) throw new Error("Ledger batch requires an entry");
+    assertText(actor, "actor");
+    const entries = inputs.map((input) => {
+      assertText(input.requestKey, "requestKey");
+      assertText(input.kind, "kind");
+      const entry: LedgerEntry = {
+        id: input.id ?? randomUUID(), requestKey: input.requestKey, kind: input.kind, occurredAt: input.occurredAt ?? now(), correctionOf: input.correctionOf ?? null, customerId: input.customerId ?? null,
+        grossWon: input.grossWon ?? input.amountWon, amountWon: input.amountWon, discountWon: input.discountWon ?? 0, vatWon: input.vatWon ?? 0, feeWon: input.feeWon ?? 0, expenseWon: input.expenseWon ?? 0, incentiveWon: input.incentiveWon ?? 0, pointsWon: input.pointsWon ?? 0, couponWon: input.couponWon ?? 0, profitWon: input.profitWon ?? 0, details: input.details ?? {},
+      };
+      assertText(entry.id, "id");
+      for (const [field, value] of Object.entries(entry)) if (field.endsWith("Won")) assertWon(value as number, field);
+      stringifyJson(entry.details, "ledger details");
+      return entry;
+    });
+
+    const pointEffects = (entry: LedgerEntry) => {
+      const used = entry.details.pointsUsedWon;
+      const earned = entry.details.pointsEarnedWon;
+      if (typeof used === "number" || typeof earned === "number") return { used: typeof used === "number" ? used : 0, earned: typeof earned === "number" ? earned : 0 };
+      return entry.pointsWon < 0 ? { used: -entry.pointsWon, earned: 0 } : { used: 0, earned: entry.pointsWon };
+    };
+
+    return transaction(db, () => {
+      if (new Set(entries.map(({ requestKey }) => requestKey)).size !== entries.length || entries.some(({ requestKey }) => db.prepare("SELECT 1 FROM ledger WHERE request_key = ?").get(requestKey))) {
+        throw new Error("Duplicate ledger requestKey");
+      }
+      for (const entry of entries) {
+        if ((entry.kind === "refund" || entry.kind === "correction") && !entry.correctionOf?.trim()) throw new Error(`${entry.kind} ledger entry requires correctionOf`);
+        if (entry.correctionOf && !db.prepare("SELECT 1 FROM ledger WHERE id = ?").get(entry.correctionOf)) throw new Error(`Unknown correctionOf ledger entry: ${entry.correctionOf}`);
+        if (entry.customerId && !findRecord<JsonObject>("customers", entry.customerId)) throw new Error(`Unknown customerId ledger entry: ${entry.customerId}`);
+      }
+      for (const entry of entries) {
+        const customer = entry.customerId ? findRecord<JsonObject>("customers", entry.customerId) : null;
+        const { used, earned } = pointEffects(entry);
+        if (customer && (used !== 0 || earned !== 0)) {
+          let points = typeof customer.value.points === "number" && Number.isSafeInteger(customer.value.points) && customer.value.points >= 0 ? customer.value.points : 0;
+          let pointDebtWon = typeof customer.value.pointDebtWon === "number" && Number.isSafeInteger(customer.value.pointDebtWon) && customer.value.pointDebtWon >= 0 ? customer.value.pointDebtWon : 0;
+          if (used > 0) {
+            if (points < used) throw new Error("Customer spendable points are insufficient");
+            points -= used;
+          } else points -= used;
+          if (earned > 0) {
+            const repayment = Math.min(pointDebtWon, earned);
+            pointDebtWon -= repayment;
+            points += earned - repayment;
+          } else if (earned < 0) {
+            const revocation = -earned;
+            const fromPoints = Math.min(points, revocation);
+            points -= fromPoints;
+            pointDebtWon += revocation - fromPoints;
+          }
+          const timestamp = now();
+          const after = { ...customer, value: { ...customer.value, points, pointDebtWon }, updatedAt: timestamp };
+          db.prepare("UPDATE records SET payload = ?, updated_at = ? WHERE kind = 'customers' AND id = ?").run(stringifyJson(after.value, "customer points"), timestamp, customer.id);
+          addAudit(db, "ledger-points", "customers", customer.id, actor, { before: customer, after }, timestamp);
+        }
+        db.prepare("INSERT INTO ledger (id, request_key, kind, occurred_at, correction_of, customer_id, gross_won, amount_won, discount_won, vat_won, fee_won, expense_won, incentive_won, points_won, coupon_won, profit_won, details) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)").run(
+          entry.id, entry.requestKey, entry.kind, entry.occurredAt, entry.correctionOf, entry.customerId ?? null, entry.grossWon, entry.amountWon, entry.discountWon, entry.vatWon, entry.feeWon, entry.expenseWon, entry.incentiveWon, entry.pointsWon, entry.couponWon, entry.profitWon, stringifyJson(entry.details, "ledger details"),
+        );
+        addAudit(db, "append-ledger", "ledger", entry.id, actor, { before: null, after: entry }, entry.occurredAt);
+      }
+      return Object.freeze(entries);
+    });
+  };
+
   return {
     close() {
       db.close();
@@ -326,76 +392,9 @@ export function createSalonStore(filename = join(process.cwd(), ".data", "hairha
       });
     },
     appendLedger(input: LedgerInput, actor: string) {
-      assertText(input.requestKey, "requestKey");
-      assertText(input.kind, "kind");
-      assertText(actor, "actor");
-      const entry: LedgerEntry = {
-        id: input.id ?? randomUUID(),
-        requestKey: input.requestKey,
-        kind: input.kind,
-        occurredAt: input.occurredAt ?? now(),
-        correctionOf: input.correctionOf ?? null,
-        customerId: input.customerId ?? null,
-        grossWon: input.grossWon ?? input.amountWon,
-        amountWon: input.amountWon,
-        discountWon: input.discountWon ?? 0,
-        vatWon: input.vatWon ?? 0,
-        feeWon: input.feeWon ?? 0,
-        expenseWon: input.expenseWon ?? 0,
-        incentiveWon: input.incentiveWon ?? 0,
-        pointsWon: input.pointsWon ?? 0,
-        couponWon: input.couponWon ?? 0,
-        profitWon: input.profitWon ?? 0,
-        details: input.details ?? {},
-      };
-      assertText(entry.id, "id");
-      for (const [field, value] of Object.entries(entry)) if (field.endsWith("Won")) assertWon(value as number, field);
-      const details = stringifyJson(entry.details, "ledger details");
-
-      return transaction(db, () => {
-        if (db.prepare("SELECT 1 FROM ledger WHERE request_key = ?").get(entry.requestKey)) {
-          throw new Error(`Duplicate ledger requestKey: ${entry.requestKey}`);
-        }
-        if ((entry.kind === "refund" || entry.kind === "correction") && !entry.correctionOf?.trim()) {
-          throw new Error(`${entry.kind} ledger entry requires correctionOf`);
-        }
-        if (entry.correctionOf && !db.prepare("SELECT 1 FROM ledger WHERE id = ?").get(entry.correctionOf)) {
-          throw new Error(`Unknown correctionOf ledger entry: ${entry.correctionOf}`);
-        }
-        const customer = entry.customerId ? findRecord<JsonObject>("customers", entry.customerId) : null;
-        if (entry.customerId && !customer) throw new Error(`Unknown customerId ledger entry: ${entry.customerId}`);
-        if (customer && entry.pointsWon !== 0) {
-          const currentPoints = typeof customer.value.points === "number" && Number.isSafeInteger(customer.value.points) ? customer.value.points : 0;
-          const nextPoints = currentPoints + entry.pointsWon;
-          if (nextPoints < 0) throw new Error("Customer points cannot be negative");
-          const timestamp = now();
-          const after = { ...customer, value: { ...customer.value, points: nextPoints }, updatedAt: timestamp };
-          db.prepare("UPDATE records SET payload = ?, updated_at = ? WHERE kind = 'customers' AND id = ?").run(stringifyJson(after.value, "customer points"), timestamp, customer.id);
-          addAudit(db, "ledger-points", "customers", customer.id, actor, { before: customer, after }, timestamp);
-        }
-        db.prepare("INSERT INTO ledger (id, request_key, kind, occurred_at, correction_of, customer_id, gross_won, amount_won, discount_won, vat_won, fee_won, expense_won, incentive_won, points_won, coupon_won, profit_won, details) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)").run(
-          entry.id,
-          entry.requestKey,
-          entry.kind,
-          entry.occurredAt,
-          entry.correctionOf,
-          entry.customerId ?? null,
-          entry.grossWon,
-          entry.amountWon,
-          entry.discountWon,
-          entry.vatWon,
-          entry.feeWon,
-          entry.expenseWon,
-          entry.incentiveWon,
-          entry.pointsWon,
-          entry.couponWon,
-          entry.profitWon,
-          details,
-        );
-        addAudit(db, "append-ledger", "ledger", entry.id, actor, { before: null, after: entry }, entry.occurredAt);
-        return entry;
-      });
+      return appendLedgerBatch([input], actor)[0];
     },
+    appendLedgerBatch,
     listLedger() {
       return (db.prepare("SELECT * FROM ledger ORDER BY occurred_at, rowid").all() as LedgerRow[]).map(ledgerFromRow);
     },

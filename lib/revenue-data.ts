@@ -1,6 +1,7 @@
 import type { JsonObject, JsonValue, LedgerEntry } from "./salon-domain";
 import type { RevenueAnalytics, RevenueTransaction } from "../components/sales/revenue-analytics";
 import { revenueRange, type RevenueQuery } from "../components/sales/revenue-query";
+import { seoulBusinessDate } from "./seoul-date";
 
 const paymentLabels = {
   cash: "현금", cashReceipt: "현금영수증", card: "카드", points: "포인트", transfer: "계좌이체", naverPay: "N페이", other: "기타", zeroPay: "제로페이", prepaid: "선불권",
@@ -11,21 +12,24 @@ const dateLabel = (date: string) => `${Number(date.slice(5, 7))}/${Number(date.s
 const detailText = (details: JsonObject, key: string, fallback: string) => typeof details[key] === "string" ? details[key] : fallback;
 const detailMethods = (details: JsonObject) => details.paymentMethods && typeof details.paymentMethods === "object" && !Array.isArray(details.paymentMethods) ? details.paymentMethods as JsonObject : {};
 const customerName = (customer: { id: string; value: JsonValue }) => { const value = customer.value; return value && typeof value === "object" && !Array.isArray(value) && typeof (value as JsonObject).name === "string" ? (value as JsonObject).name as string : customer.id; };
+const paymentAmounts = (details: JsonObject) => Object.freeze(Object.fromEntries(Object.entries(detailMethods(details)).filter(([, amount]) => typeof amount === "number" && amount !== 0).map(([method, amount]) => [paymentLabels[method as keyof typeof paymentLabels] ?? method, amount as number])));
+const pointsUsed = (entry: LedgerEntry) => typeof entry.details.pointsUsedWon === "number" ? entry.details.pointsUsedWon : entry.pointsWon < 0 ? -entry.pointsWon : 0;
 
 export function buildRevenueTransactions(ledger: readonly LedgerEntry[], customers: readonly { id: string; value: JsonValue }[] = []) {
   const customerNames = new Map(customers.map((customer) => [customer.id, customerName(customer)]));
   return Object.freeze(ledger.map((entry) => Object.freeze({
     id: entry.id,
-    date: entry.occurredAt.slice(0, 10),
-    dateLabel: dateLabel(entry.occurredAt.slice(0, 10)),
+    date: seoulBusinessDate(entry.occurredAt),
+    dateLabel: dateLabel(seoulBusinessDate(entry.occurredAt)),
     customerIdentifier: entry.customerId ? customerNames.get(entry.customerId) ?? entry.customerId : detailText(entry.details ?? {}, "customerName", "비회원"),
     service: detailText(entry.details ?? {}, "serviceMajor", "기타"),
-    payment: Object.entries(detailMethods(entry.details ?? {})).filter(([, amount]) => typeof amount === "number" && amount !== 0).map(([method]) => paymentLabels[method as keyof typeof paymentLabels] ?? method).join(" · ") || "기타",
+    payment: Object.keys(paymentAmounts(entry.details ?? {})).join(" · ") || "기타",
+    paymentAmounts: paymentAmounts(entry.details ?? {}),
     gross: entry.grossWon ?? entry.amountWon,
     netPaid: entry.amountWon,
     profit: entry.profitWon,
     discount: entry.discountWon,
-    points: entry.pointsWon < 0 ? -entry.pointsWon : 0,
+    points: pointsUsed(entry),
     vat: entry.vatWon,
     fee: entry.feeWon,
     expense: entry.expenseWon,
@@ -54,14 +58,14 @@ function amounts(records: readonly RevenueTransaction[], key: "service" | "gende
   return Object.freeze([...new Set(records.map((record) => record[key]))].map((name) => Object.freeze({ name, sales: sum(records.filter((record) => record[key] === name), (record) => record.gross) })).sort((a, b) => b.sales - a.sales));
 }
 
-function paymentAmounts(records: readonly RevenueTransaction[]) {
+function paymentRevenue(records: readonly RevenueTransaction[]) {
   const values = new Map<string, number>();
-  for (const record of records) for (const name of record.payment.split(" · ")) values.set(name, (values.get(name) ?? 0) + record.gross);
-  const total = sum(records, (record) => record.gross);
+  for (const record of records) for (const [name, amount] of Object.entries(record.paymentAmounts)) values.set(name, (values.get(name) ?? 0) + amount);
+  const total = [...values.values()].reduce((sum, amount) => sum + amount, 0);
   return Object.freeze([...values].map(([name, amount], index) => Object.freeze({ name, amount, value: total ? Math.round((amount / total) * 100) : 0, color: colors[index % colors.length] })).sort((a, b) => b.amount - a.amount));
 }
 
-export function buildRevenueAnalytics(allRecords: readonly RevenueTransaction[], query: RevenueQuery, today = new Date().toISOString().slice(0, 10)): RevenueAnalytics {
+export function buildRevenueAnalytics(allRecords: readonly RevenueTransaction[], query: RevenueQuery, today = seoulBusinessDate()): RevenueAnalytics {
   const transactions = filterRevenueTransactions(allRecords, query);
   const day = filterRevenueTransactions(allRecords, { view: "day", cursor: today });
   const month = filterRevenueTransactions(allRecords, { view: "month", cursor: today });
@@ -79,7 +83,7 @@ export function buildRevenueAnalytics(allRecords: readonly RevenueTransaction[],
     totals: Object.freeze({ today: sum(day, (record) => record.gross), month: sum(month, (record) => record.gross), total: sum(allRecords, (record) => record.gross) }),
     trend: Object.freeze(dates.map((date) => Object.freeze({ date: dateLabel(date), gross: sum(transactions.filter((record) => record.date === date), (record) => record.gross), profit: sum(transactions.filter((record) => record.date === date), (record) => record.profit) }))),
     services: amounts(transactions, "service"),
-    payments: paymentAmounts(transactions),
+    payments: paymentRevenue(transactions),
     genders: amounts(transactions, "gender"),
     visitTypes: amounts(transactions, "visitType"),
     settlement: Object.freeze([
