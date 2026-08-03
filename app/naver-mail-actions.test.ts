@@ -47,6 +47,24 @@ const discoveredMail = {
 };
 
 describe("Naver mail actions", () => {
+  it("rejects stale connect submission before touching an existing credential", async () => {
+    const store = createSalonStore(":memory:");
+    const prior = { email: "owner@naver.com", provider: "naver" as const, connected: true, lastSyncUid: 12, lastSyncAt: "2026-08-03T10:00:00" };
+    store.close = () => undefined;
+    store.saveSettings({ naverMail: prior }, "원장");
+    vi.mocked(createSalonStore).mockReturnValueOnce(store);
+
+    const redirectError = await connectNaverMail(connectionForm()).catch((error: Error) => error);
+
+    expect(redirectError).toBeInstanceOf(Error);
+    expect(testInboxConnection).not.toHaveBeenCalled();
+    expect(writeWindowsCredential).not.toHaveBeenCalled();
+    expect(deleteWindowsCredential).not.toHaveBeenCalled();
+    expect(discoverNaverBookingMails).not.toHaveBeenCalled();
+    expect(naverMailMetadata(store.getSettings())).toEqual(prior);
+    store.close();
+  });
+
   it("tests auth, stores the credential, imports initial mail, then persists the highest UID", async () => {
     const store = createSalonStore(":memory:");
     store.close = () => undefined;

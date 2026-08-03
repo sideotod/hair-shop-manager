@@ -9,6 +9,7 @@ export type NaverMailMessage = {
   receivedAt: string;
   from: string;
   subject: string;
+  authenticationResults?: unknown;
   text?: string;
   html?: string;
 };
@@ -42,9 +43,14 @@ function field(body: string, labels: string) {
   return new RegExp(`(?:${labels})\\s*[:：]\\s*([^\\r\\n]+)`, "i").exec(body)?.[1]?.trim() ?? "";
 }
 
+function hasAuthenticatedNaverDkim(value: unknown) {
+  const headers = typeof value === "string" ? [value] : Array.isArray(value) ? value.filter((item): item is string => typeof item === "string") : [];
+  return headers.some((header) => header.split(";").some((result) => /^\s*dkim\s*=\s*pass\b/i.test(result) && /\bheader\.d\s*=\s*naver\.com(?![\w.-])/i.test(result)));
+}
+
 export function classifyNaverBookingMail(message: NaverMailMessage): NaverBookingStatus | null {
   const sender = (/<\s*([^<>]+)\s*>/.exec(message.from)?.[1] ?? message.from).trim().toLowerCase();
-  if (sender !== "booking_noreply@naver.com") return null;
+  if (sender !== "booking_noreply@naver.com" || !hasAuthenticatedNaverDkim(message.authenticationResults)) return null;
   const event = /^(?:\[네이버 예약\]|네이버 예약)\s*(?:예약\s*)?(신청|접수|확정|변경|취소)/.exec(message.subject.trim())?.[1];
   if (event === "취소") return "cancelled";
   if (event === "변경") return "changed";
@@ -172,6 +178,7 @@ export async function discoverNaverBookingMails(input: NaverMailConnectionInput 
           receivedAt: new Date(parsed.date ?? item.internalDate ?? Date.now()).toISOString(),
           from: parsed.from?.text ?? "",
           subject: parsed.subject ?? "",
+          authenticationResults: parsed.headers.get("authentication-results"),
           text: parsed.text,
           html: typeof parsed.html === "string" ? parsed.html : undefined,
         };

@@ -1,4 +1,5 @@
 import { describe, expect, it } from "vitest";
+import { simpleParser } from "mailparser";
 
 import {
   applyNaverBookingMails,
@@ -16,6 +17,7 @@ const mail = (overrides: Partial<NaverMailMessage> = {}): NaverMailMessage => ({
   receivedAt: "2026-08-03T05:00:00.000Z",
   from: "네이버 예약 <booking_noreply@naver.com>",
   subject: "[네이버 예약] 예약 확정",
+  authenticationResults: "mx.naver.com; dkim=pass header.d=naver.com header.s=booking; spf=pass smtp.mailfrom=naver.com",
   text: [
     "예약번호: NVR-20260804-001",
     "예약자명: 김하나",
@@ -48,6 +50,25 @@ describe("Naver booking mail", () => {
       subject: "[네이버 예약] 예약 확정",
       text: `${mail().text}\n예약 취소는 네이버 예약 화면에서 진행해 주세요.`,
     }))).toBe("confirmed");
+  });
+
+  it("rejects forged From identity without authenticated Naver DKIM", () => {
+    expect(classifyNaverBookingMail(mail({ authenticationResults: undefined }))).toBeNull();
+    expect(classifyNaverBookingMail(mail({ authenticationResults: "mx.naver.com; dkim=fail header.d=naver.com; spf=pass smtp.mailfrom=naver.com" }))).toBeNull();
+    expect(classifyNaverBookingMail(mail({ authenticationResults: "mx.naver.com; spf=pass smtp.mailfrom=naver.com" }))).toBeNull();
+    expect(classifyNaverBookingMail(mail({ authenticationResults: "mx.naver.com; dkim=pass header.d=evil.example; dkim=fail header.d=naver.com" }))).toBeNull();
+  });
+
+  it("accepts parsed Authentication-Results only with dkim=pass header.d=naver.com", async () => {
+    const parsed = await simpleParser([
+      "Authentication-Results: mx.naver.com; dkim=pass header.d=naver.com header.s=booking; spf=pass smtp.mailfrom=naver.com",
+      "From: booking_noreply@naver.com",
+      "Subject: [네이버 예약] 예약 확정",
+      "",
+      "예약 알림",
+    ].join("\r\n"));
+
+    expect(classifyNaverBookingMail(mail({ authenticationResults: parsed.headers.get("authentication-results") }))).toBe("confirmed");
   });
 
   it("parses reservation identity, customer, service, and visit time", () => {

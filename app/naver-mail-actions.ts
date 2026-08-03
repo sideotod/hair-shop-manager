@@ -57,7 +57,7 @@ function validate(input: NaverMailConnectionInput) {
 
 function safeError(error: unknown) {
   const message = error instanceof Error ? error.message : "";
-  if (message === "네이버 메일 주소를 확인하세요." || message === "애플리케이션 비밀번호를 입력하세요." || message.includes("Windows Credential Manager")) return message;
+  if (message === "네이버 메일 주소를 확인하세요." || message === "애플리케이션 비밀번호를 입력하세요." || message === "네이버 예약 메일이 이미 연결되어 있습니다." || message.includes("Windows Credential Manager")) return message;
   return "네이버 메일 연결을 확인하세요. 메일 주소와 애플리케이션 비밀번호를 다시 확인하세요.";
 }
 
@@ -93,26 +93,29 @@ export async function connectNaverMail(formData: FormData, dependencies: NaverMa
   let imported = 0;
   try {
     const input = validate({ email: text(formData, "email"), password: text(formData, "applicationPassword") });
-    await dependencies.testConnection(input);
-    await dependencies.writeCredential(credentialTarget, input.email, input.password);
+    const store = dependencies.createStore();
+    let credentialStored = false;
     try {
-      const store = dependencies.createStore();
+      const prior = naverMailMetadata(store.getSettings());
+      if (prior.connected) throw new Error("네이버 예약 메일이 이미 연결되어 있습니다.");
+      await dependencies.testConnection(input);
+      await dependencies.writeCredential(credentialTarget, input.email, input.password);
+      credentialStored = true;
       try {
-        const prior = naverMailMetadata(store.getSettings());
         const result = applyNaverBookingMails(store, await dependencies.discover({ ...input, afterUid: 0 }));
         const lastSyncUid = Math.max(prior.lastSyncUid, result.highestUid);
         store.saveSettings({ naverMail: { email: input.email, provider: "naver", connected: true, lastSyncUid, lastSyncAt: seoulTimestamp() } }, actor);
         recordSync(store, "connected", "initial-import", { email: input.email, changed: result.changed, cancelled: result.cancelled, lastSyncUid });
         imported = result.changed;
       } catch (error) {
-        recordSync(store, "error", "initial-import-failed", { message: safeError(error), lastSyncUid: naverMailMetadata(store.getSettings()).lastSyncUid });
+        recordSync(store, "error", "initial-import-failed", { message: safeError(error), lastSyncUid: prior.lastSyncUid });
         throw error;
-      } finally {
-        store.close();
       }
     } catch (error) {
-      await dependencies.deleteCredential(credentialTarget).catch(() => undefined);
+      if (credentialStored) await dependencies.deleteCredential(credentialTarget).catch(() => undefined);
       throw error;
+    } finally {
+      store.close();
     }
   } catch (error) {
     fail(error);
