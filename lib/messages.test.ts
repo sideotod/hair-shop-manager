@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import { eligibleRecipients, messageBytes, messageType, queueMessage } from "./messages";
+import { eligibleRecipients, messageBytes, messageType, queueMessage, saveAutomationRule } from "./messages";
 import type { JsonObject } from "./salon-domain";
 import { createSalonStore } from "./salon-store";
 
@@ -53,5 +53,32 @@ describe("message rules", () => {
     expect(eligibleRecipients(store.list("customers"), "women").map(({ id }) => id)).toEqual(["customer-seed-1"]);
     expect(eligibleRecipients(store.list("customers"), "men").map(({ id }) => id)).toEqual(["customer-seed-2"]);
     expect(eligibleRecipients(store.list("customers"), "power").map(({ id }) => id)).toEqual(["customer-seed-1"]);
+  });
+
+  it("uses unique selected opt-in customers for the preview and dry-run quota", () => {
+    const store = createSalonStore(":memory:");
+    const second = store.get("customers", "customer-seed-2")!;
+    store.save("customers", second.id, { ...(second.value as JsonObject), smsOptIn: false }, "원장");
+
+    expect(eligibleRecipients(store.list("customers"), "all", 100, ["customer-seed-1", "customer-seed-1", "customer-seed-2"]).map(({ id }) => id)).toEqual(["customer-seed-1"]);
+    const message = queueMessage(store, { requestKey: "unique", text: " 안녕 ", recipientIds: ["customer-seed-1", "customer-seed-1", "customer-seed-2"] });
+    expect(message.value).toMatchObject({ recipientIds: ["customer-seed-1"], recipientCount: 1, text: "안녕", bytes: 6, channel: "SMS" });
+    expect(store.getSettings().smsRemaining).toBe(499);
+  });
+
+  it("normalizes message text and records the owner audit actor", () => {
+    const store = createSalonStore(":memory:");
+    const message = queueMessage(store, { requestKey: "trimmed", text: ` ${"가".repeat(31)} `, recipientIds: ["customer-seed-1"] });
+
+    expect(message.value).toMatchObject({ text: "가".repeat(31), bytes: 93, channel: "LMS" });
+    expect(store.snapshot().auditEvents.find((event) => event.recordId === message.id)?.actor).toBe("원장");
+  });
+
+  it("normalizes and saves an automation rule with an owner audit", () => {
+    const store = createSalonStore(":memory:");
+    const rule = saveAutomationRule(store, { label: " 신규 안내 ", enabled: true, text: " 안녕 ", schedule: " 등록 후 10분 " });
+
+    expect(rule.value).toMatchObject({ label: "신규 안내", text: "안녕", bytes: 6, channel: "SMS", status: "사용", operator: "원장" });
+    expect(store.snapshot().auditEvents.find((event) => event.recordId === rule.id)?.actor).toBe("원장");
   });
 });

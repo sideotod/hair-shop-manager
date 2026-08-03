@@ -17,6 +17,7 @@ describe("MessagesPage", () => {
     expect(html).toContain('data-app-shell-background');
     expect(html).toContain('href="/messages"');
     expect(html).toContain('aria-label="문자 dry-run 저장"');
+    expect(html).toContain("보내는 사람: 원장");
     expect(html).toContain('name="recipientIds"');
     expect(html).toContain("개별 수신자 (최대 3명)");
     expect(html).toContain("상태: dry-run");
