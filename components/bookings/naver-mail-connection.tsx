@@ -18,6 +18,23 @@ function text(record: SalonRecord<JsonValue>, key: string) {
   return typeof field === "string" ? field : "";
 }
 
+const naverLinks = [
+  ["스마트플레이스 회원 가입·설정 참고 자료", "https://smartplace.naver.com/"],
+  ["네이버 고객센터", "https://help.naver.com/"],
+  ["네이버 Pay 고객센터", "https://help.pay.naver.com/"],
+  ["네이버 예약 공식 페이지", "https://booking.naver.com/"],
+] as const;
+
+export function NaverMailReplacementGuide() {
+  return <section aria-labelledby="naver-mail-replacement-title" className="mt-4 rounded-[10px] border border-[var(--border)] p-4">
+    <h4 className="text-sm font-bold" id="naver-mail-replacement-title">네이버 예약 메일 대체 안내</h4>
+    <p className="mt-2 text-sm text-[var(--muted)]">스마트플레이스 회원 가입과 예약 알림 메일 수신을 먼저 설정하세요. 기존 네이버 예약 코드 입력은 네이버 메일 주소와 애플리케이션 비밀번호로 대체합니다.</p>
+    <p className="mt-2 text-sm text-[var(--muted)]">네이버 메일 주소 = 네이버 계정, 매장 = Hairhaeyo 단일 매장, 담당자 = 원장 1인으로 매핑합니다. 예약 ID·고객 연락처·메모는 신뢰된 예약 메일에서 로컬 예약으로 저장합니다.</p>
+    <details className="mt-3 rounded-[8px] bg-[var(--background)] p-3 text-sm"><summary className="cursor-pointer font-bold">예약 연동 FAQ</summary><p className="mt-2 text-[var(--muted)]">Hairhaeyo는 네이버 예약 직접 API·코드 연동을 제공하지 않습니다. 사용자가 승인한 예약 알림 메일 읽기 방식만 사용하며, 비밀번호는 Windows Credential Manager에만 저장합니다.</p></details>
+    <nav aria-label="네이버 예약 공식 도움말" className="mt-3 flex flex-wrap gap-x-4 gap-y-2 text-sm">{naverLinks.map(([label, href]) => <a aria-label={`${label} 새 창`} className="font-bold text-[var(--brand)]" href={href} key={href} rel="noopener noreferrer" target="_blank">{label}</a>)}</nav>
+  </section>;
+}
+
 export function NaverMailConnection({ settings, history }: { settings: JsonObject; history: readonly SalonRecord<JsonValue>[] }) {
   const metadata = naverMailMetadata(settings);
   return <section aria-labelledby="naver-mail-title" className="mt-6 border-t border-[var(--border)] pt-5">
@@ -25,6 +42,7 @@ export function NaverMailConnection({ settings, history }: { settings: JsonObjec
       <div><h3 className="font-bold" id="naver-mail-title">네이버 예약 메일 연동</h3><p className="mt-1 text-sm text-[var(--muted)]">네이버 예약 알림 메일을 읽어 로컬 예약으로 저장합니다. 메일 발송 기능은 사용하지 않습니다.</p></div>
       <span className={`rounded-full px-3 py-1 text-xs font-bold ${metadata.connected ? "bg-[var(--success-soft)] text-[var(--success)]" : "bg-[var(--background)] text-[var(--muted)]"}`}>상태: {metadata.connected ? "연결됨" : "연결 안 됨"}</span>
     </div>
+    <NaverMailReplacementGuide />
     <ol className="mt-4 grid grid-cols-4 gap-2 text-xs">
       {["1. 네이버 예약 메일 연동 클릭", "2. 연동 방식·개인정보 안내", "3. 네이버 메일 주소 입력", "4. 애플리케이션 비밀번호 입력", "5. 연결 테스트", "6. 예약 관련 메일 자동 탐색", "7. 초기 예약 데이터 불러오기", "8. 앱 실행 시 신규 메일 동기화"].map((step) => <li className="rounded-[8px] bg-[var(--background)] p-3" key={step}>{step}</li>)}
     </ol>

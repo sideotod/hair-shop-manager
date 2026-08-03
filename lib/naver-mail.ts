@@ -43,12 +43,13 @@ function field(body: string, labels: string) {
 }
 
 export function classifyNaverBookingMail(message: NaverMailMessage): NaverBookingStatus | null {
-  const source = `${message.from}\n${message.subject}\n${plain(message)}`;
-  if (!/네이버|naver/i.test(source)) return null;
-  if (/예약[^\r\n]*(?:취소)|(?:취소)[^\r\n]*예약/.test(source)) return "cancelled";
-  if (/예약[^\r\n]*(?:변경)|(?:변경)[^\r\n]*예약/.test(source)) return "changed";
-  if (/예약[^\r\n]*(?:확정)|(?:확정)[^\r\n]*예약/.test(source)) return "confirmed";
-  if (/예약[^\r\n]*(?:신청|접수)|(?:신청|접수)[^\r\n]*예약/.test(source)) return "requested";
+  const sender = (/<\s*([^<>]+)\s*>/.exec(message.from)?.[1] ?? message.from).trim().toLowerCase();
+  if (sender !== "booking_noreply@naver.com") return null;
+  const event = /^(?:\[네이버 예약\]|네이버 예약)\s*(?:예약\s*)?(신청|접수|확정|변경|취소)/.exec(message.subject.trim())?.[1];
+  if (event === "취소") return "cancelled";
+  if (event === "변경") return "changed";
+  if (event === "확정") return "confirmed";
+  if (event === "신청" || event === "접수") return "requested";
   return null;
 }
 
@@ -112,12 +113,19 @@ export function applyNaverBookingMails(store: SalonStore, messages: readonly Par
     const bookingId = `naver-booking:${message.reservationNumber}`;
     const existing = store.get("bookings", bookingId);
     const merged = mergeNaverBookingMail(recordValue(existing), message);
-    if (!merged.changed) continue;
-    const currentCustomerId = typeof merged.value.customerId === "string" ? merged.value.customerId : "";
-    const matchingCustomer = currentCustomerId ? store.get("customers", currentCustomerId) : store.list("customers").find((record) => {
-      const value = recordValue(record);
-      return Boolean(message.customerPhone && value.phone === message.customerPhone) || Boolean(message.customerName && value.name === message.customerName);
-    });
+    if (!merged.changed) {
+      if (message.status === "cancelled" && existing?.archivedAt === null && recordValue(existing).naverUid === message.uid) {
+        store.archive("bookings", bookingId, actor);
+        changed += 1;
+        cancelled += 1;
+      }
+      continue;
+    }
+    const customers = store.list("customers");
+    const nameMatches = message.customerName ? customers.filter((record) => recordValue(record).name === message.customerName) : [];
+    const matchingCustomer = message.customerPhone
+      ? customers.find((record) => String(recordValue(record).phone ?? "").replace(/\D/g, "") === message.customerPhone)
+      : nameMatches.length === 1 ? nameMatches[0] : undefined;
     const customerId = matchingCustomer?.id ?? `naver-customer:${message.customerPhone || message.reservationNumber}`;
     if (!matchingCustomer) store.save("customers", customerId, { name: message.customerName || "네이버 예약 고객", phone: message.customerPhone, telephone: "", phoneAbsent: !message.customerPhone, smsOptIn: false, points: 0, visitType: "first", operator: actor }, actor);
     store.save("bookings", bookingId, { ...merged.value, customerId }, actor);

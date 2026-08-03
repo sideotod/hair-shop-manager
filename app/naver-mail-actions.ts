@@ -9,7 +9,6 @@ import {
   applyNaverBookingMails,
   createStartupNaverSync,
   discoverNaverBookingMails,
-  naverMailConnectionMetadata,
   naverMailMetadata,
   seoulTimestamp,
   testNaverMailConnection as testConnection,
@@ -25,10 +24,24 @@ type NaverMailSyncDependencies = {
   readCredential: typeof readWindowsCredential;
   discover: typeof discoverNaverBookingMails;
 };
+type NaverMailConnectDependencies = {
+  createStore: typeof createSalonStore;
+  deleteCredential: typeof deleteWindowsCredential;
+  discover: typeof discoverNaverBookingMails;
+  testConnection: typeof testConnection;
+  writeCredential: typeof writeWindowsCredential;
+};
 const naverMailSyncDependencies: NaverMailSyncDependencies = {
   createStore: createSalonStore,
   readCredential: readWindowsCredential,
   discover: discoverNaverBookingMails,
+};
+const naverMailConnectDependencies: NaverMailConnectDependencies = {
+  createStore: createSalonStore,
+  deleteCredential: deleteWindowsCredential,
+  discover: discoverNaverBookingMails,
+  testConnection,
+  writeCredential: writeWindowsCredential,
 };
 
 function text(formData: FormData, key: string) {
@@ -76,25 +89,35 @@ export async function testNaverMailConnection(input: NaverMailConnectionInput) {
   }
 }
 
-export async function connectNaverMail(formData: FormData) {
+export async function connectNaverMail(formData: FormData, dependencies: NaverMailConnectDependencies = naverMailConnectDependencies) {
+  let imported = 0;
   try {
     const input = validate({ email: text(formData, "email"), password: text(formData, "applicationPassword") });
-    await testNaverMailConnection(input);
-    await writeWindowsCredential(credentialTarget, input.email, input.password);
-    const store = createSalonStore();
+    await dependencies.testConnection(input);
+    await dependencies.writeCredential(credentialTarget, input.email, input.password);
     try {
-      store.saveSettings({ naverMail: naverMailConnectionMetadata(input.email) }, actor);
-      recordSync(store, "connected", "connection-test-passed", { email: input.email });
+      const store = dependencies.createStore();
+      try {
+        const prior = naverMailMetadata(store.getSettings());
+        const result = applyNaverBookingMails(store, await dependencies.discover({ ...input, afterUid: 0 }));
+        const lastSyncUid = Math.max(prior.lastSyncUid, result.highestUid);
+        store.saveSettings({ naverMail: { email: input.email, provider: "naver", connected: true, lastSyncUid, lastSyncAt: seoulTimestamp() } }, actor);
+        recordSync(store, "connected", "initial-import", { email: input.email, changed: result.changed, cancelled: result.cancelled, lastSyncUid });
+        imported = result.changed;
+      } catch (error) {
+        recordSync(store, "error", "initial-import-failed", { message: safeError(error), lastSyncUid: naverMailMetadata(store.getSettings()).lastSyncUid });
+        throw error;
+      } finally {
+        store.close();
+      }
     } catch (error) {
-      await deleteWindowsCredential(credentialTarget).catch(() => undefined);
+      await dependencies.deleteCredential(credentialTarget).catch(() => undefined);
       throw error;
-    } finally {
-      store.close();
     }
   } catch (error) {
     fail(error);
   }
-  finish("네이버 예약 메일 연결 테스트에 성공했습니다.");
+  finish(`네이버 예약 메일을 연결하고 초기 예약 ${imported}건을 불러왔습니다.`);
 }
 
 export async function synchronizeNaverBookings(initial: boolean, dependencies: NaverMailSyncDependencies = naverMailSyncDependencies) {

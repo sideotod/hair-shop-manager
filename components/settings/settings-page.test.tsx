@@ -163,6 +163,13 @@ describe("SettingsPage", () => {
   it("shows Naver mail metadata and a booking link without credentials", () => {
     const disconnected = renderToStaticMarkup(<SettingsPage {...props} section="integrations" />);
     expect(disconnected).toContain('href="/bookings"');
+    for (const label of ["스마트플레이스 회원 가입", "기존 네이버 예약 코드", "네이버 메일 주소 = 네이버 계정", "매장 = Hairhaeyo 단일 매장", "담당자 = 원장 1인", "예약 연동 FAQ", "직접 API·코드 연동을 제공하지 않습니다."]) expect(disconnected).toContain(label);
+    for (const url of ["https://smartplace.naver.com/", "https://help.naver.com/", "https://help.pay.naver.com/", "https://booking.naver.com/"]) {
+      const tag = disconnected.match(new RegExp(`<a[^>]*href="${url.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")}"[^>]*>`))?.[0] ?? "";
+      expect(tag).toContain('target="_blank"');
+      expect(tag).toContain('rel="noopener noreferrer"');
+      expect(tag).toContain('aria-label=');
+    }
     const integrations = renderToStaticMarkup(<SettingsPage {...props} settings={{ ...props.settings, naverMail: { email: "owner@naver.com", provider: "naver", connected: true, lastSyncUid: 18372, lastSyncAt: "2026-08-03T15:18:00" } }} section="integrations" />);
     for (const label of ["owner@naver.com", "18372", "2026-08-03T15:18:00"]) expect(integrations).toContain(label);
     for (const secret of ["applicationPassword", "clientSecret", "NAVER_RESERVATION_CLIENT_SECRET"]) expect(integrations).not.toContain(secret);    const help = renderToStaticMarkup(<SettingsPage {...props} section="help" />);

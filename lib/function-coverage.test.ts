@@ -27,7 +27,7 @@ const rows = matrixText.split(/\r?\n/)
   .filter((line) => /^\|.+\|$/.test(line))
   .map(parseMarkdownRow)
   .filter(([feature]) => feature !== "기능" && !/^--+$/.test(feature ?? ""));
-const allowedStatuses = new Set(["구현", "원장 1인 대체", "연동 확인 필요", "사용자 승인 제외"]);
+const allowedStatuses = new Set(["구현", "원장 1인 대체", "연동 확인 필요", "사용자 승인 제외", "사용자 승인 메일 대체"]);
 const evidencePath = /^(?:FUNCTION\.md|(?:app|components|lib|docs)\/[^\s;]+)$/;
 
 function evidencePaths(cell: string, feature: string) {
@@ -75,7 +75,28 @@ describe("FUNCTION.md coverage matrix", () => {
   it("marks owner replacements and external SMS/Naver boundaries", () => {
     for (const [feature, status] of rows) {
       if (/(직원|디자이너|판매자|시술자)/.test(feature ?? "") && status !== "사용자 승인 제외") expect(status, feature).toBe("원장 1인 대체");
-      if (/(SMS|문자|네이버)/.test(feature ?? "")) expect(["구현", "연동 확인 필요", "사용자 승인 제외"]).toContain(status);
+      if (/(SMS|문자|네이버)/.test(feature ?? "")) expect(["구현", "연동 확인 필요", "사용자 승인 제외", "사용자 승인 메일 대체"]).toContain(status);
+    }
+  });
+
+  it("maps legacy Naver direct integration rows to the approved booking-mail replacement", () => {
+    for (const feature of [
+      "네이버 스마트 플레이스 회원 가입 안내",
+      "네이버 예약 코드 등록",
+      "네이버 계정/매장 정보 입력",
+      "네이버 예약 ID·코드·매장명·담당자·전화번호·메모 저장",
+      "네이버 예약 연동 FAQ",
+      "네이버 고객센터 연결",
+      "네이버 페이센터 연결",
+      "네이버 예약 설정 참고 자료",
+      "네이버 예약 데이터 동기화 `[추가확인: 실제 API/동기화 주기/충돌 규칙]`",
+      "네이버 예약 연동 설정",
+      "외부 네이버 예약/네이버 페이 연동은 계정 권한과 API 계약 확인이 필요하다.",
+    ]) {
+      const row = rows.find(([name]) => name === feature);
+      expect(row?.[1], feature).toBe("사용자 승인 메일 대체");
+      expect(row?.[2], feature).toContain("components/bookings/naver-mail-connection.tsx");
+      expect(row?.[3], feature).toContain("components/bookings/naver-mail-connection.test.tsx");
     }
   });
 

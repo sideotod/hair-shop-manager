@@ -6,6 +6,7 @@ import { naverMailMetadata } from "../../lib/naver-mail";
 import { settingsErrorMessage } from "../../lib/settings";
 import { DEFAULT_VISUAL_TOKENS } from "../../lib/visual-tokens";
 import { AppShell } from "../app-shell";
+import { NaverMailReplacementGuide } from "../bookings/naver-mail-connection";
 
 const sections = [
   ["owner", "매장 · 원장 계정"],
@@ -63,7 +64,7 @@ function Messages({ settings }: { settings: JsonObject }) {
 
 function Integrations({ settings }: { settings: JsonObject }) {
   const metadata = naverMailMetadata(settings);
-  return <section className={card} aria-labelledby="integration-title"><h2 className="text-lg font-bold" id="integration-title">외부 연동</h2><div className="mt-5 rounded-[10px] border border-[var(--border)] p-5"><div className="flex items-center justify-between"><strong>네이버 예약 메일</strong><span className="rounded-full bg-[var(--background)] px-3 py-2 text-xs font-bold">상태: {metadata.connected ? "연결됨" : "연결 안 됨"}</span></div><p className="mt-3 text-sm text-[var(--muted)]">{metadata.connected ? `${metadata.email} · 마지막 UID ${metadata.lastSyncUid || "초기 동기화 전"} · ${metadata.lastSyncAt || "초기 동기화 전"}` : "네이버 예약 메일을 Windows Credential Manager로 안전하게 연결합니다."}</p><Link className="mt-4 inline-block text-sm font-bold text-[var(--brand)]" href="/bookings">예약 메일 연결 및 동기화</Link></div></section>;
+  return <section className={card} aria-labelledby="integration-title"><h2 className="text-lg font-bold" id="integration-title">외부 연동</h2><div className="mt-5 rounded-[10px] border border-[var(--border)] p-5"><div className="flex items-center justify-between"><strong>네이버 예약 메일</strong><span className="rounded-full bg-[var(--background)] px-3 py-2 text-xs font-bold">상태: {metadata.connected ? "연결됨" : "연결 안 됨"}</span></div><p className="mt-3 text-sm text-[var(--muted)]">{metadata.connected ? `${metadata.email} · 마지막 UID ${metadata.lastSyncUid || "초기 동기화 전"} · ${metadata.lastSyncAt || "초기 동기화 전"}` : "네이버 예약 메일을 Windows Credential Manager로 안전하게 연결합니다."}</p><Link className="mt-4 inline-block text-sm font-bold text-[var(--brand)]" href="/bookings">예약 메일 연결 및 동기화</Link></div><NaverMailReplacementGuide /></section>;
 }
 
 function Help({ settings, notices, auditEvents }: Pick<Props, "settings" | "notices" | "auditEvents">) {
