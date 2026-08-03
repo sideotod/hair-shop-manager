@@ -138,6 +138,7 @@ describe("DashboardPage", () => {
         customers={[]}
         overlay={<div role="dialog">고객 상세</div>}
         ownerName="원장"
+        settings={{ brandColor: "#123456" }}
         shopName="수원 본점"
         smsRemaining={500}
       >
@@ -149,6 +150,7 @@ describe("DashboardPage", () => {
     expect(html).toContain("inert");
     expect(html).toContain('aria-hidden="true"');
     expect(html).toContain('role="dialog"');
+    expect(html).toMatch(/data-app-shell-token-scope[^>]*style="[^"]*--brand:#123456[^"]*"[\s\S]*data-app-shell-background[\s\S]*role="dialog"/);
   });
 
   it("reads persisted menu visibility and visual tokens without changing route links", () => {

@@ -33,6 +33,16 @@ describe("message rules", () => {
     expect(() => queueMessage(store, { requestKey: "past", text: "안녕하세요", recipientIds: ["customer-seed-1"], scheduledAt: "2026-07-30T23:59:59.000Z", now: new Date("2026-07-31T00:00:00.000Z") })).toThrow("예약 시간");
   });
 
+  it("does not queue or consume quota while SMS is disabled", () => {
+    const store = createSalonStore(":memory:");
+    store.saveSettings({ smsEnabled: false, smsRemaining: 500 }, "원장");
+    const before = store.snapshot();
+
+    expect(() => queueMessage(store, { requestKey: "disabled", text: "안녕하세요", recipientIds: ["customer-seed-1"] })).toThrow("비활성화");
+    expect(store.list("messages")).toEqual(before.records.messages ?? []);
+    expect(store.getSettings().smsRemaining).toBe(500);
+  });
+
   it("persists only a dry-run request, reduces quota, and rejects its duplicate key", () => {
     const store = createSalonStore(":memory:");
     const message = queueMessage(store, { requestKey: "once", text: "안녕하세요", segment: "women" });

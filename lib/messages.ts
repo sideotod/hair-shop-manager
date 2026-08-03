@@ -32,6 +32,8 @@ export function queueMessage(store: SalonStore, input: QueueMessageInput) {
   if (!text) throw new Error("문자 내용을 입력하세요.");
   if (input.segment && !messageSegments.has(input.segment)) throw new Error("알 수 없는 발송 대상입니다.");
   if (recipientIds.length > 3) throw new Error("개별 수신자는 최대 3명입니다.");
+  const settings = store.getSettings();
+  if (settings.smsEnabled === false) throw new Error("SMS 기능이 비활성화되어 있습니다.");
   if (store.list<JsonObject>("messages").some(({ value }) => value.requestKey === input.requestKey)) throw new Error("이미 처리한 요청입니다.");
   const now = input.now ?? new Date();
   if (input.scheduledAt) {
@@ -40,7 +42,6 @@ export function queueMessage(store: SalonStore, input: QueueMessageInput) {
   }
 
   const customers = store.list<JsonValue>("customers");
-  const settings = store.getSettings();
   const powerMinimum = typeof settings.powerCustomerMinPoints === "number" && settings.powerCustomerMinPoints >= 0 ? settings.powerCustomerMinPoints : 100;
   if (recipientIds.some((id) => !customers.some((customer) => customer.id === id))) throw new Error("알 수 없는 고객입니다.");
   const recipients = eligibleRecipients(customers, input.segment ?? "all", powerMinimum, recipientIds);

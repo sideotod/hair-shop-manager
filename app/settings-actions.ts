@@ -3,7 +3,7 @@
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 
-import { changeOwnerPasswordRecord, parseShopSettings, saveNoticeRecord } from "../lib/settings";
+import { changeOwnerPasswordRecord, parseShopSettings, saveNoticeRecord, settingsErrorMessage } from "../lib/settings";
 import { createSalonStore } from "../lib/salon-store";
 
 function returnTo(formData: FormData) {
@@ -17,7 +17,7 @@ function mutate(formData: FormData, notice: string, operation: (store: ReturnTyp
     const store = createSalonStore();
     try { operation(store); } finally { store.close(); }
   } catch (error) {
-    url.searchParams.set("error", error instanceof Error ? error.message : "설정을 저장하지 못했습니다.");
+    url.searchParams.set("error", settingsErrorMessage(error));
     redirect(`${url.pathname}${url.search}`);
   }
   for (const path of ["/", "/customers", "/bookings", "/sales", "/messages", "/operations", "/settings"]) revalidatePath(path);

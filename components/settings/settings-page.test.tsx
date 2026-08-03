@@ -3,7 +3,7 @@ import { renderToStaticMarkup } from "react-dom/server";
 import { describe, expect, it } from "vitest";
 
 import { hashOwnerPassword, verifyOwnerPassword } from "../../lib/auth";
-import { changeOwnerPasswordRecord, parseShopSettings } from "../../lib/settings";
+import { changeOwnerPasswordRecord, parseShopSettings, settingsErrorMessage } from "../../lib/settings";
 import { createSalonStore } from "../../lib/salon-store";
 import { SettingsPage } from "./settings-page";
 
@@ -26,6 +26,21 @@ describe("settings validation", () => {
   it("accepts only six-digit hexadecimal display colors", () => {
     expect(() => parseShopSettings(settingsForm({ backgroundColor: "red" }), {})).toThrow("색상");
     expect(parseShopSettings(settingsForm({ backgroundColor: "#f7f5f6", foregroundColor: "#211a1f" }), {})).toMatchObject({ backgroundColor: "#f7f5f6", foregroundColor: "#211a1f" });
+  });
+
+  it("rejects visual tokens without readable contrast", () => {
+    expect(() => parseShopSettings(settingsForm({ backgroundColor: "#ffffff", foregroundColor: "#ffffff" }), {})).toThrow("대비");
+    expect(() => parseShopSettings(settingsForm({ brandColor: "#ffffff" }), {})).toThrow("대비");
+    expect(() => parseShopSettings(settingsForm({ sidebarColor: "#ffffff" }), {})).toThrow("대비");
+  });
+
+  it("does not add visual defaults to unrelated settings saves", () => {
+    expect(parseShopSettings(settingsForm({ shopName: "강남점" }), {})).toEqual({ shopName: "강남점" });
+  });
+
+  it("stores the existing booking reminder key and ignores the retired duplicate key", () => {
+    expect(parseShopSettings(settingsForm({ reminderText: "예약 하루 전 안내" }), {})).toEqual({ reminderText: "예약 하루 전 안내" });
+    expect(parseShopSettings(settingsForm({ bookingNoticeText: "unused" }), {})).toEqual({});
   });
 
   it("confirms and hashes a changed owner password without persisting plaintext", () => {
@@ -56,6 +71,38 @@ describe("settings validation", () => {
       store.close();
     }
   });
+
+  it("rejects a wrong current password and a short new password", () => {
+    const store = createSalonStore(":memory:");
+    try {
+      store.saveSettings({ ownerPasswordHash: hashOwnerPassword("current-password", "current-salt") }, "원장");
+      expect(() => changeOwnerPasswordRecord(store, settingsForm({ currentPassword: "wrong-password", newPassword: "changed-password", confirmPassword: "changed-password" }))).toThrow("현재 비밀번호");
+      expect(() => changeOwnerPasswordRecord(store, settingsForm({ currentPassword: "current-password", newPassword: "short", confirmPassword: "short" }))).toThrow("8자 이상");
+    } finally {
+      store.close();
+    }
+  });
+
+  it("preserves password whitespace exactly instead of trimming it", () => {
+    const store = createSalonStore(":memory:");
+    try {
+      store.saveSettings({ ownerPasswordHash: hashOwnerPassword(" current-password ", "current-salt") }, "원장");
+      changeOwnerPasswordRecord(store, settingsForm({ currentPassword: " current-password ", newPassword: " changed-password ", confirmPassword: " changed-password " }));
+      expect(verifyOwnerPassword(" changed-password ", String(store.getSettings().ownerPasswordHash))).toBe(true);
+      expect(verifyOwnerPassword("changed-password", String(store.getSettings().ownerPasswordHash))).toBe(false);
+    } finally {
+      store.close();
+    }
+  });
+
+  it("keeps known validation errors but redacts operational details from redirect queries", () => {
+    const secret = "plain-password-from-sqlite";
+    const query = new URLSearchParams({ error: settingsErrorMessage(new Error(`SQLITE_BUSY: ${secret}`)) }).toString();
+
+    expect(new URLSearchParams(query).get("error")).toBe("설정을 저장하지 못했습니다.");
+    expect(query).not.toContain(secret);
+    expect(settingsErrorMessage(new Error("현재 비밀번호를 확인하세요."))).toBe("현재 비밀번호를 확인하세요.");
+  });
 });
 
 describe("SettingsPage", () => {
@@ -80,6 +127,11 @@ describe("SettingsPage", () => {
     expect(html).not.toContain("쿠폰 설정");
   });
 
+  it("uses the same visual defaults in the settings form and app shell", () => {
+    const html = renderToStaticMarkup(<SettingsPage {...props} settings={{ shopName: "강남점", ownerName: "민지" }} section="customer" />);
+    for (const token of ["#f7f5f0", "#202124", "#5c344f", "#2b2028"]) expect(html.match(new RegExp(token, "g"))?.length).toBeGreaterThanOrEqual(2);
+  });
+
   it("renders customer, payment, booking, and dry-run messaging policies", () => {
     const customer = renderToStaticMarkup(<SettingsPage {...props} section="customer" />);
     expect(customer).toContain("사이드 메뉴 숨김");
@@ -92,9 +144,15 @@ describe("SettingsPage", () => {
     const booking = renderToStaticMarkup(<SettingsPage {...props} section="booking" />);
     expect(booking).toContain('name="bookingOpen"');
     expect(booking).toContain('name="bookingClose"');
+    expect(booking).toContain('name="reminderText"');
+    expect(booking).not.toContain('name="bookingNoticeText"');
     const messages = renderToStaticMarkup(<SettingsPage {...props} section="messages" />);
     expect(messages).toContain("상태: dry-run");
     expect(messages).toContain("공급자 전송 없이");
+    expect(messages).toContain('href="/messages#automation"');
+    expect(messages).not.toContain('name="messageAutomationSchedule"');
+    expect(messages).not.toContain('name="messageAutomationText"');
+    expect(messages).not.toContain('name="messageAutomationEnabled"');
   });
 
   it("shows non-secret Naver help and reachable notices, FAQ, and audit history", () => {
@@ -106,5 +164,18 @@ describe("SettingsPage", () => {
     expect(help).toContain("운영 공지");
     expect(help).toContain("설정 변경 이력");
     expect(help).toContain("원장");
+    expect(help).toContain('id="terms"');
+    expect(help).toContain("서비스 이용약관");
+    expect(help).toContain("불변 거래 원장");
+    expect(help).toContain("공급자 연결 전까지 dry-run");
+  });
+
+  it("redacts operational errors and password values from rendered HTML", () => {
+    const secret = "plain-password-from-sqlite";
+    const html = renderToStaticMarkup(<SettingsPage {...props} error={`SQLITE_BUSY: ${secret}`} section="owner" />);
+
+    expect(html).toContain("설정을 저장하지 못했습니다.");
+    expect(html).not.toContain("SQLITE_BUSY");
+    expect(html).not.toContain(secret);
   });
 });

@@ -115,3 +115,87 @@ A bounded production server was started on port 3011 with a generated scrypt dem
 
 - The repository-wide suite remains non-green because of the four pre-existing revenue/shared-data failures listed above. Task 8 focused tests, typecheck, build, and both required Chrome viewport checks pass.
 - The unrelated modified file `docs/superpowers/plans/2026-07-31-hairhaeyo-owner-operations-implementation.md` remains unstaged and uncommitted.
+
+## Fix round 1 — 2026-08-03
+
+### Review findings addressed
+
+- New-customer gender now uses persisted `defaultGender`; an existing customer's stored gender remains authoritative.
+- `smsEnabled=false` is enforced in `lib/messages.ts` before message persistence or quota mutation. `/messages` renders explicit `SMS 기능 꺼짐` text and disables the queue fieldset.
+- Booking settings now read and persist only the existing `reminderText` key. The unused `bookingNoticeText` key is ignored.
+- The duplicate `messageAutomationSchedule`, `messageAutomationText`, and `messageAutomationEnabled` settings were removed. Settings now provides truthful dry-run/SMS status and links to `/messages#automation`, where the existing controls remain.
+- Settings errors use an exact validation-message allowlist. SQLite, configuration, and other operational errors become `설정을 저장하지 못했습니다.` before entering a redirect URL or rendered HTML.
+- Password fields use an untrimmed raw accessor. Current, new, and confirmation values preserve whitespace exactly; plaintext remains absent from settings, audit payloads, redirect queries, and HTML.
+- `DEFAULT_VISUAL_TOKENS` is the single default source for the settings form and `AppShell`. Native relative-luminance checks enforce 4.5:1 for background/foreground, brand/white, and sidebar/white. The token scope now wraps both shell background and overlay.
+- Help now contains reachable `#terms` service terms covering owner account responsibility, customer/booking/financial data, immutable financial corrections, SMS dry-run limits, and separate Naver integration.
+- The coverage matrix was re-audited conservatively. All product/coupon rows are `사용자 승인 제외`; unverified point policy, automatic-delivery, popup, endpoint, and meta-policy claims are `연동 확인 필요`.
+- The coverage parser now rejects generic evidence labels such as `Playwright`, requires every semicolon-separated evidence item to be an existing concrete repository path, and requires implementation/test paths for `구현` and `원장 1인 대체` rows.
+
+### Coverage after re-audit
+
+- Top-level bullets: **253**
+- Nested bullets: **10**
+- Total bullets: **263**
+- `구현`: **153**
+- `원장 1인 대체`: **16**
+- `연동 확인 필요`: **51**
+- `사용자 승인 제외`: **43**
+- `계획`: **0**
+
+### TDD and focused verification
+
+Initial regression run before implementation:
+
+```powershell
+npm test -- components/settings/settings-page.test.tsx components/customers/customers-page.test.tsx lib/messages.test.ts components/messages/messages-page.test.tsx components/dashboard/dashboard-page.test.tsx lib/function-coverage.test.ts
+```
+
+Result: exit 1; **6 test files failed; 11 tests failed and 34 passed**. Failures reproduced missing contrast checks, password whitespace preservation, reminder-key consolidation, terms/error redaction, default gender, SMS disable enforcement/UI, overlay token scope, and conservative matrix evidence/status rules.
+
+Final focused settings/coverage/shell/auth run:
+
+```powershell
+npm test -- components/settings/settings-page.test.tsx components/customers/customers-page.test.tsx lib/messages.test.ts components/messages/messages-page.test.tsx components/dashboard/dashboard-page.test.tsx lib/function-coverage.test.ts lib/auth.test.ts
+```
+
+Result: exit 0; **7 test files passed, 55 tests passed**.
+
+Strict TypeScript:
+
+```powershell
+npm run typecheck
+```
+
+Result: exit 0; `tsc --noEmit` passed.
+
+Production build:
+
+```powershell
+npm run build
+```
+
+Result: exit 0; Next.js 16.2.12 compiled successfully, TypeScript completed, 11 static pages were generated, and dynamic `/settings` and `/messages` routes were included.
+
+Working-tree whitespace check:
+
+```powershell
+git diff --check
+```
+
+Result: exit 0; no whitespace errors. Git emitted only the repository's existing LF-to-CRLF conversion warnings.
+
+Staged diff whitespace check:
+
+```powershell
+git diff --cached --check
+```
+
+Result: exit 0; no staged whitespace errors.
+
+The full repository suite was not repeated in this fix round. Its four previously documented revenue/shared-`.data` failures remain separately classified and the fix did not modify revenue aggregation, transaction-page filtering, or shared `.data` behavior.
+
+### Fix-round self-review
+
+- No new dependency, UI framework, provider abstraction, credential storage, product/coupon surface, or prepaid balance manager was added.
+- Shared enforcement lives at the existing queue/settings/auth boundaries; UI status mirrors but does not replace server enforcement.
+- The controller-owned revised plan remains unstaged.

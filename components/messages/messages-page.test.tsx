@@ -28,4 +28,13 @@ describe("MessagesPage", () => {
     expect(page({ customers: [], error: "SMS 잔여 건수가 부족합니다." })).toContain('role="alert"');
     expect(page({ customers: [] })).toContain("발송 가능한 고객이 없습니다.");
   });
+
+  it("shows a non-color disabled state and disables queue controls", () => {
+    const html = page({ settings: { smsEnabled: false, smsRemaining: 500 } });
+
+    expect(html).toContain("SMS 기능 꺼짐");
+    expect(html).toContain("문자 요청을 저장할 수 없습니다");
+    expect(html).toContain('<fieldset disabled=""');
+    expect(html).toContain('id="automation"');
+  });
 });

@@ -2,6 +2,7 @@ import Link from "next/link";
 
 import { logoutOwner } from "../app/auth-actions";
 import type { JsonObject, JsonValue, SalonRecord } from "../lib/salon-domain";
+import { resolveVisualTokens } from "../lib/visual-tokens";
 
 const menu = [
   ["오늘", "/"],
@@ -64,16 +65,17 @@ export function AppShell({
   const customerTarget = settings.customerOpenMode === "new-window" ? "_blank" : undefined;
   const ownerLabel = resolvedOwnerName === "원장" ? "원장님" : `${resolvedOwnerName} 원장님`;
   const dateLabel = new Intl.DateTimeFormat("ko-KR", { dateStyle: "full", timeZone: "Asia/Seoul" }).format(today);
+  const resolvedVisualTokens = resolveVisualTokens(settings);
   const visualTokens = {
-    "--background": setting("backgroundColor", "#f7f5f0"),
-    "--foreground": setting("foregroundColor", "#202124"),
-    "--brand": setting("brandColor", "#5c344f"),
-    "--sidebar": setting("sidebarColor", "#2b2028"),
+    "--background": resolvedVisualTokens.backgroundColor,
+    "--foreground": resolvedVisualTokens.foregroundColor,
+    "--brand": resolvedVisualTokens.brandColor,
+    "--sidebar": resolvedVisualTokens.sidebarColor,
   } as React.CSSProperties;
 
   return (
-    <>
-      <div data-app-shell-background {...(overlay ? { inert: true, "aria-hidden": true } : {})} className="grid min-h-screen min-w-[1280px] grid-cols-[232px_minmax(0,1fr)] bg-[var(--background)] text-[var(--foreground)]" style={visualTokens}>
+    <div data-app-shell-token-scope style={visualTokens}>
+      <div data-app-shell-background {...(overlay ? { inert: true, "aria-hidden": true } : {})} className="grid min-h-screen min-w-[1280px] grid-cols-[232px_minmax(0,1fr)] bg-[var(--background)] text-[var(--foreground)]">
         <aside className="sticky top-0 flex h-screen flex-col bg-[var(--sidebar)] px-6 py-7 text-white">
           <div>
             <strong className="block text-[22px] leading-none tracking-[-0.02em]">HAIRHAEYO</strong>
@@ -127,6 +129,6 @@ export function AppShell({
         </div>
       </div>
       {overlay}
-    </>
+    </div>
   );
 }

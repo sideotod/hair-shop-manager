@@ -106,4 +106,15 @@ describe("CustomersPage", () => {
     expect(existingHtml).toContain('<option value="on" selected="">수신 동의</option>');
     expect(existingHtml).toContain('type="radio" name="birthdayCalendar" checked="" value="solar"');
   });
+
+  it("applies default gender only to new customers", () => {
+    const store = createSalonStore(":memory:");
+    store.saveSettings({ defaultGender: "male" }, "원장");
+
+    const newHtml = page(store, { showNew: true });
+    const existingHtml = page(store, { selectedCustomerId: "customer-seed-1" });
+
+    expect(newHtml).toContain('<option value="male" selected="">남성</option>');
+    expect(existingHtml).toContain('<option value="female" selected="">여성</option>');
+  });
 });
