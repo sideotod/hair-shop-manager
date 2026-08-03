@@ -95,6 +95,32 @@ await qaExpensePrintLink.click();
 - `1280x900`, `http://127.0.0.1:3000/operations?tab=expenses`: `인쇄용 지출 원장` action count was `1`, href `/operations?tab=expenses&print=1`; normal page dimensions were `scrollWidth=1265`, `clientWidth=1265`, `overflow=false`. Its print route rendered `인쇄용 지출 정산` and `인쇄용 지출 원장`; print document dimensions were `scrollWidth=1280`, `clientWidth=1280`, `overflow=false`.
 - `1440x1000`, `http://127.0.0.1:3000/operations?tab=expenses`: `인쇄용 지출 원장` action count was `1`, href `/operations?tab=expenses&print=1`; normal page dimensions were `scrollWidth=1425`, `clientWidth=1425`, `overflow=false`. The print route had one `인쇄용 지출 정산` heading and one `인쇄용 지출 원장` heading with `scrollWidth=1440`, `clientWidth=1440`, `overflow=false`.
 
+## Task 6 fix round 2 verification
+
+Focused render test (red) command:
+
+```powershell
+npm test -- components/operations/operations-page.test.tsx
+```
+
+Decisive output: exit code `1`; `Test Files  1 failed (1)` and `Tests  1 failed | 3 passed (4)`. The exact period-preserving print href assertion failed because the rendered link was only `/operations?tab=expenses&amp;print=1`.
+
+Focused render test (green) command:
+
+```powershell
+npm test -- components/operations/operations-page.test.tsx
+```
+
+Decisive output: exit code `0`; `Test Files  1 passed (1)` and `Tests  4 passed (4)`; duration `1.28s`.
+
+Typecheck command:
+
+```powershell
+npm run typecheck
+```
+
+Decisive output: exit code `0`; `tsc --noEmit` completed without diagnostics.
+
 ## Exact verification evidence
 
 Focused verification command:

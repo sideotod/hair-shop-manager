@@ -27,6 +27,8 @@ describe("OperationsPage", () => {
   it("renders expense preset, period reconciliation, correction, and the ledger from one period", () => {
     const page = renderToStaticMarkup(<OperationsPage {...props} activeTab="expenses" correctionId="expense-1" />);
 
+    expect(page).toContain('href="/operations?tab=expenses&amp;print=1&amp;start=2026-07-01&amp;end=2026-07-31"');
+
     expect(page).toContain("지출 정정");
     expect(page).toContain("지출 프리셋");
     expect(page).toContain("기간 정산");
