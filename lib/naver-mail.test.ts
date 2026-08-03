@@ -1,0 +1,93 @@
+import { describe, expect, it } from "vitest";
+
+import {
+  applyNaverBookingMails,
+  classifyNaverBookingMail,
+  mergeNaverBookingMail,
+  parseNaverBookingMail,
+  type NaverMailMessage,
+} from "./naver-mail";
+import { createSalonStore } from "./salon-store";
+
+const mail = (overrides: Partial<NaverMailMessage> = {}): NaverMailMessage => ({
+  uid: 101,
+  receivedAt: "2026-08-03T05:00:00.000Z",
+  from: "네이버 예약 <booking_noreply@naver.com>",
+  subject: "[네이버 예약] 예약 확정",
+  text: [
+    "예약번호: NVR-20260804-001",
+    "예약자명: 김하나",
+    "연락처: 010-1234-5678",
+    "예약상품: 여성 커트",
+    "방문일시: 2026-08-04 14:30~15:30",
+  ].join("\n"),
+  ...overrides,
+});
+
+describe("Naver booking mail", () => {
+  it("classifies request, confirmation, change, and cancellation", () => {
+    expect(classifyNaverBookingMail(mail({ subject: "네이버 예약 신청" }))).toBe("requested");
+    expect(classifyNaverBookingMail(mail({ subject: "네이버 예약 확정" }))).toBe("confirmed");
+    expect(classifyNaverBookingMail(mail({ subject: "네이버 예약 변경" }))).toBe("changed");
+    expect(classifyNaverBookingMail(mail({ subject: "네이버 예약 취소" }))).toBe("cancelled");
+    expect(classifyNaverBookingMail(mail({ from: "news@example.com", subject: "주간 소식", text: "안녕하세요" }))).toBeNull();
+  });
+
+  it("parses reservation identity, customer, service, and visit time", () => {
+    expect(parseNaverBookingMail(mail())).toEqual({
+      uid: 101,
+      receivedAt: "2026-08-03T05:00:00.000Z",
+      reservationNumber: "NVR-20260804-001",
+      customerName: "김하나",
+      customerPhone: "01012345678",
+      service: "여성 커트",
+      startsAt: "2026-08-04T14:30:00.000Z",
+      endsAt: "2026-08-04T15:30:00.000Z",
+      status: "confirmed",
+    });
+  });
+
+  it("parses HTML-only mail and returns null without a reservation number", () => {
+    const html = mail({ text: undefined, html: "<p>예약번호: NVR-HTML-1<br>예약자명: 박봄<br>연락처: 010-9999-1111<br>예약상품: 펌<br>방문일시: 2026-08-05 10:00~11:00</p>" });
+    expect(parseNaverBookingMail(html)?.reservationNumber).toBe("NVR-HTML-1");
+    expect(parseNaverBookingMail(mail({ text: "예약자명: 번호없음" }))).toBeNull();
+  });
+
+  it("ignores same or lower UID and applies higher UID in order", () => {
+    const first = parseNaverBookingMail(mail())!;
+    const created = mergeNaverBookingMail(undefined, first);
+    const stale = mergeNaverBookingMail(created.value, { ...first, uid: 100, status: "changed" });
+    const changed = mergeNaverBookingMail(created.value, { ...first, uid: 102, status: "changed", service: "여성 펌" });
+
+    expect(created.changed).toBe(true);
+    expect(stale).toEqual({ changed: false, archived: false, value: created.value });
+    expect(changed.changed).toBe(true);
+    expect(changed.value.service).toBe("여성 펌");
+    expect(changed.value.naverUid).toBe(102);
+    expect(changed.value.statusHistory).toHaveLength(2);
+  });
+
+  it("archives cancellation while preserving prior status history", () => {
+    const confirmed = mergeNaverBookingMail(undefined, parseNaverBookingMail(mail())!);
+    const cancelled = mergeNaverBookingMail(confirmed.value, parseNaverBookingMail(mail({ uid: 103, subject: "네이버 예약 취소" }))!);
+
+    expect(cancelled.archived).toBe(true);
+    expect(cancelled.value.status).toBe("cancelled");
+    expect(cancelled.value.statusHistory).toHaveLength(2);
+  });
+
+  it("deduplicates UIDs and integrates one booking per reservation number", () => {
+    const store = createSalonStore(":memory:");
+    try {
+      const first = parseNaverBookingMail(mail())!;
+      const result = applyNaverBookingMails(store, [first, first, { ...first, uid: 102, status: "changed", service: "여성 펌" }]);
+      const bookings = store.list("bookings").filter((record) => record.id.startsWith("naver-booking:"));
+
+      expect(result).toEqual({ changed: 2, cancelled: 0, highestUid: 102 });
+      expect(bookings).toHaveLength(1);
+      expect((bookings[0].value as { service: string }).service).toBe("여성 펌");
+    } finally {
+      store.close();
+    }
+  });
+});
