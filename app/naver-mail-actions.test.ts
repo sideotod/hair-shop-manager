@@ -1,7 +1,7 @@
 import { describe, expect, it, vi } from "vitest";
 
-import { createStartupNaverSync, synchronizeNaverBookings, testNaverMailConnection } from "./naver-mail-actions";
-import { naverMailMetadata, testNaverMailConnection as testInboxConnection } from "../lib/naver-mail";
+import { synchronizeNaverBookings, testNaverMailConnection } from "./naver-mail-actions";
+import { createStartupNaverSync, naverMailMetadata, testNaverMailConnection as testInboxConnection } from "../lib/naver-mail";
 import { createSalonStore } from "../lib/salon-store";
 
 vi.mock("../lib/naver-mail", async (importOriginal) => ({

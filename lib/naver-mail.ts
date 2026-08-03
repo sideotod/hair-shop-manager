@@ -199,3 +199,16 @@ export function naverMailMetadata(settings: JsonObject): NaverMailMetadata {
 export function naverMailConnectionMetadata(email: string): NaverMailMetadata {
   return { email, provider: "naver", connected: true, lastSyncUid: 0, lastSyncAt: "" };
 }
+
+export function createStartupNaverSync(sync: () => Promise<void>) {
+  let done = false;
+  let pending: Promise<void> | undefined;
+  return async () => {
+    if (done) return;
+    if (!pending) {
+      // ponytail: single-process startup sync; use a DB lease if multi-process desktop instances are introduced.
+      pending = sync().then(() => { done = true; }).catch(() => undefined).finally(() => { pending = undefined; });
+    }
+    await pending;
+  };
+}

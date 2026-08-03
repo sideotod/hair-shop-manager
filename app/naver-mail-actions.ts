@@ -7,6 +7,7 @@ import { redirect } from "next/navigation";
 
 import {
   applyNaverBookingMails,
+  createStartupNaverSync,
   discoverNaverBookingMails,
   naverMailConnectionMetadata,
   naverMailMetadata,
@@ -156,19 +157,6 @@ export async function disconnectNaverMail() {
     fail(error);
   }
   finish("네이버 예약 메일 연결을 해제했습니다.");
-}
-
-export function createStartupNaverSync(sync: () => Promise<void>) {
-  let done = false;
-  let pending: Promise<void> | undefined;
-  return async () => {
-    if (done) return;
-    if (!pending) {
-      // ponytail: single-process startup sync; use a DB lease if multi-process desktop instances are introduced.
-      pending = sync().then(() => { done = true; }).catch(() => undefined).finally(() => { pending = undefined; });
-    }
-    await pending;
-  };
 }
 
 const runStartupSync = createStartupNaverSync(async () => { await synchronizeNaverBookings(false); });
