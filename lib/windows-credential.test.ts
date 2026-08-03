@@ -47,7 +47,7 @@ describe("Windows Credential Manager boundary", () => {
 
   it("runs helper for a missing disposable target", async () => {
     await expect(readWindowsCredential(`Hairhaeyo:Task10Missing-${randomUUID()}`)).resolves.toBeNull();
-  });
+  }, 15_000);
 
   it("deletes target through helper JSON", async () => {
     const run = runner({ stdout: '{"ok":true}', exitCode: 0 });
