@@ -22,8 +22,8 @@ export function buildRevenueTransactions(ledger: readonly LedgerEntry[], custome
     date: seoulBusinessDate(entry.occurredAt),
     dateLabel: dateLabel(seoulBusinessDate(entry.occurredAt)),
     customerIdentifier: entry.customerId ? customerNames.get(entry.customerId) ?? entry.customerId : detailText(entry.details ?? {}, "customerName", "비회원"),
-    service: detailText(entry.details ?? {}, "serviceMajor", "기타"),
-    payment: Object.keys(paymentAmounts(entry.details ?? {})).join(" · ") || "기타",
+    service: entry.kind === "expense" ? detailText(entry.details ?? {}, "expenseName", "지출") : detailText(entry.details ?? {}, "serviceMajor", "기타"),
+    payment: entry.kind === "expense" ? "지출" : Object.keys(paymentAmounts(entry.details ?? {})).join(" · ") || "기타",
     paymentAmounts: paymentAmounts(entry.details ?? {}),
     gross: entry.grossWon ?? entry.amountWon,
     netPaid: entry.amountWon,
@@ -33,7 +33,7 @@ export function buildRevenueTransactions(ledger: readonly LedgerEntry[], custome
     vat: entry.vatWon,
     fee: entry.feeWon,
     expense: entry.expenseWon,
-    status: entry.kind === "refund" ? "환불" : entry.kind === "correction" ? "정정" : "결제",
+    status: entry.kind === "refund" ? "환불" : entry.kind === "correction" ? "정정" : entry.kind === "expense" ? "지출" : "결제",
     gender: detailText(entry.details ?? {}, "gender", "미지정") === "female" ? "여성" : detailText(entry.details ?? {}, "gender", "미지정") === "male" ? "남성" : "미지정",
     visitType: detailText(entry.details ?? {}, "visitType", "first") === "repeat" ? "재방문" : "신규",
   } satisfies RevenueTransaction)));
@@ -73,7 +73,7 @@ export function buildRevenueAnalytics(allRecords: readonly RevenueTransaction[],
   const gross = sum(transactions, (record) => record.gross);
   const discount = sum(transactions, (record) => record.discount);
   const points = sum(transactions, (record) => record.points);
-  const paid = sum(transactions, (record) => record.netPaid);
+  const paid = sum(transactions.filter((record) => record.status !== "지출"), (record) => record.netPaid);
   const vat = sum(transactions, (record) => record.vat);
   const fee = sum(transactions, (record) => record.fee);
   const expense = sum(transactions, (record) => record.expense);
@@ -88,7 +88,7 @@ export function buildRevenueAnalytics(allRecords: readonly RevenueTransaction[],
     genders: amounts(transactions, "gender"),
     visitTypes: amounts(transactions, "visitType"),
     settlement: Object.freeze([
-      { name: "총 시술금액", value: gross }, { name: "할인", value: discount }, { name: "포인트 사용", value: points }, { name: "실결제", value: paid }, { name: "환불", value: refunds }, { name: "VAT", value: vat }, { name: "결제 수수료", value: fee }, { name: "지출", value: expense }, { name: "샵 수익", value: sum(transactions, (record) => record.profit) },
+      { name: "총 매출", value: gross }, { name: "할인", value: discount }, { name: "포인트 사용", value: points }, { name: "실결제", value: paid }, { name: "환불", value: refunds }, { name: "VAT", value: vat }, { name: "결제 수수료", value: fee }, { name: "지출", value: expense }, { name: "샵 수익", value: sum(transactions, (record) => record.profit) },
     ].map((row) => Object.freeze(row))),
     transactions,
   });

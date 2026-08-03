@@ -350,6 +350,12 @@ export function RevenueDashboard({
           >
             결제 등록
           </Link>
+          <Link
+            className="rounded-[10px] border border-[var(--border)] bg-white px-4 py-2 text-sm font-medium"
+            href="?tab=expenses"
+          >
+            지출·정산
+          </Link>
         </nav>
         <section
           aria-label="매출 조회"

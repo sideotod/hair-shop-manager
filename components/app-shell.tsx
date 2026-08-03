@@ -9,7 +9,7 @@ const menu = [
   ["예약", "/bookings"],
   ["매출·결제", "/sales"],
   ["문자", "/messages"],
-  ["상품·쿠폰", "/products"],
+  ["운영 설정", "/operations"],
   ["설정", "/settings"],
 ] as const;
 

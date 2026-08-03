@@ -300,46 +300,47 @@ git add app/sales app/payment-actions.ts components/sales lib
 git commit -m "feat(sales): add owner payments and simple revenue"
 ```
 
-### Task 6: Implement product sales, coupons, prepaid, expenses, and catalog
+### Task 6: Implement expenses, service catalog, and memo/state settings
 
 **Files:**
-- Create: `app/products/page.tsx`
-- Create: `app/product-actions.ts`
-- Create: `components/products/products-page.tsx`
-- Create: `components/products/products-page.test.tsx`
-- Create: `lib/coupons.ts`
-- Create: `lib/coupons.test.ts`
+- Create: `app/operations/page.tsx`
+- Create: `app/operation-actions.ts`
+- Create: `components/operations/operations-page.tsx`
+- Create: `components/operations/operations-page.test.tsx`
+- Modify: `components/sales/revenue-analytics.ts`
+- Modify: `components/sales/revenue-dashboard.tsx`
+- Modify: `app/sales/page.tsx`
 
 **Interfaces:**
-- Produces `sellProduct`, `correctProductSale`, `saveCatalogItem`, `sellCoupon`, `deductCoupon`, `saveExpense`, `correctExpense`, `savePreset` Server Actions.
-- Coupon helper rejects deductions greater than balance and returns an immutable balance history.
+- Produces `saveCatalogItem`, `saveExpense`, `correctExpense`, and `savePreset` Server Actions.
+- Product sales, coupons, and prepaid balances are explicitly excluded by user approval on 2026-08-03; coverage rows map them to `사용자 승인 제외` instead of silently representing them as implemented.
 
-- [ ] **Step 1: Write failing product and coupon tests**
+- [x] **Step 1: Write focused expense and catalog tests**
 
-Test product sale fields, implicit owner seller, cost/VAT/fee/profit/points, correction history, coupon category/name/price, sale/deduction/balance/history, quick memo, automatic-message event, ledger reflection, expense presets, period totals, reconciliation, and overdraft rejection.
+Test immutable expense entries, linked correction history, presets, period totals, reconciliation, service major/detail/price, scalp states, hair traits, selected memo, gifts, convenient memo values, and printable price list.
 
-- [ ] **Step 2: Implement actions and immutable ledger entries**
+- [x] **Step 2: Implement expense actions and immutable ledger entries**
 
-Product sale, coupon sale/deduction, refund, and expense each append ledger entries and audit events. Corrections append linked inverse/replacement entries.
+Expense save appends ledger and audit entries. Corrections append linked inverse/replacement entries and never update prior rows.
 
-- [ ] **Step 3: Build the Products/Coupons route**
+- [x] **Step 3: Build the operations route**
 
-Tabs: 상품 판매, 판매 이력, 쿠폰·선불권, 시술·상품 설정, 메모·상태값, 지출 항목. Include service major/detail/price, product category/name/price/supplier, scalp states, hair traits, selected memo, gifts, convenient memo values, and printable price list.
+Tabs: 시술 설정, 메모·상태값, 지출 항목. Include service major/detail/price, scalp states, hair traits, selected memo, gifts, convenient memo values, and printable service price list. Do not expose product, coupon, or prepaid tabs.
 
-- [ ] **Step 4: Add expense/reconciliation tab to Sales**
+- [x] **Step 4: Add expense/reconciliation tab to Sales**
 
 Render expense entry, preset, period list, settlement totals, correction, and print from the same ledger aggregate.
 
-- [ ] **Step 5: Verify and commit**
+- [x] **Step 5: Verify and commit**
 
-Run: `npm test -- lib/coupons.test.ts components/products/products-page.test.tsx lib/finance.test.ts && npm run typecheck`
+Run: `npm test -- components/operations/operations-page.test.tsx lib/finance.test.ts app/sales/page.test.tsx && npm run typecheck`
 
 ```bash
-git add app/products app/product-actions.ts components/products components/sales lib
-git commit -m "feat(products): add catalog coupon and expense flows"
+git add app/operations app/operation-actions.ts components/operations components/sales lib docs/superpowers/plans
+git commit -m "feat(operations): add expenses and service catalog"
 ```
 
-### Task 7: Implement SMS/LMS composer and automation
+### Task 7: Implement minimal SMS/LMS dry-run and automation settings
 
 **Files:**
 - Create: `app/messages/page.tsx`
@@ -350,20 +351,20 @@ git commit -m "feat(products): add catalog coupon and expense flows"
 - Create: `lib/messages.test.ts`
 
 **Interfaces:**
-- Produces `messageBytes(text): number`, `messageType(text): "SMS" | "LMS"`, `eligibleRecipients(customers,segment)`.
-- Produces `queueMessage`, `saveMessageTemplate`, `saveAutomationRule` Server Actions.
+- Produces `messageBytes(text): number`, `messageType(text): "SMS" | "LMS"`, and `eligibleRecipients(customers,segment)`.
+- Produces minimal `queueMessage` and `saveAutomationRule` Server Actions. Real provider delivery, full template management, and delivery tracking are explicitly excluded; all submissions remain `dry-run`.
 
 - [ ] **Step 1: Write failing message tests**
 
-Test max three individual recipients, sender, SMS/LMS byte threshold, immediate/scheduled date validation, opt-out exclusion, quota exhaustion, duplicate request key, all/women/men/power segments, templates, and every automatic-message rule.
+Test max three individual recipients, SMS/LMS byte threshold, opt-out exclusion, quota exhaustion, duplicate request key, basic segments, and dry-run status.
 
 - [ ] **Step 2: Implement pure message rules and queue actions**
 
-Use UTF-8 byte count, reject past schedules, preview excluded recipients and quota before enqueue, and create audit events. Without provider credentials, queue status is `dry-run`; do not report delivery.
+Use UTF-8 byte count, reject past schedules, preview excluded recipients and quota before enqueue, and create audit events. Queue status is always `dry-run`; do not add provider dependencies or report delivery.
 
 - [ ] **Step 3: Build the messaging route**
 
-Tabs: 개별 문자, 단체 문자, 템플릿, 자동 문자, 발송 이력. Show recipient preview, message type, bytes, expected quota, schedule fields, sample/template copy, remaining quota, and status labels.
+Provide one compact desktop page for individual/group dry-run composition, recipient preview, message type, bytes, expected quota, remaining quota, status labels, and basic automatic-message toggles. Do not build a full template library or delivery-history system.
 
 - [ ] **Step 4: Verify and commit**
 

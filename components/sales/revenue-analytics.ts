@@ -16,7 +16,7 @@ export type RevenueTransaction = {
   readonly vat: number;
   readonly fee: number;
   readonly expense: number;
-  readonly status: "결제" | "환불" | "정정";
+  readonly status: "결제" | "환불" | "정정" | "지출";
   readonly gender: string;
   readonly visitType: string;
 };

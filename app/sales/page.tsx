@@ -1,4 +1,5 @@
 import { AppShell } from "../../components/app-shell";
+import { OperationsPage } from "../../components/operations/operations-page";
 import { PaymentForm } from "../../components/sales/payment-form";
 import { RevenueDashboard } from "../../components/sales/revenue-dashboard";
 import { parseRevenueSearchParams } from "../../components/sales/revenue-query";
@@ -15,6 +16,7 @@ export default async function SalesPage({ searchParams }: { searchParams: Promis
     const snapshot = store.snapshot();
     const customers = snapshot.records.customers ?? [];
     const businessToday = seoulBusinessDate();
+    if (value(params.tab) === "expenses") return <OperationsPage activeTab="expenses" catalog={snapshot.records["catalog-items"] ?? []} correctionId={value(params.correction)} customers={customers} error={value(params.error) || undefined} expenses={snapshot.records["expense-presets"] ?? []} ledger={snapshot.ledger} salesContext settings={snapshot.settings} />;
     if (value(params.tab) === "payment") {
       const correctionTarget = snapshot.ledger.find(({ id, kind }) => id === value(params.correction) && kind === "payment");
       const customerId = value(params.customer) || correctionTarget?.customerId || undefined;
