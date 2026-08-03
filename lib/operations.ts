@@ -12,9 +12,10 @@ const won = (data: FormData, key: string) => {
 const object = (value: unknown): JsonObject => value && typeof value === "object" && !Array.isArray(value) ? value as JsonObject : {};
 const string = (value: JsonObject, key: string) => typeof value[key] === "string" ? value[key] : "";
 const number = (value: JsonObject, key: string) => typeof value[key] === "number" && Number.isSafeInteger(value[key]) ? value[key] : 0;
+export function isCalendarDate(value: string) { return /^\d{4}-\d{2}-\d{2}$/.test(value) && new Date(`${value}T00:00:00Z`).toISOString().slice(0, 10) === value; }
 function occurredAt(data: FormData) {
   const date = text(data, "occurredDate"); const time = text(data, "occurredTime");
-  if (!/^\d{4}-\d{2}-\d{2}$/.test(date) || !/^(?:[01]\d|2[0-3]):[0-5]\d$/.test(time) || Number.isNaN(new Date(`${date}T00:00:00Z`).valueOf())) throw new Error("거래 날짜와 시간을 확인하세요.");
+  if (!isCalendarDate(date) || !/^(?:[01]\d|2[0-3]):[0-5]\d$/.test(time)) throw new Error("거래 날짜와 시간을 확인하세요.");
   return `${date}T${time}:00.000Z`;
 }
 function original(store: SalonStore, id: string) {

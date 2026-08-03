@@ -19,9 +19,7 @@ export default async function Page({ searchParams }: { searchParams: Promise<Rec
       ledger={snapshot.ledger}
       messages={snapshot.records.messages ?? []}
       mode={value(params.mode)}
-      coupons={snapshot.records["customer-coupons"] ?? []}
       printLayout={value(params.printLayout)}
-      products={snapshot.records["product-sales"] ?? []}
       query={value(params.query)}
       segment={value(params.segment)}
       segmentValue={value(params.segmentValue)}

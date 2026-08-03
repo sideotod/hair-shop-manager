@@ -9,11 +9,9 @@ function page(store = createSalonStore(":memory:"), props: Partial<React.Compone
   const snapshot = store.snapshot();
   return renderToStaticMarkup(<CustomersPage
     bookings={snapshot.records.bookings ?? []}
-    coupons={snapshot.records["customer-coupons"] ?? []}
     customers={snapshot.records.customers ?? []}
     ledger={snapshot.ledger}
     messages={snapshot.records.messages ?? []}
-    products={snapshot.records["product-sales"] ?? []}
     settings={snapshot.settings}
     waitingCustomers={snapshot.records["waiting-customers"] ?? []}
     {...props}
@@ -25,7 +23,14 @@ function listRows(html: string) {
 }
 
 describe("CustomersPage", () => {
-  it("renders linked booking, ledger, product, point, coupon, and message histories", () => {
+  it("omits product and coupon customer-history surfaces", () => {
+    const html = page(undefined, { selectedCustomerId: "customer-seed-1" });
+
+    expect(html).not.toContain("상품");
+    expect(html).not.toContain("쿠폰");
+  });
+
+  it("renders linked booking, ledger, point, and message histories", () => {
     const html = page(undefined, { selectedCustomerId: "customer-seed-1" });
 
     expect(html).toContain('data-selected-customer-payment="customer-seed-1"');
@@ -33,9 +38,7 @@ describe("CustomersPage", () => {
 
     expect(html).toContain("2026-07-31T10:00:00.000Z · 커트 · confirmed");
     expect(html).toContain("2026-07-24 · 결제 · ₩10,480,000");
-    expect(html).toContain("헤어 오일 · ₩28,000");
     expect(html).toContain("2026-07-24 · 1,000P");
-    expect(html).toContain("클리닉 5회 · 잔액 ₩250,000");
     expect(html).toContain("SMS · dry-run");
   });
 

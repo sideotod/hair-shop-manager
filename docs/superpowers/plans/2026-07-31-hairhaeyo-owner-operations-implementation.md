@@ -193,7 +193,7 @@ Validate required name, phone rules, memo length, duplicate name/phone override,
 
 - [ ] **Step 3: Build the customer route**
 
-Render search/list on the left and a query-selected detail drawer on the right. Detail tabs: 기본정보, 예약, 시술·결제, 상품, 포인트, 쿠폰·선불, 문자. Add segment presets for power, sales threshold, grade, group, gender, motive, recent/nonvisit, and birthday.
+Render search/list on the left and a query-selected detail drawer on the right. Detail tabs: 기본정보, 예약, 시술·결제, 포인트, 문자. Add segment presets for power, sales threshold, grade, group, gender, motive, recent/nonvisit, and birthday.
 
 - [ ] **Step 4: Implement waiting and bulk actions**
 
@@ -313,7 +313,7 @@ git commit -m "feat(sales): add owner payments and simple revenue"
 
 **Interfaces:**
 - Produces `saveCatalogItem`, `saveExpense`, `correctExpense`, and `savePreset` Server Actions.
-- Product sales, coupons, and prepaid balances are explicitly excluded by user approval on 2026-08-03; coverage rows map them to `사용자 승인 제외` instead of silently representing them as implemented.
+- Product sales and coupons are explicitly excluded by user approval on 2026-08-03; coverage rows map them to `사용자 승인 제외` instead of silently representing them as implemented. Prepaid maps to the existing payment-ledger tender workflow, without dedicated balance management.
 
 - [x] **Step 1: Write focused expense and catalog tests**
 
@@ -325,7 +325,7 @@ Expense save appends ledger and audit entries. Corrections append linked inverse
 
 - [x] **Step 3: Build the operations route**
 
-Tabs: 시술 설정, 메모·상태값, 지출 항목. Include service major/detail/price, scalp states, hair traits, selected memo, gifts, convenient memo values, and printable service price list. Do not expose product, coupon, or prepaid tabs.
+Tabs: 시술 설정, 메모·상태값, 지출 항목. Include service major/detail/price, scalp states, hair traits, selected memo, gifts, convenient memo values, and printable service price list. Do not expose product or coupon tabs; retain prepaid as an existing payment-ledger tender, without dedicated balance management.
 
 - [x] **Step 4: Add expense/reconciliation tab to Sales**
 

@@ -34,6 +34,18 @@ describe("OperationsPage", () => {
     expect(page).toContain("임대료");
   });
 
+  it("renders a populated catalog edit form and a dedicated expense print layout", () => {
+    const EditableOperationsPage = OperationsPage as unknown as (input: typeof props & { activeTab: "services"; editCatalogId: string }) => React.ReactElement;
+    const edit = renderToStaticMarkup(<EditableOperationsPage {...props} activeTab="services" editCatalogId="detail" />);
+    const print = renderToStaticMarkup(<OperationsPage {...props} activeTab="expenses" print />);
+
+    expect(edit).toContain('data-catalog-edit="detail"');
+    expect(edit).toContain('type="hidden" name="catalogId" value="detail"');
+    expect(edit).toContain('name="name" value="여성 커트"');
+    expect(print).toContain("인쇄용 지출 원장");
+    expect(print).toContain("임대료");
+  });
+
   it("shows explicit empty and input-error states", () => {
     const page = renderToStaticMarkup(<OperationsPage {...props} activeTab="expenses" error="지출 금액을 입력하세요." ledger={[]} />);
 
