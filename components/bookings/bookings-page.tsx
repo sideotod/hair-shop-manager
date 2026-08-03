@@ -44,7 +44,7 @@ export function BookingsPage({ bookings, customers, settings, syncHistory, date,
   const nextDate = activeView === "month" ? addCalendarMonths(selectedDate, 1) : addDays(selectedDate, activeView === "period" ? days : 1);
   const returnTo = link(selectedDate, activeView, period);
   const shopName = setting(settings, "shopName", "수원 본점"); const ownerName = setting(settings, "ownerName", "원장"); const smsRemaining = typeof settings.smsRemaining === "number" ? settings.smsRemaining : 0;
-  return <AppShell activeHref="/bookings" customers={customers} ownerName={ownerName} settings={settings} shopName={shopName} smsRemaining={smsRemaining}><main className="min-w-[1048px] px-8 pb-14 pt-8">
+  return <AppShell activeHref="/bookings" customers={customers} ownerName={ownerName} settings={settings} shopName={shopName} smsRemaining={smsRemaining}><main className="min-w-[1032px] px-8 pb-14 pt-8">
     {error && <p className="mb-5 rounded-[10px] border border-[var(--warning)] bg-[var(--warning-soft)] px-4 py-3 text-sm text-[var(--warning)]" role="alert">입력 내용을 수정하세요: {error}</p>}
     {notice && <p className="mb-5 rounded-[10px] border border-[var(--success)] bg-[var(--success-soft)] px-4 py-3 text-sm text-[var(--success)]" role="status">{notice}</p>}
     <div className="flex items-start justify-between gap-6"><div><p className="text-xs font-medium text-[var(--muted)]">예약 · FUNCTION.md 5.1–5.2</p><h1 className="mt-1 text-[28px] font-bold tracking-[-0.03em]">원장 예약</h1><p className="mt-1 text-sm text-[var(--muted)]">단일 원장 일정입니다. 디자이너·직원 배정은 사용하지 않습니다.</p></div><Link className="rounded-[9px] bg-[var(--brand)] px-4 py-3 text-sm font-bold text-white" href={link(selectedDate, activeView, period, "&new=1")}>예약 등록</Link></div>
