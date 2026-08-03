@@ -13,6 +13,14 @@ function rustTargetTriple() {
   return host;
 }
 
+export function cleanSidecarBuildArtifacts(root) {
+  for (const path of [
+    join(root, "src-tauri", ".next", "standalone"),
+    join(root, "src-tauri", "target", "debug", "server"),
+    join(root, "src-tauri", "target", "release", "server"),
+  ]) rmSync(path, { recursive: true, force: true });
+}
+
 export function prepareSidecar({ root, nodeExecutable, targetTriple }) {
   const standalone = join(root, ".next", "standalone");
   rmSync(join(standalone, ".data"), { recursive: true, force: true });
@@ -29,7 +37,7 @@ export function prepareSidecar({ root, nodeExecutable, targetTriple }) {
   mkdirSync(dirname(bundledCredentialHelper), { recursive: true });
   cpSync(credentialHelper, bundledCredentialHelper);
   const configStandalone = join(root, "src-tauri", ".next", "standalone");
-  rmSync(configStandalone, { recursive: true, force: true });
+  cleanSidecarBuildArtifacts(root);
   mkdirSync(dirname(configStandalone), { recursive: true });
   symlinkSync(standalone, configStandalone, "junction");
   const binaries = join(root, "src-tauri", "binaries");
@@ -39,9 +47,7 @@ export function prepareSidecar({ root, nodeExecutable, targetTriple }) {
 
 const currentFile = fileURLToPath(import.meta.url);
 if (process.argv[1] && pathToFileURL(resolve(process.argv[1])).href === pathToFileURL(currentFile).href) {
-  prepareSidecar({
-    root: resolve(dirname(currentFile), ".."),
-    nodeExecutable: process.execPath,
-    targetTriple: rustTargetTriple(),
-  });
+  const root = resolve(dirname(currentFile), "..");
+  if (process.argv.includes("--clean")) cleanSidecarBuildArtifacts(root);
+  else prepareSidecar({ root, nodeExecutable: process.execPath, targetTriple: rustTargetTriple() });
 }

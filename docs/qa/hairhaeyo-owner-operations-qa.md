@@ -1,69 +1,75 @@
 # Hairhaeyo owner operations QA — 2026-08-03
 
-## Scope
+## 범위
 
-- Desktop web only: Chrome at 1280×900 and 1440×1000.
-- Production Next standalone server and packaged Tauri Windows app.
-- Routes: `/`, `/customers`, `/bookings`, `/sales`, `/sales/transactions`, `/messages`, `/operations`, `/settings`.
-- Authoritative coverage: `FUNCTION.md` 253 top-level bullets, 10 nested bullets, 263 total.
+- 데스크톱 웹 전용: Chrome 1280×900, 1440×1000.
+- Next.js production standalone과 Tauri Windows 패키지.
+- 경로: `/`, `/customers`, `/bookings`, `/sales`, `/sales/transactions`, `/messages`, `/operations`, `/settings`.
+- 기준 문서: `FUNCTION.md` 상위 253개, 하위 10개, 총 263개 기능.
 
-## Browser workflow results
+## 웹 브라우저 결과
 
-- Production owner login and logout worked.
-- 1280×900 and 1440×1000 had no page-level horizontal overflow.
-- Customer registration, edit, global search, detail navigation, and persisted history worked.
-- Waiting-customer registration, customer link, payment link, and completion controls were present.
-- Booking create, status change, edit, cancellation, and overlapping-time rejection worked.
-- Payment creation preserved immutable rows; refund produced the original entry plus linked reversing entry.
-- Revenue page showed today, month, and total values from the shared server aggregate.
-- Day/month/total navigation, previous/next controls, CSV, print, transaction drawer, and settlement table were present.
-- Bar charts rendered permanent end labels with no bar tooltip. Pie chart retained tooltip behavior.
-- Revenue entry motion ran for line, bar, and pie charts; reduced-motion tests cover immediate settled geometry.
-- Drawer keyboard close and focus restoration worked.
-- Service catalog, expense entry/correction, presets, period totals, and print controls worked.
-- Product and coupon tabs were absent by approved scope. Prepaid remained a payment tender, without separate balance management.
-- Individual/group/scheduled message dry-run and automation settings worked without external delivery claims.
-- Naver 예약 메일은 IMAP TLS(`imap.naver.com:993`) 수신 전용으로 연결되며 SMTP·발송 기능은 없다.
-- Settings persisted shop and owner display values; notices used encoded redirects without Korean text corruption.
-- Browser console errors and warnings: 0 during final route checks.
+- 원장 로그인·로그아웃, 고객 등록·수정·검색·상세 이동, 대기 고객 처리, 예약 등록·수정·상태 변경·취소·중복 차단을 확인했다.
+- 결제는 불변 원장을 유지하고 환불·정정은 원본과 연결된 보정 거래로 남는다.
+- 매출은 오늘·월·총매출과 시술·성별·방문·결제수단 분석을 같은 서버 집계로 표시한다.
+- 막대 차트 금액은 끝에 항상 표시되고 막대 tooltip은 없다. 원형 차트 tooltip은 유지된다.
+- 매출 진입 motion과 `prefers-reduced-motion` 즉시 정착 상태를 자동 테스트로 확인했다.
+- 상품·쿠폰 화면은 승인된 범위에 따라 제외했다. 선불권은 별도 잔액 기능 없이 결제수단으로만 유지한다.
+- 문자 기능은 외부 전송을 주장하지 않는 dry-run으로 동작한다.
+- 설정에서 매장명·원장 표시 이름을 저장하며 기본 매장명은 `수원 본점`이다.
+- Chrome console error: 0.
 
-## Visual results
+## 네이버 예약 메일 연동
 
-- Pretendard Variable loaded locally; Korean labels, form controls, tables, and chart labels stayed aligned.
-- 1440 revenue bars: 8 permanent amount labels, 0 clipped labels.
-- No unintended hover disclosure on bar charts; pie tooltip remained the only chart hover detail.
-- Dense desktop pages retained visible focus, semantic labels, non-color status text, and usable 1280px layout.
-- No clipped sidebar, header, primary form, chart label, or fixed-shell region found in checked states.
+- 수신 전용 IMAP TLS `imap.naver.com:993`을 사용한다. SMTP·발송 기능은 없다.
+- 화면에 다음 8단계가 모두 표시된다.
+  1. 네이버 예약 메일 연동 클릭
+  2. 연동 방식·개인정보 안내
+  3. 네이버 메일 주소 입력
+  4. 애플리케이션 비밀번호 입력
+  5. 연결 테스트
+  6. 예약 관련 메일 자동 탐색
+  7. 초기 예약 데이터 불러오기
+  8. 앱 실행 시 신규 메일 동기화
+- 신청·확정·변경·취소를 분류하고 예약번호로 통합한다. 같은 UID와 낮은 UID는 무시한다.
+- 취소는 예약을 보관 처리하면서 상태 이력과 감사 처리자 `원장`을 유지한다.
+- 초기 import와 이후 신규 UID 증분 동기화를 지원한다. DB 저장이 실패하면 checkpoint를 갱신하지 않는다.
+- 시작 동기화는 프로세스당 성공 1회이며 동시 요청은 같은 Promise를 공유한다. 실패 후에는 재시도할 수 있다.
+- 비밀번호는 `Hairhaeyo:NaverBookingMail` Windows Credential Manager 항목에만 저장한다.
+- 비밀번호는 argv, URL, SQLite, 로그, 감사 payload, 오류 문구, HTML에 저장하거나 표시하지 않는다.
+- 실제 Chrome에서 잘못된 `owner@gmail.com`과 가짜 비밀번호를 제출했을 때 `입력 내용을 수정하세요: 네이버 메일 주소를 확인하세요.`가 표시됐다.
+- 가짜 비밀번호의 URL·본문·HTML·재렌더된 password value 잔존 수는 모두 0이었다.
+- 설정 외부 연동 화면은 `상태: 연결 안 됨`, `/bookings` 이동 링크를 표시했고 secret/password 필드는 0개였다.
 
-## Tauri production smoke
+## 화면 크기·시각 결과
 
-- `npm run tauri:build` produced `src-tauri/target/release/hairhaeyo.exe` and `Hairhaeyo_0.1.0_x64-setup.exe`.
-- Packaged app started its Node sidecar on `127.0.0.1:3210` and served the production login page.
-- Login opened the `수원 본점` dashboard.
-- Owner display name changed to `QA원장`; app restart retained `수원 본점`, `QA원장`, and the settings audit entry in the app-data SQLite database.
-- Keyboard Tab navigation moved from `오늘` to `고객` in menu order.
-- Revenue `인쇄` opened the native print flow; Escape closed it.
-- `CloseMainWindow()` exited the app and removed the port 3210 listener. A second restart and close produced the same clean shutdown result.
+- 1280×900: `clientWidth=1265`, `scrollWidth=1265`, 가로 스크롤 없음.
+- 1440×1000: `clientWidth=1425`, `scrollWidth=1425`, 가로 스크롤 없음.
+- 네이버 8단계 grid, 개인정보 안내, 이메일·비밀번호 입력, 버튼, 재시도 이력의 정렬·clipping 문제 없음.
+- Pretendard Variable을 로컬에서 사용하며 한국어 label, form control, 표, 차트 label 정렬을 확인했다.
+- 키보드 focus, semantic label, 색상 외 상태 문구를 유지한다.
 
-## Naver booking mail scenarios
+## Tauri·패키지 결과
 
-- Failed mocked connection: invalid Naver email, authentication, search, or parse failure shows a correction message with no password; prior `lastSyncUid` and `lastSyncAt` remain unchanged.
-- Successful mocked connection: connected state shows Naver email, last sync UID/time, and `/bookings` connection workflow; no secret input/value is rendered after connection.
-- Initial import: request and confirmation emails create one local booking per reservation number and record the highest imported UID.
-- Duplicate suppression: repeated UID and repeated reservation mail do not create duplicate bookings; a lower UID cannot overwrite a newer state.
-- Changed/cancelled state: a higher UID change updates booking details and status history; a cancellation archives the booking while preserving that history.
-- Restart checkpoint: startup incremental sync queries only UIDs above the saved checkpoint; one successful sync runs per process and a failed attempt can retry.
-- Secret redaction: application password never appears in argv, URL, SQLite, logs, audit payload, error text, history, or rendered HTML.
-- Disconnect: removes `Hairhaeyo:NaverBookingMail` from Windows Credential Manager and leaves only disconnected public metadata.
-- Disposable Credential Manager smoke: write/read/delete a generated disposable `Hairhaeyo:Task10-*` target; assert read value, then assert absence after delete. Never use a real password.
-- Viewports: at 1280x900 and 1440x1000, verify the eight-step notice, validation/correction state, connected metadata, import/sync controls, retry history, and disconnect control without horizontal overflow.
+- `npm run tauri:build` 성공.
+- 실행 파일: `src-tauri/target/release/hairhaeyo.exe`.
+- installer: `src-tauri/target/release/bundle/nsis/Hairhaeyo_0.1.0_x64-setup.exe`.
+- installer 크기: 30,513,889 bytes.
+- source, standalone, release의 `windows-credential.ps1` SHA-256가 모두 `B9B3BBBA94736BE016059C1E2DD67D41AB6A70F1A981646A9521F9DEEF242BE0`으로 일치한다.
+- 이전 Tauri runtime smoke에서 sidecar가 `127.0.0.1:3210` login을 제공하고 창 종료 후 listener가 제거되는 것을 확인했다.
+- prebuild가 이전 Tauri resource junction과 `target/*/server` 생성물을 제거한다. 최신 standalone과 release server의 재귀 `src-tauri` 포함 수는 0이다.
+- SQLite는 Tauri app-data에 저장되고 sidecar는 loopback에만 bind한다.
+- readiness는 실행마다 생성한 256-bit health token을 사용한다. token이 없거나 틀리면 403이다.
 
-## Security and release checks
+## 자동 검증
 
-- Production password hash and per-run 256-bit session secret are supplied to the sidecar environment; plaintext password is not embedded in Rust source.
-- SQLite path is supplied through `HAIRHAEYO_DB_PATH` and resolves under the Tauri app-data directory.
-- Sidecar listens only on loopback.
-- Standalone packaging removes `.data` before Tauri resources are assembled; the regression test prevents a salon SQLite file from entering the installer.
-- Readiness uses a separate per-run 256-bit health token. Missing or incorrect tokens return 403, and unrelated loopback listeners are rejected.
-- Independent review found one Critical and two Important issues; all three were fixed and the scoped re-review reported no new Critical/Important findings.
-- All 11 Naver-specific coverage rows map to IMAP reservation-mail implementation or its replacement workflow; no coverage rows remain pending.
+- Vitest: 30 files, 175/175.
+- TypeScript strict: 통과.
+- Next production build: 12/12 pages.
+- Cargo: 3/3.
+- `npm audit --omit=dev`: 취약점 0.
+- 실제 disposable Credential Manager write/read/delete: 통과.
+- Hairnuri 문자열: 0.
+- coverage pending: 0.
+- secret/static legacy field scan: 0.
+- `FUNCTION.md` 263/263 기능은 route, component, server operation, integration, background job 또는 승인된 대체 흐름에 매핑된다.

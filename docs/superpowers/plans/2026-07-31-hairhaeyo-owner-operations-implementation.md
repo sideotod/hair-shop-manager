@@ -501,37 +501,37 @@ git push origin main
 - Produces `writeWindowsCredential(target, username, secret)`, `readWindowsCredential(target)`, and `deleteWindowsCredential(target)` without placing the application password in command-line arguments, SQLite, logs, audit payloads, or rendered HTML.
 - Persists only non-secret connection metadata: `{ email, provider: "naver", connected, lastSyncUid, lastSyncAt }`.
 
-- [ ] **Step 1: Add IMAP and mail parsing dependencies**
+- [x] **Step 1: Add IMAP and mail parsing dependencies**
 
 Add only `imapflow` and `mailparser` plus their required TypeScript types. Use `imap.naver.com:993` with TLS. Do not implement SMTP or outbound mail.
 
-- [ ] **Step 2: Implement Windows Credential Manager boundary**
+- [x] **Step 2: Implement Windows Credential Manager boundary**
 
 Use the native Windows Credential Manager `CredWriteW`, `CredReadW`, and `CredDeleteW` APIs from `Advapi32.dll` through `scripts/windows-credential.ps1`. Pass request JSON through stdin and return response JSON through stdout so the application password never appears in the process command line. The credential target is `Hairhaeyo:NaverBookingMail`; zero secret buffers after use where supported.
 
 Test the TypeScript boundary with an injected process runner. Test write/read/delete commands, malformed helper output, helper failure, and secret redaction. Run: `npm test -- lib/windows-credential.test.ts`.
 
-- [ ] **Step 3: Implement Naver reservation mail parsing and merge rules**
+- [x] **Step 3: Implement Naver reservation mail parsing and merge rules**
 
 Parse subject, sender, HTML/text body, UID, received time, reservation number, customer name/phone, service, start/end, and reservation status. Classify reservation request, confirmation, change, and cancellation. Merge by reservation number; ignore the same/lower UID; apply a higher UID as the newest state; archive the local booking on cancellation while preserving status history and audit actor `원장`.
 
 Use TDD for parser classification, UID idempotency, duplicate removal, change ordering, cancellation, malformed mail, and no-reservation-number cases. Run: `npm test -- lib/naver-mail.test.ts`.
 
-- [ ] **Step 4: Implement connection, initial import, and incremental sync actions**
+- [x] **Step 4: Implement connection, initial import, and incremental sync actions**
 
 The connection flow is exact: `네이버 예약 메일 연동` → method/privacy notice → Naver email → application password → connection test → reservation-mail discovery → initial import. On success, store the password only in Windows Credential Manager and persist metadata with `provider: "naver"`, `connected: true`, the highest imported UID, and KST `lastSyncAt`.
 
 On later app launches, load the stored credential, read `lastSyncUid`, query only higher UIDs, deduplicate by UID and reservation number, update local booking states, and advance the checkpoint only after the database writes succeed. Authentication/search/parse failures must leave the prior checkpoint unchanged and render a non-secret correction message.
 
-- [ ] **Step 5: Add the bookings-page connection workflow**
+- [x] **Step 5: Add the bookings-page connection workflow**
 
 Replace the old generic Naver credential fields with a staged desktop web form for the exact eight-step flow. Show application-password creation guidance, privacy/storage notice, connection status, last sync UID/time, initial-import count, incremental-sync result, retry history, and disconnect action. Browser-only delivery may show `Windows Credential Manager 사용 가능 환경에서 연결` when the native credential helper is unavailable; it must not fall back to plaintext storage.
 
-- [ ] **Step 6: Add startup incremental synchronization**
+- [x] **Step 6: Add startup incremental synchronization**
 
 When the local Next server first serves the bookings/dashboard flow for an authenticated owner session, run one guarded incremental sync per process. Prevent concurrent duplicate sync with a module-level promise; release it after completion. Mark the ceiling with `ponytail: single-process startup sync; use a DB lease if multi-process desktop instances are introduced`.
 
-- [ ] **Step 7: Verify, review, and push main again**
+- [x] **Step 7: Verify, review, and push main again**
 
 Run: `npm test -- lib/naver-mail.test.ts lib/windows-credential.test.ts components/bookings/naver-mail-connection.test.tsx app/booking-actions.test.ts lib/booking.test.ts`
 

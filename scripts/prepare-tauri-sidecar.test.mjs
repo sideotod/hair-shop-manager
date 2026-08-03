@@ -1,10 +1,10 @@
-import { mkdtempSync, mkdirSync, readFileSync, realpathSync, rmSync, writeFileSync } from "node:fs";
+import { existsSync, mkdtempSync, mkdirSync, readFileSync, realpathSync, rmSync, symlinkSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 
 import { afterEach, describe, expect, it } from "vitest";
 
-import { prepareSidecar } from "./prepare-tauri-sidecar.mjs";
+import { cleanSidecarBuildArtifacts, prepareSidecar } from "./prepare-tauri-sidecar.mjs";
 
 const roots = [];
 
@@ -13,6 +13,28 @@ afterEach(() => {
 });
 
 describe("prepareSidecar", () => {
+  it("removes stale Tauri resources before the next Next build", () => {
+    const root = mkdtempSync(join(tmpdir(), "hairhaeyo-sidecar-"));
+    roots.push(root);
+    mkdirSync(join(root, ".next", "standalone"), { recursive: true });
+    mkdirSync(join(root, "src-tauri", ".next"), { recursive: true });
+    const source = join(root, ".next", "standalone");
+    const link = join(root, "src-tauri", ".next", "standalone");
+    symlinkSync(source, link, "junction");
+    for (const profile of ["debug", "release"]) {
+      const server = join(root, "src-tauri", "target", profile, "server", "scripts");
+      mkdirSync(server, { recursive: true });
+      writeFileSync(join(server, "windows-credential.ps1"), "stale helper");
+    }
+
+    cleanSidecarBuildArtifacts(root);
+
+    expect(existsSync(link)).toBe(false);
+    expect(existsSync(source)).toBe(true);
+    expect(existsSync(join(root, "src-tauri", "target", "debug", "server"))).toBe(false);
+    expect(existsSync(join(root, "src-tauri", "target", "release", "server"))).toBe(false);
+  });
+
   it("maps repository standalone output to bundled server resources", () => {
     const config = JSON.parse(readFileSync(join(process.cwd(), "src-tauri", "tauri.conf.json"), "utf8"));
 

@@ -4,6 +4,7 @@
   "private": true,
   "scripts": {
     "dev": "next dev",
+    "prebuild": "node scripts/prepare-tauri-sidecar.mjs --clean",
     "build": "next build",
     "test": "vitest run",
     "typecheck": "tsc --noEmit",
