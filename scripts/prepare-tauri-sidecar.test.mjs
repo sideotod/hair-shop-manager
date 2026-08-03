@@ -1,4 +1,4 @@
-import { mkdtempSync, mkdirSync, readFileSync, rmSync, writeFileSync } from "node:fs";
+import { mkdtempSync, mkdirSync, readFileSync, realpathSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 
@@ -13,6 +13,12 @@ afterEach(() => {
 });
 
 describe("prepareSidecar", () => {
+  it("maps repository standalone output to bundled server resources", () => {
+    const config = JSON.parse(readFileSync(join(process.cwd(), "src-tauri", "tauri.conf.json"), "utf8"));
+
+    expect(config.bundle.resources[".next/standalone/"]).toBe("server/");
+  });
+
   it("assembles standalone assets and the target-triple Node executable", () => {
     const root = mkdtempSync(join(tmpdir(), "hairhaeyo-sidecar-"));
     roots.push(root);
@@ -30,6 +36,7 @@ describe("prepareSidecar", () => {
 
     prepareSidecar({ root, nodeExecutable, targetTriple: "x86_64-pc-windows-msvc" });
 
+    expect(realpathSync(join(root, "src-tauri", ".next", "standalone"))).toBe(realpathSync(join(root, ".next", "standalone")));
     expect(readFileSync(join(root, ".next", "standalone", ".next", "static", "asset.txt"), "utf8")).toBe("static");
     expect(readFileSync(join(root, ".next", "standalone", "public", "public.txt"), "utf8")).toBe("public");
     expect(readFileSync(join(root, ".next", "standalone", "scripts", "windows-credential.ps1"), "utf8")).toBe("credential helper");

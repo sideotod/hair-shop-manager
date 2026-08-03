@@ -1,4 +1,4 @@
-import { cpSync, existsSync, mkdirSync, rmSync } from "node:fs";
+import { cpSync, existsSync, mkdirSync, rmSync, symlinkSync } from "node:fs";
 import { execFileSync } from "node:child_process";
 import { homedir } from "node:os";
 import { dirname, join, resolve } from "node:path";
@@ -28,6 +28,10 @@ export function prepareSidecar({ root, nodeExecutable, targetTriple }) {
   const bundledCredentialHelper = join(standalone, "scripts", "windows-credential.ps1");
   mkdirSync(dirname(bundledCredentialHelper), { recursive: true });
   cpSync(credentialHelper, bundledCredentialHelper);
+  const configStandalone = join(root, "src-tauri", ".next", "standalone");
+  rmSync(configStandalone, { recursive: true, force: true });
+  mkdirSync(dirname(configStandalone), { recursive: true });
+  symlinkSync(standalone, configStandalone, "junction");
   const binaries = join(root, "src-tauri", "binaries");
   mkdirSync(binaries, { recursive: true });
   cpSync(nodeExecutable, join(binaries, `node-${targetTriple}.exe`));

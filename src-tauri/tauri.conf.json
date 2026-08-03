@@ -30,7 +30,7 @@
     "targets": ["nsis"],
     "externalBin": ["binaries/node"],
     "resources": {
-      "../.next/standalone/": "server/"
+      ".next/standalone/": "server/"
     },
     "icon": ["icons/icon.ico"]
   }
