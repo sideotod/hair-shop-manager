@@ -1,0 +1,115 @@
+# Task 3 report — customer management and waiting workflow
+
+## Files
+
+- Created `app/customers/page.tsx`: server route loads one `SalonStore` snapshot and passes query-selected customer state to the page.
+- Created `app/customer-actions.ts`: server actions and testable record operations for customer, waiting, archive/completion, and customer-policy workflows.
+- Created `app/customer-actions.test.ts`: server validation, duplicate override, linked records, correction state, audit, waiting, and policy verification.
+- Created `components/customers/customers-page.tsx`: desktop customer search/list/detail workflow and forms.
+- Created `components/customers/customers-page.test.tsx`: semantic Korean-label, empty-state, search, tab, segment, print-layout, and waiting-control verification.
+- Modified `lib/salon-domain.ts`: shared customer and waiting record payload types.
+
+## Behavior mapping
+
+| FUNCTION.md section | Implemented workflow | Verification |
+|---|---|---|
+| 2.1 고객 등록 | Customer form captures identity, absent-phone state, contact/SMS preference, lunar/solar birthday, grade/group/motive, points/card/family fields, memo, dates, and initial SMS/booking/waiting choices. Server validates name, phone, memo, points, and duplicate override. | `app/customer-actions.test.ts`; `components/customers/customers-page.test.tsx` |
+| 2.2 고객 검색/조회 | Ten criteria filter the customer list; query-selected detail has basic, booking, service/payment, product, point, coupon/prepaid, and message history tabs. Customer archive is a soft archive with an `원장` audit record. | `components/customers/customers-page.test.tsx`; `app/customer-actions.test.ts` |
+| 2.3 고객 분류/마케팅 | Segment links cover power, sales threshold, grade, group, gender, motive, recent/nonvisit, and birthday; message-target link and four print-layout choices are present. | `components/customers/customers-page.test.tsx` |
+| 2.4 대기 고객 | Waiting name/memo registration, existing-member payment link, completion via soft archive, and explicit empty state are implemented. | `app/customer-actions.test.ts`; `components/customers/customers-page.test.tsx` |
+| 2.5 고객 설정 | Group, grade, motive, SMS-default, and birthday-calendar policy values are server-owned settings with an `원장` audit record. | `app/customer-actions.test.ts` |
+
+## TDD
+
+Used only for the requested high-risk logic.
+
+- RED: `npm test -- app/customer-actions.test.ts` failed because `app/customer-actions.ts` did not yet exist.
+- GREEN: after minimal server actions, the same command passed 3/3 tests.
+- RED: the correction-state test exposed that an incomplete initial booking saved its customer before throwing (customer count changed from 4 to 5).
+- GREEN: validation moved before the first mutation; focused tests passed 6/6.
+
+Routine page markup was implemented first, then covered with focused static-render verification per the testing override.
+
+## Commands and output
+
+- `npm test -- app/customer-actions.test.ts` — RED module-not-found, then GREEN 3/3; correction RED 1 failure, then GREEN 6 focused tests with page checks.
+- `npm test -- components/customers/customers-page.test.tsx lib/salon-store.test.ts` — 9/9 passed.
+- `npm test` — 13 files, 65 tests passed.
+- `npm run typecheck` — passed (`tsc --noEmit`).
+- `git diff --check` — passed.
+
+## Self-review
+
+- Actions use `SalonStore` writes and soft archive rather than client-owned state; every Task 3 mutation has actor exactly `원장`.
+- Duplicate, incomplete-linked-record, empty, length, opt-out, and waiting completion paths are covered.
+- The page has a 1048px content minimum inside the existing desktop shell, semantic labels, forms, headings, navigation, and non-color text status.
+- No designer/staff fields were added.
+
+## Concerns
+
+None. The Task 3 brief asks for a four-layout selector; browser print rendering/visual QA remains outside this task and is explicitly deferred to Task 9.
+
+## Fix round 1
+
+### Root-cause corrections
+
+- Customer saves now persist `telephone`; server date validation round-trips date values and bounds time values before any record mutation.
+- Customer-keyed ledger entries, product-sale records, and customer-coupon records drive customer histories and sales segments. Existing SQLite databases receive the additive `ledger.customer_id` migration.
+- Grade, group, gender, and motive segments require their selected value. Sales uses the linked ledger aggregate; recent/nonvisit use booking/payment timestamps rather than `visitType`.
+- Bulk group/grade updates mutate only selected customer records and preserve policy settings omitted by the bulk form. Policy values are consumed by the registration form's grade/group/motive controls.
+- The waiting payment link targets `/sales/transactions?new=1&customer=…`; that route resolves and renders the payment-registration customer context without adding payment-entry functionality ahead of Task 5.
+- Print layout is query-selected, renders four distinct printable tables, and uses a small client button that calls native `window.print()` with print-only CSS.
+
+### Tests and evidence
+
+- RED: `app/customer-actions.test.ts` proved missing `telephone` persistence and missing bulk customer updates.
+- GREEN: server payload, exact date/time validation, and bulk mutation changes passed 14 focused action/store tests.
+- RED: bulk-only submission cleared stored policy values; the regression test showed empty group/grade settings.
+- GREEN: omitted policy fields are preserved; the action test passes.
+- Behavioral page tests now assert linked histories, selected-value segments, ledger sales, timestamp-based recent/nonvisit, policy controls, and distinct print layouts. Transaction-page coverage asserts payment customer preselection.
+- Final focused command: `npm test -- app/customer-actions.test.ts components/customers/customers-page.test.tsx app/sales/transactions/page.test.tsx lib/salon-store.test.ts` — 27/27 passed.
+- `npm run typecheck` and `git diff --check` passed.
+
+## Fix round 2
+
+### Behavior mapping
+
+| FUNCTION.md section | Corrected workflow | Behavioral verification |
+|---|---|---|
+| 2.3 고객 분류/마케팅 | `파워 고객` reads the persisted non-negative integer `powerCustomerMinPoints` policy (fallback 100); `생일 대상` is scoped to the current KST month supplied by the server route. | Customer list test saves a 500-point policy, verifies only the 700-point record is power, and verifies an August KST scope excludes a September birthday. |
+| 2.1 고객 등록 / 2.5 고객 설정 | A new registration uses the persisted SMS and birthday-calendar defaults. An existing registration reads its own stored opt-in and calendar value, so policy changes do not overwrite it on edit. | Rendered form test verifies new SMS-off/lunar defaults and existing SMS-on/solar values separately. |
+| 2.3 고객 분류/인쇄 | The client print boundary delegates to native `window.print()` after the query-selected printable layout has been rendered. | `triggerCustomerPrint` is invoked with a `print` spy and asserts exactly one native call. |
+| 2.1 고객 등록 | Server validation rejects impossible birthday, first-meet, joined, and initial-booking dates before write; it rejects invalid booking times including `24:00`. | Action test tries every customer date field plus the time boundary and verifies no customer is saved. |
+
+### TDD evidence
+
+- RED: `npm test -- app/customer-actions.test.ts components/customers/customers-page.test.tsx components/customers/customer-print-button.test.tsx` produced four expected failures: missing persisted power criterion, absent print boundary, hard-coded power/birthday selection, and new form defaults ignoring persisted policy.
+- GREEN: the same focused command passed 15/15 after the minimal policy, KST scope, form-default, and print-boundary changes.
+- The exact date/time guards were implemented in Fix round 1. This round added behavioral coverage for every customer date field and `24:00`; the focused action test passed 9/9 because the existing server guards already reject each value before mutation.
+
+### Commands and output
+
+- `npm test -- app/customer-actions.test.ts components/customers/customers-page.test.tsx components/customers/customer-print-button.test.tsx` — 3 files, 15 tests passed.
+- `npm test -- app/customer-actions.test.ts components/customers/customers-page.test.tsx components/customers/customer-print-button.test.tsx app/sales/transactions/page.test.tsx lib/salon-store.test.ts` — 5 files, 32 tests passed.
+- `npm run typecheck` — passed (`tsc --noEmit`).
+- `git diff --check` — passed.
+
+### Files
+
+- Modified `app/customer-actions.ts` and `app/customer-actions.test.ts`: persisted/validated power criterion and exhaustive date/time mutation prevention coverage.
+- Modified `app/customers/page.tsx`: passes the current server time to the customer page.
+- Modified `components/customers/customers-page.tsx` and its test: persisted power policy, KST current-month birthday targeting, and new-versus-existing registration defaults.
+- Created `components/customers/customer-print-button.test.tsx` and modified its component: an injectable boundary verifies native print invocation.
+
+### Self-review and concerns
+
+- Power, SMS default, and birthday-calendar policy values remain server-owned through `SalonStore`; no client-only policy state was introduced.
+- All customer mutations retain the exact `원장` actor. Existing values take precedence only for an edit; defaults apply only to a new form.
+- Native-print invocation and layout selection are behaviorally covered. Visual print output and actual browser rendering remain Task 9 browser QA.
+
+## Build regression fix
+
+- Root cause: `app/customer-actions.ts` was marked `"use server"` while exporting five synchronous record operations solely for direct unit testing. Next.js production compilation correctly rejected those exports because Server Action modules may export only async functions.
+- Fix: moved the synchronous customer record operations and their private pure helpers unchanged into `lib/customer-operations.ts`. The Server Action module now imports them and exports only the five async action wrappers; the existing action test imports the operations from the library module.
+- Scope: customer operation module boundary only. No Task 4 booking code was changed.
+- Verification: focused customer tests passed 15/15; `npm run typecheck` passed; `HAIRHAEYO_DEMO_MODE=1 npm run build` compiled, typechecked, generated 8/8 static pages, and completed successfully; `git diff --check` passed.
