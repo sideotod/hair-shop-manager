@@ -5,6 +5,7 @@
   "identifier": "com.hairhaeyo.salon",
   "build": {
     "beforeDevCommand": "npm run dev",
+    "beforeBuildCommand": "npm run build && node scripts/prepare-tauri-sidecar.mjs",
     "devUrl": "http://localhost:3000"
   },
   "app": {
@@ -16,6 +17,7 @@
         "height": 1000,
         "minWidth": 1280,
         "minHeight": 720,
+        "visible": false,
         "resizable": true
       }
     ],
@@ -24,6 +26,12 @@
     }
   },
   "bundle": {
-    "active": false
+    "active": true,
+    "targets": ["nsis"],
+    "externalBin": ["binaries/node"],
+    "resources": {
+      "../.next/standalone/": "server/"
+    },
+    "icon": ["icons/icon.ico"]
   }
 }

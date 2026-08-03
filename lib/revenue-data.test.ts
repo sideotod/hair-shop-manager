@@ -41,7 +41,7 @@ describe("server revenue aggregate", () => {
       expect(analytics.genders).toEqual([{ name: "여성", sales: 16600000 }, { name: "남성", sales: 13360000 }]);
       expect(analytics.visitTypes).toEqual([{ name: "재방문", sales: 21320000 }, { name: "신규", sales: 8640000 }]);
       expect(analytics.settlement).toEqual([
-        { name: "총 시술금액", value: 29960000 },
+        { name: "총 매출", value: 29960000 },
         { name: "할인", value: 0 },
         { name: "포인트 사용", value: 0 },
         { name: "실결제", value: 29960000 },
@@ -110,7 +110,8 @@ describe("server revenue aggregate", () => {
       expect(beforeRefund.settlement.find(({ name }) => name === "포인트 사용")).toEqual({ name: "포인트 사용", value: 1000 });
 
       const refund = refundPaymentRecord(store, form({ targetId: payment.id, requestKey: "refund-split", reason: "환불" }));
-      const afterRefund = buildRevenueAnalytics(buildRevenueTransactions([payment, refund]), { view: "month", cursor: "2026-07-31" }, "2026-07-31");
+      expect(refund.details).toMatchObject({ paymentMethods: { cash: -5000, card: -5000, points: -1000 }, pointsUsedWon: -1000 });
+      const afterRefund = buildRevenueAnalytics(buildRevenueTransactions([payment, refund]), { view: "total", cursor: "2026-07-31" }, "2026-07-31");
       expect(afterRefund.payments).toEqual(expect.arrayContaining([
         expect.objectContaining({ name: "현금", amount: 5000, value: 45 }),
         expect.objectContaining({ name: "카드", amount: 5000, value: 45 }),

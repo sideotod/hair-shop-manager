@@ -268,7 +268,7 @@ function seed(db: DatabaseSync) {
   });
 }
 
-export function createSalonStore(filename = join(process.cwd(), ".data", "hairhaeyo.sqlite")): SalonStore {
+export function createSalonStore(filename = process.env.HAIRHAEYO_DB_PATH || join(process.cwd(), ".data", "hairhaeyo.sqlite")): SalonStore {
   if (filename !== ":memory:") mkdirSync(dirname(filename), { recursive: true });
   const db = new DatabaseSync(filename);
   createSchema(db);

@@ -6,6 +6,7 @@ coverage/
 .data/
 src-tauri/target/
 src-tauri/gen/
+src-tauri/binaries/
 *.tsbuildinfo
 .env*
 !.env.example

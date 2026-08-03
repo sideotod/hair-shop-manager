@@ -430,7 +430,7 @@ git commit -m "feat(settings): complete owner shop settings"
 **Interfaces:**
 - Produces final browser evidence and a branch with no unmapped function.
 
-- [ ] **Step 1: Run repository verification**
+- [x] **Step 1: Run repository verification**
 
 Run: `npm test`
 
@@ -444,25 +444,25 @@ Run forbidden-brand scan; expected `0`.
 
 Run function count and coverage tests; expected top `253`, nested `10`, all `263`, unmapped `0`.
 
-- [ ] **Step 2: Package the production Tauri sidecar**
+- [x] **Step 2: Package the production Tauri sidecar**
 
 Set Next `output: "standalone"`. `scripts/prepare-tauri-sidecar.mjs` copies `.next/static` and `public` into `.next/standalone`, copies the current Windows `node.exe` to the Tauri target-triple sidecar name, and leaves the Next server files as Tauri resources. Rust starts the Node sidecar on `127.0.0.1`, passes an app-data SQLite path, waits for readiness, opens the main window, and kills the child on exit. Mark the fixed loopback port ceiling with `ponytail: fixed local port; allocate dynamically if multi-instance desktop use is introduced`.
 
 Run: `npm run tauri:build`
 
-- [ ] **Step 3: Run critical Playwright flows at 1280×900 and 1440×1000**
+- [x] **Step 3: Run critical Playwright flows at 1280×900 and 1440×1000**
 
-Exercise login/logout, global customer search, customer registration/edit/history, waiting→payment, booking create/edit/cancel/status/overlap, payment duplicate/correction/refund, coupon sale/deduction, product sale, expense correction, individual/group/scheduled message dry-run, automation settings, and Naver disabled state.
+Exercise login/logout, global customer search, customer registration/edit/history, waiting→payment, booking create/edit/cancel/status/overlap, payment duplicate/correction/refund, service-catalog edit, expense correction/period print, individual/group/scheduled message dry-run, automation settings, product/coupon absence, and Naver disabled state.
 
-- [ ] **Step 4: Verify simplified revenue visuals and typography**
+- [x] **Step 4: Verify simplified revenue visuals and typography**
 
 Check today/month/total cards, day/month arrows, trend motion, bar-end money labels without bar tooltips, pie tooltip, gender/new-returning views, settlement table, CSV, print, drawer, reduced motion, zero data, Pretendard loading, Korean alignment, and no horizontal overflow or label clipping.
 
-- [ ] **Step 5: Run Tauri smoke QA**
+- [x] **Step 5: Run Tauri smoke QA**
 
 Launch the built Windows app, verify `수원 본점`, configured owner display name, login/logout, local SQLite persistence after restart, keyboard navigation, print, and clean sidecar shutdown.
 
-- [ ] **Step 6: Request final code review**
+- [x] **Step 6: Request final code review**
 
 Fix every Critical and Important finding. Re-run focused tests after each fix and the full verification suite after the final fix.
 

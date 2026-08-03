@@ -7,7 +7,7 @@ import { queueMessage as queueMessageRecord, saveAutomationRule as saveAutomatio
 import { createSalonStore } from "../lib/salon-store";
 
 function text(formData: FormData, name: string) { return String(formData.get(name) ?? ""); }
-function finish(error?: unknown) { revalidatePath("/"); revalidatePath("/messages"); redirect(`/messages?${error ? `error=${encodeURIComponent(error instanceof Error ? error.message : "문자를 저장하지 못했습니다.")}` : "notice=dry-run%20저장됨"}`); }
+function finish(error?: unknown) { revalidatePath("/"); revalidatePath("/messages"); redirect(`/messages?${error ? `error=${encodeURIComponent(error instanceof Error ? error.message : "문자를 저장하지 못했습니다.")}` : `notice=${encodeURIComponent("dry-run 저장됨")}`}`); }
 
 export async function queueMessage(formData: FormData) {
   const store = createSalonStore();

@@ -32,6 +32,8 @@ describe("DashboardPage", () => {
     expect(html).toContain("SMS 잔여 500건");
     expect(html).toContain("도움말");
     expect(html).toContain("로그아웃");
+    expect(html).toContain("min-h-screen w-full");
+    expect(html).not.toContain("min-w-[1280px]");
 
     expect(html).toContain("오늘 매출");
     expect(html).toContain("오늘 예약");

@@ -75,7 +75,7 @@ export function AppShell({
 
   return (
     <div data-app-shell-token-scope style={visualTokens}>
-      <div data-app-shell-background {...(overlay ? { inert: true, "aria-hidden": true } : {})} className="grid min-h-screen min-w-[1280px] grid-cols-[232px_minmax(0,1fr)] bg-[var(--background)] text-[var(--foreground)]">
+      <div data-app-shell-background {...(overlay ? { inert: true, "aria-hidden": true } : {})} className="grid min-h-screen w-full grid-cols-[232px_minmax(0,1fr)] bg-[var(--background)] text-[var(--foreground)]">
         <aside className="sticky top-0 flex h-screen flex-col bg-[var(--sidebar)] px-6 py-7 text-white">
           <div>
             <strong className="block text-[22px] leading-none tracking-[-0.02em]">HAIRHAEYO</strong>

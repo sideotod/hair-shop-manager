@@ -7,6 +7,7 @@ const publicFiles = new Set(["/favicon.ico", "/icon.svg", "/robots.txt", "/sitem
 
 export function isPublicPath(pathname: string): boolean {
   return pathname === "/login"
+    || pathname === "/api/health"
     || pathname.startsWith("/_next/static/")
     || pathname.startsWith("/_next/image/")
     || publicFiles.has(pathname);

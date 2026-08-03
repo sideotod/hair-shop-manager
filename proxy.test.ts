@@ -13,6 +13,7 @@ describe("owner shell proxy", () => {
   it("exposes only the exact login and framework asset paths", () => {
     for (const pathname of [
       "/login",
+      "/api/health",
       "/_next/static/chunks/app.js",
       "/_next/image/asset",
       "/favicon.ico",

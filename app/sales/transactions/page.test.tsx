@@ -1,9 +1,12 @@
 import { renderToStaticMarkup } from "react-dom/server";
-import { describe, expect, it } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import TransactionsPage from "./page";
 
 describe("TransactionsPage", () => {
+  beforeEach(() => vi.stubEnv("HAIRHAEYO_DB_PATH", ":memory:"));
+  afterEach(() => vi.unstubAllEnvs());
+
   it("renders a desktop owner transaction table from the same monthly aggregate", async () => {
     const html = renderToStaticMarkup(await TransactionsPage({ searchParams: Promise.resolve({ view: "month", cursor: "2026-07-31" }) }));
     expect(html.match(/data-revenue-transaction=/g)).toHaveLength(4);

@@ -3,5 +3,6 @@
   "identifier": "default",
   "description": "Default capability for the Hairhaeyo owner window",
   "windows": ["main"],
+  "remote": { "urls": ["http://127.0.0.1:3210/*"] },
   "permissions": ["core:default"]
 }
