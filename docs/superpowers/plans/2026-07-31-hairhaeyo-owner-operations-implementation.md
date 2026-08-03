@@ -387,11 +387,12 @@ git commit -m "feat(messages): add SMS workflows"
 - Modify: `lib/function-coverage.test.ts`
 
 **Interfaces:**
-- Produces `saveShopSettings`, `changeOwnerPassword`, `saveNotice`, `saveNaverSettings` Server Actions.
+- Produces `saveShopSettings`, `changeOwnerPassword`, and `saveNotice` Server Actions.
+- Naver credential/connection fields are owned by Task 10. Task 8 renders only non-secret integration status/help and must not add plaintext credential storage.
 
 - [ ] **Step 1: Write failing settings tests**
 
-Assert shop name/phone, owner/admin password, display colors/movement/mode, hidden menus, SMS enabled, default gender/SMS, grades/groups/motives, points, VAT, card fee, coupon/product VAT, overlap, operating hours, automation, booking copy, Naver fields, terms/help/FAQ/notices, and settings change history.
+Assert shop name/phone, owner/admin password, display colors/movement/mode, hidden menus, SMS enabled, default gender/SMS, grades/groups/motives, points, VAT, card fee, overlap, operating hours, dry-run automation, booking copy, non-secret Naver status/help, terms/help/FAQ/notices, and settings change history. Product/coupon VAT settings are excluded with their user-approved workflows.
 
 - [ ] **Step 2: Implement grouped settings UI**
 
@@ -403,7 +404,7 @@ AppShell reads menu visibility and display tokens from settings while server rou
 
 - [ ] **Step 4: Reconcile the coverage matrix**
 
-Update every row to `구현`, `원장 1인 대체`, or `연동 확인 필요`. No row may remain `계획`. Add exact tests or QA evidence paths.
+Update every row to `구현`, `원장 1인 대체`, `연동 확인 필요`, or `사용자 승인 제외`. Product and coupon rows use `사용자 승인 제외`; prepaid rows map to the existing payment-ledger replacement; full template/provider/delivery-history message rows map to the minimal dry-run replacement or `사용자 승인 제외` as applicable. No row may remain `계획`. Add exact tests or QA evidence paths.
 
 - [ ] **Step 5: Verify and commit**
 
