@@ -4,6 +4,7 @@ import {
   applyNaverBookingMails,
   classifyNaverBookingMail,
   mergeNaverBookingMail,
+  naverMailConnectionMetadata,
   parseNaverBookingMail,
   type NaverMailMessage,
 } from "./naver-mail";
@@ -25,6 +26,10 @@ const mail = (overrides: Partial<NaverMailMessage> = {}): NaverMailMessage => ({
 });
 
 describe("Naver booking mail", () => {
+  it("starts every new mail connection at the initial checkpoint", () => {
+    expect(naverMailConnectionMetadata("new-owner@naver.com")).toEqual({ email: "new-owner@naver.com", provider: "naver", connected: true, lastSyncUid: 0, lastSyncAt: "" });
+  });
+
   it("classifies request, confirmation, change, and cancellation", () => {
     expect(classifyNaverBookingMail(mail({ subject: "네이버 예약 신청" }))).toBe("requested");
     expect(classifyNaverBookingMail(mail({ subject: "네이버 예약 확정" }))).toBe("confirmed");

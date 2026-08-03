@@ -8,6 +8,7 @@ import { redirect } from "next/navigation";
 import {
   applyNaverBookingMails,
   discoverNaverBookingMails,
+  naverMailConnectionMetadata,
   naverMailMetadata,
   seoulTimestamp,
   testNaverMailConnection as testConnection,
@@ -67,7 +68,11 @@ function recordSync(store: ReturnType<typeof createSalonStore>, status: string, 
 }
 
 export async function testNaverMailConnection(input: NaverMailConnectionInput) {
-  return testConnection(validate(input));
+  try {
+    return await testConnection(validate(input));
+  } catch (error) {
+    throw new Error(safeError(error));
+  }
 }
 
 export async function connectNaverMail(formData: FormData) {
@@ -77,8 +82,7 @@ export async function connectNaverMail(formData: FormData) {
     await writeWindowsCredential(credentialTarget, input.email, input.password);
     const store = createSalonStore();
     try {
-      const current = naverMailMetadata(store.getSettings());
-      store.saveSettings({ naverMail: { ...current, email: input.email, provider: "naver", connected: true } }, actor);
+      store.saveSettings({ naverMail: naverMailConnectionMetadata(input.email) }, actor);
       recordSync(store, "connected", "connection-test-passed", { email: input.email });
     } catch (error) {
       await deleteWindowsCredential(credentialTarget).catch(() => undefined);
@@ -108,7 +112,7 @@ export async function synchronizeNaverBookings(initial: boolean, dependencies: N
       return { skipped: false, ...result, highestUid: lastSyncUid };
     } catch (error) {
       recordSync(store, "error", initial ? "initial-import-failed" : "incremental-sync-failed", { message: safeError(error), lastSyncUid: metadata.lastSyncUid });
-      throw error;
+      throw new Error(safeError(error));
     }
   } finally {
     store.close();

@@ -195,3 +195,7 @@ export function naverMailMetadata(settings: JsonObject): NaverMailMetadata {
     lastSyncAt: typeof metadata.lastSyncAt === "string" ? metadata.lastSyncAt : "",
   };
 }
+
+export function naverMailConnectionMetadata(email: string): NaverMailMetadata {
+  return { email, provider: "naver", connected: true, lastSyncUid: 0, lastSyncAt: "" };
+}

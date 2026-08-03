@@ -1,24 +1,38 @@
 import { describe, expect, it, vi } from "vitest";
 
-import { createStartupNaverSync, synchronizeNaverBookings } from "./naver-mail-actions";
-import { naverMailMetadata } from "../lib/naver-mail";
+import { createStartupNaverSync, synchronizeNaverBookings, testNaverMailConnection } from "./naver-mail-actions";
+import { naverMailMetadata, testNaverMailConnection as testInboxConnection } from "../lib/naver-mail";
 import { createSalonStore } from "../lib/salon-store";
 
+vi.mock("../lib/naver-mail", async (importOriginal) => ({
+  ...await importOriginal<typeof import("../lib/naver-mail")>(),
+  testNaverMailConnection: vi.fn(),
+}));
+
 describe("Naver mail actions", () => {
-  it("keeps the checkpoint and redacts a failed incremental sync", async () => {
+  it("keeps the checkpoint and redacts raw IMAP errors before rethrowing", async () => {
     const store = createSalonStore(":memory:");
     const secret = "naver-application-password";
     store.close = () => undefined;
     store.saveSettings({ naverMail: { email: "owner@naver.com", provider: "naver", connected: true, lastSyncUid: 7, lastSyncAt: "2026-08-03T10:00:00" } }, "원장");
 
-    await expect(synchronizeNaverBookings(false, {
+    const syncError = await synchronizeNaverBookings(false, {
       createStore: () => store,
       readCredential: vi.fn().mockResolvedValue({ username: "owner@naver.com", secret }),
       discover: vi.fn().mockRejectedValue(new Error(`authentication failed: ${secret}`)),
-    })).rejects.toThrow(secret);
+    }).catch((error: Error) => error);
 
+    expect(syncError).toBeInstanceOf(Error);
+    if (!(syncError instanceof Error)) throw new Error("expected sync failure");
+    expect(syncError.message).not.toContain(secret);
     expect(naverMailMetadata(store.getSettings()).lastSyncUid).toBe(7);
     expect(JSON.stringify(store.list("naver-syncs")[0]?.value)).not.toContain(secret);
+
+    vi.mocked(testInboxConnection).mockRejectedValueOnce(new Error(`IMAP rejected ${secret}`));
+    const connectionError = await testNaverMailConnection({ email: "owner@naver.com", password: secret }).catch((error: Error) => error);
+    expect(connectionError).toBeInstanceOf(Error);
+    if (!(connectionError instanceof Error)) throw new Error("expected connection failure");
+    expect(connectionError.message).not.toContain(secret);
   });
 
   it("runs one successful startup sync, but retries after failure", async () => {

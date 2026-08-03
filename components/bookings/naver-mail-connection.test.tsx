@@ -12,4 +12,10 @@ describe("NaverMailConnection", () => {
     expect(html).toContain("18372");
     expect(html).not.toContain("application-password-secret");
   });
+
+  it("renders the stored safe correction message in sync history", () => {
+    const html = renderToStaticMarkup(<NaverMailConnection history={[{ id: "sync-error", kind: "naver-syncs", value: { status: "error", result: "incremental-sync-failed", message: "메일 주소와 애플리케이션 비밀번호를 다시 확인하세요.", attemptedAt: "2026-08-03T10:00:00" }, createdAt: "2026-08-03T10:00:00", updatedAt: "2026-08-03T10:00:00", archivedAt: null }]} settings={{ naverMail: { email: "owner@naver.com", provider: "naver", connected: true, lastSyncUid: 18372, lastSyncAt: "2026-07-31T15:18:00" } }} />);
+
+    expect(html).toContain("메일 주소와 애플리케이션 비밀번호를 다시 확인하세요.");
+  });
 });

@@ -39,6 +39,6 @@ export function NaverMailConnection({ settings, history }: { settings: JsonObjec
       <label className="grid gap-1 text-xs font-medium text-[var(--muted)]"><span>애플리케이션 비밀번호</span><input autoComplete="new-password" className={input} name="applicationPassword" required type="password" /></label>
       <button className="h-10 rounded-[8px] bg-[var(--brand)] px-5 text-sm font-bold text-white" type="submit">연결 테스트 및 저장</button>
     </form>}
-    <div className="mt-5"><h4 className="text-sm font-bold">동기화·재시도 이력</h4>{history.length ? <ul className="mt-2 space-y-2">{history.slice(-6).reverse().map((entry) => <li className="rounded-[8px] bg-[var(--background)] px-3 py-2 text-xs" key={entry.id}>상태: {text(entry, "status")} · 결과: {text(entry, "result")} · {text(entry, "attemptedAt")}{typeof value(entry).changed === "number" ? ` · ${value(entry).changed}건` : ""}</li>)}</ul> : <p className="mt-2 text-sm text-[var(--muted)]">동기화 이력이 없습니다.</p>}</div>
+    <div className="mt-5"><h4 className="text-sm font-bold">동기화·재시도 이력</h4>{history.length ? <ul className="mt-2 space-y-2">{history.slice(-6).reverse().map((entry) => <li className="rounded-[8px] bg-[var(--background)] px-3 py-2 text-xs" key={entry.id}>상태: {text(entry, "status")} · 결과: {text(entry, "result")} · {text(entry, "attemptedAt")}{text(entry, "message") ? ` · ${text(entry, "message")}` : ""}{typeof value(entry).changed === "number" ? ` · ${value(entry).changed}건` : ""}</li>)}</ul> : <p className="mt-2 text-sm text-[var(--muted)]">동기화 이력이 없습니다.</p>}</div>
   </section>;
 }
