@@ -21,9 +21,9 @@ export default async function SalesPage({ searchParams }: { searchParams: Promis
       const correctionTarget = snapshot.ledger.find(({ id, kind }) => id === value(params.correction) && kind === "payment");
       const customerId = value(params.customer) || correctionTarget?.customerId || undefined;
       const returnTo = `/sales?tab=payment${customerId ? `&customer=${encodeURIComponent(customerId)}` : ""}${correctionTarget ? `&correction=${encodeURIComponent(correctionTarget.id)}` : ""}`;
-      return <AppShell activeHref="/sales"><PaymentForm correctionTargetId={correctionTarget?.id} customerId={customerId} customers={customers} error={value(params.error) || undefined} returnTo={returnTo} today={seoulDate()} /></AppShell>;
+      return <AppShell activeHref="/sales" settings={snapshot.settings}><PaymentForm correctionTargetId={correctionTarget?.id} customerId={customerId} customers={customers} error={value(params.error) || undefined} returnTo={returnTo} settings={snapshot.settings} today={seoulDate()} /></AppShell>;
     }
     const query = parseRevenueSearchParams(params, businessToday);
-    return <RevenueDashboard analytics={buildRevenueAnalytics(buildRevenueTransactions(snapshot.ledger, customers), query, businessToday)} query={query} />;
+    return <RevenueDashboard analytics={buildRevenueAnalytics(buildRevenueTransactions(snapshot.ledger, customers), query, businessToday)} query={query} settings={snapshot.settings} />;
   } finally { store.close(); }
 }

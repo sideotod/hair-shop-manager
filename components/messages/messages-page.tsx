@@ -26,7 +26,7 @@ export function MessagesPage({ customers, messages, automations, settings, reque
   const ownerName = typeof settings.ownerName === "string" ? settings.ownerName : "원장";
   const shopName = typeof settings.shopName === "string" ? settings.shopName : "수원 본점";
 
-  return <AppShell activeHref="/messages" customers={customers} ownerName={ownerName} shopName={shopName} smsRemaining={smsRemaining}><main className="min-w-0 px-8 pb-14 pt-8">
+  return <AppShell activeHref="/messages" customers={customers} ownerName={ownerName} settings={settings} shopName={shopName} smsRemaining={smsRemaining}><main className="min-w-0 px-8 pb-14 pt-8">
     <div className="flex items-start justify-between gap-6"><div><p className="text-xs font-medium text-[var(--muted)]">문자 · FUNCTION.md 4.1–4.3</p><h1 className="mt-1 text-[28px] font-bold tracking-[-0.03em]">문자 발송</h1><p className="mt-2 text-sm text-[var(--muted)]">모든 발송은 저장 전용 dry-run입니다. 실제 전달 여부는 확인하거나 표시하지 않습니다.</p></div><span className="rounded-full border border-[var(--brand)] px-3 py-2 text-sm font-bold text-[var(--brand)]">상태: dry-run</span></div>
     {error && <p className="mt-5 rounded-[10px] border border-red-300 bg-red-50 px-4 py-3 text-sm text-red-800" role="alert">입력 내용을 수정하세요: {error}</p>}{notice && <p className="mt-5 rounded-[10px] border border-green-300 bg-green-50 px-4 py-3 text-sm text-green-800" role="status">{notice} · 실제 발송 없음</p>}
     <div className="mt-6 grid grid-cols-[minmax(600px,1.3fr)_minmax(320px,0.7fr)] gap-5">

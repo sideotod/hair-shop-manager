@@ -1,4 +1,4 @@
-import { readFileSync } from "node:fs";
+import { existsSync, readFileSync } from "node:fs";
 import { resolve } from "node:path";
 
 import { describe, expect, it } from "vitest";
@@ -27,11 +27,12 @@ const rows = matrixText.split(/\r?\n/)
   .filter((line) => /^\|.+\|$/.test(line))
   .map(parseMarkdownRow)
   .filter(([feature]) => feature !== "기능" && !/^--+$/.test(feature ?? ""));
+const allowedStatuses = new Set(["구현", "원장 1인 대체", "연동 확인 필요", "사용자 승인 제외"]);
 
 describe("FUNCTION.md coverage matrix", () => {
   it("parses escaped pipes without splitting the feature cell", () => {
-    expect(parseMarkdownRow("| SMS \\| LMS | 구현 예정 | app/messages/page.tsx | lib/function-coverage.test.ts |"))
-      .toEqual(["SMS | LMS", "구현 예정", "app/messages/page.tsx", "lib/function-coverage.test.ts"]);
+    expect(parseMarkdownRow("| SMS \\| LMS | 구현 | app/messages/page.tsx | lib/function-coverage.test.ts |"))
+      .toEqual(["SMS | LMS", "구현", "app/messages/page.tsx", "lib/function-coverage.test.ts"]);
   });
 
   it("tracks all 253 top-level and 10 nested bullets exactly", () => {
@@ -42,19 +43,31 @@ describe("FUNCTION.md coverage matrix", () => {
     expect(rows.map(([feature]) => feature).sort()).toEqual([...bullets].sort());
   });
 
-  it("gives every bullet a status, implementation location, and verification", () => {
+  it("gives every bullet one allowed status and exact implementation and verification paths", () => {
     for (const [feature, status, location, verification] of rows) {
+      expect(rows.find((row) => row[0] === feature)).toHaveLength(4);
       expect(feature).toBeTruthy();
-      expect(status, feature).toBeTruthy();
-      expect(location, feature).toBeTruthy();
-      expect(verification, feature).toBeTruthy();
+      expect(allowedStatuses.has(status ?? ""), feature).toBe(true);
+      expect(status, feature).not.toContain("계획");
+      expect(location, feature).toMatch(/(?:^|; )(?:app|components|lib|docs)\/.+/);
+      expect(verification, feature).toMatch(/(?:^|; )(?:app|components|lib|docs)\/.+/);
+      for (const path of `${location};${verification}`.split(";").map((value) => value.trim()).filter((value) => /^(?:app|components|lib|docs)\//.test(value))) expect(existsSync(resolve(path)), `${feature}: ${path}`).toBe(true);
     }
+  });
+
+  it("keeps the approved status totals stable", () => {
+    expect(Object.fromEntries([...allowedStatuses].map((status) => [status, rows.filter((row) => row[1] === status).length]))).toEqual({
+      "구현": 177,
+      "원장 1인 대체": 16,
+      "연동 확인 필요": 32,
+      "사용자 승인 제외": 38,
+    });
   });
 
   it("marks owner replacements and external SMS/Naver boundaries", () => {
     for (const [feature, status] of rows) {
-      if (/(직원|디자이너|판매자|시술자)/.test(feature ?? "")) expect(status, feature).toBe("원장 1인 대체");
-      if (/(SMS|문자|네이버)/.test(feature ?? "")) expect(status, feature).toBe("연동 확인 필요");
+      if (/(직원|디자이너|판매자|시술자)/.test(feature ?? "") && status !== "사용자 승인 제외") expect(status, feature).toBe("원장 1인 대체");
+      if (/(SMS|문자|네이버)/.test(feature ?? "")) expect(["구현", "연동 확인 필요", "사용자 승인 제외"]).toContain(status);
     }
   });
 });

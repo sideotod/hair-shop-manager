@@ -21,6 +21,7 @@ import {
 } from "recharts";
 
 import { AppShell } from "../app-shell";
+import type { JsonObject } from "../../lib/salon-domain";
 import type { RevenueAnalytics } from "./revenue-analytics";
 import { createRevenueCsv } from "./revenue-csv";
 import {
@@ -218,9 +219,11 @@ function DataTable({
 export function RevenueDashboard({
   analytics,
   query,
+  settings = {},
 }: {
   analytics: RevenueAnalytics;
   query: RevenueQuery;
+  settings?: JsonObject;
 }) {
   const router = useRouter();
   const motion = revenueChartMotions(usePrefersReducedMotion());
@@ -299,6 +302,7 @@ export function RevenueDashboard({
   return (
     <AppShell
       activeHref="/sales"
+      settings={settings}
       overlay={
         selection ? (
           <RevenueDetailDrawer

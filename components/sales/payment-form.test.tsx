@@ -21,4 +21,10 @@ describe("PaymentForm", () => {
     expect(html).toContain('name="returnTo" value="/sales?tab=payment&amp;customer=customer-1&amp;correction=ledger-1"');
     expect(html).toContain('value="2026-08-01"');
   });
+
+  it("uses persisted VAT mode and card fee defaults", () => {
+    const html = renderToStaticMarkup(<PaymentForm customers={[]} settings={{ vatMode: "separate", cardFeeRate: 2.75 }} today="2026-08-01" />);
+    expect(html).toContain('<option value="separate" selected="">별도</option>');
+    expect(html).toContain('name="cardFeeRate" value="2.75"');
+  });
 });

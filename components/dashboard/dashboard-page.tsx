@@ -67,7 +67,7 @@ export function DashboardPage({ snapshot, today = new Date() }: { snapshot: Salo
     + snapshot.auditEvents.filter((event) => validDate(event.occurredAt) === null).length;
 
   return (
-    <AppShell activeHref="/" customers={customers} ownerName={ownerName} shopName={shopName} smsRemaining={smsRemaining} today={today}>
+    <AppShell activeHref="/" customers={customers} ownerName={ownerName} settings={settings} shopName={shopName} smsRemaining={smsRemaining} today={today}>
       <main className="px-8 pb-14 pt-8">
         <div className="flex items-start justify-between gap-6">
           <div>
@@ -148,7 +148,7 @@ export function DashboardPage({ snapshot, today = new Date() }: { snapshot: Salo
 
         <div className="mt-5 grid grid-cols-3 gap-5">
           <section className={`${card} px-5 py-5`}><h2 className="text-lg font-bold">자동화 대기열</h2>{automations.length > 0 ? <ul className="mt-4 space-y-3">{automations.map((record) => { const automation = objectValue(record); return <li className="rounded-[10px] bg-[var(--background)] p-3 text-sm" key={record.id}><div className="flex justify-between gap-3"><strong>{textValue(automation, "label")}</strong><span className="font-medium text-[var(--brand)]">상태: {textValue(automation, "status")}</span></div><span className="mt-1 block text-xs text-[var(--muted)]">{textValue(automation, "schedule")}</span></li>; })}</ul> : <p className="mt-6 text-sm text-[var(--muted)]">대기 중인 자동화가 없습니다.</p>}</section>
-          <section className={`${card} px-5 py-5`}><h2 className="text-lg font-bold">공지사항</h2>{notices.length > 0 ? <ul className="mt-4 space-y-3">{notices.map((record) => { const notice = objectValue(record); return <li className="rounded-[10px] border border-[var(--border)] p-3" key={record.id}><strong className="text-sm">{textValue(notice, "title")}</strong><p className="mt-1 text-xs text-[var(--muted)]">{textValue(notice, "body")}</p></li>; })}</ul> : <p className="mt-6 text-sm text-[var(--muted)]">공지사항이 없습니다.</p>}</section>
+          <section className={`${card} px-5 py-5`}><div className="flex items-center justify-between"><h2 className="text-lg font-bold">공지사항</h2><Link className="text-xs font-bold text-[var(--brand)]" href="/settings?section=help">도움말·FAQ</Link></div>{notices.length > 0 ? <ul className="mt-4 space-y-3">{notices.map((record) => { const notice = objectValue(record); return <li className="rounded-[10px] border border-[var(--border)] p-3" key={record.id}><Link className="text-sm font-bold" href={`/settings?section=help#${record.id}`}>{textValue(notice, "title")}</Link><p className="mt-1 text-xs text-[var(--muted)]">{textValue(notice, "body")}</p></li>; })}</ul> : <p className="mt-6 text-sm text-[var(--muted)]">공지사항이 없습니다.</p>}</section>
           <section className={`${card} px-5 py-5`}><h2 className="text-lg font-bold">최근 감사 이력</h2>{recentAudit.length > 0 ? <ol className="mt-4 space-y-3">{recentAudit.map((event) => <li className="border-b border-[var(--border)] pb-3 text-xs last:border-0" key={event.id}><strong className="block text-sm">{event.actor} · {event.action}</strong><span className="mt-1 block text-[var(--muted)]">{event.kind ?? "시스템"} · {auditDateLabel(event.occurredAt)}</span></li>)}</ol> : <p className="mt-6 text-sm text-[var(--muted)]">감사 이력이 없습니다.</p>}</section>
         </div>
       </main>

@@ -1,7 +1,7 @@
 import Link from "next/link";
 
 import { logoutOwner } from "../app/auth-actions";
-import type { JsonValue, SalonRecord } from "../lib/salon-domain";
+import type { JsonObject, JsonValue, SalonRecord } from "../lib/salon-domain";
 
 const menu = [
   ["오늘", "/"],
@@ -32,6 +32,7 @@ type AppShellProps = {
   smsRemaining?: number;
   shopName?: string;
   ownerName?: string;
+  settings?: JsonObject;
   activeHref?: string;
   overlay?: React.ReactNode;
   today?: Date;
@@ -49,16 +50,30 @@ export function AppShell({
   smsRemaining = 0,
   shopName = "수원 본점",
   ownerName = "원장",
+  settings = {},
   activeHref = "/",
   overlay,
   today = new Date(),
 }: AppShellProps) {
-  const ownerLabel = ownerName === "원장" ? "원장님" : `${ownerName} 원장님`;
+  const setting = (key: string, fallback: string) => typeof settings[key] === "string" ? settings[key] : fallback;
+  const resolvedShopName = setting("shopName", shopName);
+  const resolvedOwnerName = setting("ownerName", ownerName);
+  const resolvedSmsRemaining = typeof settings.smsRemaining === "number" ? settings.smsRemaining : smsRemaining;
+  const hiddenMenus = new Set(Array.isArray(settings.hiddenMenus) ? settings.hiddenMenus.filter((value): value is string => typeof value === "string") : []);
+  const visibleMenu = menu.filter(([, href]) => !hiddenMenus.has(href));
+  const customerTarget = settings.customerOpenMode === "new-window" ? "_blank" : undefined;
+  const ownerLabel = resolvedOwnerName === "원장" ? "원장님" : `${resolvedOwnerName} 원장님`;
   const dateLabel = new Intl.DateTimeFormat("ko-KR", { dateStyle: "full", timeZone: "Asia/Seoul" }).format(today);
+  const visualTokens = {
+    "--background": setting("backgroundColor", "#f7f5f0"),
+    "--foreground": setting("foregroundColor", "#202124"),
+    "--brand": setting("brandColor", "#5c344f"),
+    "--sidebar": setting("sidebarColor", "#2b2028"),
+  } as React.CSSProperties;
 
   return (
     <>
-      <div data-app-shell-background {...(overlay ? { inert: true, "aria-hidden": true } : {})} className="grid min-h-screen grid-cols-[232px_minmax(0,1fr)] bg-[var(--background)]">
+      <div data-app-shell-background {...(overlay ? { inert: true, "aria-hidden": true } : {})} className="grid min-h-screen min-w-[1280px] grid-cols-[232px_minmax(0,1fr)] bg-[var(--background)] text-[var(--foreground)]" style={visualTokens}>
         <aside className="sticky top-0 flex h-screen flex-col bg-[var(--sidebar)] px-6 py-7 text-white">
           <div>
             <strong className="block text-[22px] leading-none tracking-[-0.02em]">HAIRHAEYO</strong>
@@ -66,7 +81,7 @@ export function AppShell({
           </div>
 
           <nav aria-label="주요 메뉴" className="mt-10 space-y-2">
-            {menu.map(([label, href]) => (
+            {visibleMenu.map(([label, href]) => (
               <Link
                 className={`block rounded-[10px] px-4 py-3 text-sm ${href === activeHref ? "bg-[var(--brand)] font-bold text-white" : "text-[#d8cdd4] hover:bg-white/5 hover:text-white"}`}
                 href={href}
@@ -78,8 +93,8 @@ export function AppShell({
           </nav>
 
           <div className="mt-auto rounded-[14px] bg-[#382d35] px-4 py-3">
-            <strong className="block text-[13px] font-medium">{shopName}</strong>
-            <span className="mt-1 block text-[11px] text-[#bfb1ba]">영업중 · 09:30–21:00</span>
+            <strong className="block text-[13px] font-medium">{resolvedShopName}</strong>
+            <span className="mt-1 block text-[11px] text-[#bfb1ba]">영업중 · {setting("bookingOpen", "09:30")}–{setting("bookingClose", "21:00")}</span>
           </div>
         </aside>
 
@@ -98,13 +113,13 @@ export function AppShell({
                 <summary className="cursor-pointer list-none text-[var(--brand)]">고객 바로가기</summary>
                 <ul aria-label="고객 검색 결과 바로가기" className="absolute right-0 z-20 mt-3 w-52 rounded-[10px] border border-[var(--border)] bg-white p-2 shadow-lg">
                   {customers.map((customer) => (
-                    <li key={customer.id}><Link className="block rounded-md px-3 py-2 hover:bg-[var(--brand-soft)]" href={`/customers?customer=${customer.id}`}>{customerName(customer)}</Link></li>
+                    <li key={customer.id}><Link className={`block rounded-md px-3 hover:bg-[var(--brand-soft)] ${settings.customerDisplayMode === "compact" ? "py-1" : "py-2"}`} href={`/customers?customer=${customer.id}`} target={customerTarget}>{customerName(customer)}</Link></li>
                   ))}
                 </ul>
               </details>
             )}
             <Link className="shrink-0 text-[var(--muted)]" href="/settings?section=help">도움말</Link>
-            <span className="shrink-0 rounded-full bg-[var(--brand-soft)] px-3 py-2 font-medium text-[var(--brand)]">SMS 잔여 {smsRemaining.toLocaleString("ko-KR")}건</span>
+            <span className="shrink-0 rounded-full bg-[var(--brand-soft)] px-3 py-2 font-medium text-[var(--brand)]">SMS 잔여 {resolvedSmsRemaining.toLocaleString("ko-KR")}건</span>
             <Link className="shrink-0 font-medium" href="/settings?section=owner">{ownerLabel}</Link>
             <form action={logoutOwner}><button className="shrink-0 text-[var(--muted)]" type="submit">로그아웃</button></form>
           </header>

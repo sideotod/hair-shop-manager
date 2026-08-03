@@ -20,9 +20,10 @@ describe("DashboardPage", () => {
     expect(html).not.toContain("직원");
     expect(html).not.toContain("디자이너");
 
-    for (const label of ["오늘", "고객", "예약", "매출·결제", "문자", "상품·쿠폰", "설정"]) {
+    for (const label of ["오늘", "고객", "예약", "매출·결제", "문자", "운영 설정", "설정"]) {
       expect(html).toContain(`>${label}<`);
     }
+    expect(html).not.toContain(">상품·쿠폰<");
     for (const mode of ["핸드폰 뒷번호/고객명", "닉네임", "전화번호 뒷번호", "그룹명", "메모", "주소", "방문동기", "이메일", "포인트 카드", "패밀리번호"]) {
       expect(html).toContain(`>${mode}<`);
     }
@@ -148,5 +149,13 @@ describe("DashboardPage", () => {
     expect(html).toContain("inert");
     expect(html).toContain('aria-hidden="true"');
     expect(html).toContain('role="dialog"');
+  });
+
+  it("reads persisted menu visibility and visual tokens without changing route links", () => {
+    const html = renderToStaticMarkup(<AppShell settings={{ hiddenMenus: ["/messages"], backgroundColor: "#abcdef", brandColor: "#123456" }}><main>설정 적용</main></AppShell>);
+    expect(html).not.toContain('href="/messages"');
+    expect(html).toContain('href="/settings?section=help"');
+    expect(html).toContain("--background:#abcdef");
+    expect(html).toContain("--brand:#123456");
   });
 });
