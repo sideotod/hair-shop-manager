@@ -18,8 +18,16 @@ import { deleteWindowsCredential, readWindowsCredential, writeWindowsCredential 
 
 const actor = "원장" as const;
 const credentialTarget = "Hairhaeyo:NaverBookingMail";
-let startupDone = false;
-let startupPromise: Promise<void> | undefined;
+type NaverMailSyncDependencies = {
+  createStore: typeof createSalonStore;
+  readCredential: typeof readWindowsCredential;
+  discover: typeof discoverNaverBookingMails;
+};
+const naverMailSyncDependencies: NaverMailSyncDependencies = {
+  createStore: createSalonStore,
+  readCredential: readWindowsCredential,
+  discover: discoverNaverBookingMails,
+};
 
 function text(formData: FormData, key: string) {
   const value = formData.get(key);
@@ -84,15 +92,15 @@ export async function connectNaverMail(formData: FormData) {
   finish("네이버 예약 메일 연결 테스트에 성공했습니다.");
 }
 
-async function synchronize(initial: boolean) {
-  const store = createSalonStore();
+export async function synchronizeNaverBookings(initial: boolean, dependencies: NaverMailSyncDependencies = naverMailSyncDependencies) {
+  const store = dependencies.createStore();
   try {
     const metadata = naverMailMetadata(store.getSettings());
     if (!metadata.connected) return { skipped: true, changed: 0, cancelled: 0, highestUid: metadata.lastSyncUid };
-    const credential = await readWindowsCredential(credentialTarget);
+    const credential = await dependencies.readCredential(credentialTarget);
     if (!credential) throw new Error("Windows Credential Manager에서 네이버 예약 자격 증명을 찾지 못했습니다.");
     try {
-      const mails = await discoverNaverBookingMails({ email: metadata.email || credential.username, password: credential.secret, afterUid: initial ? 0 : metadata.lastSyncUid });
+      const mails = await dependencies.discover({ email: metadata.email || credential.username, password: credential.secret, afterUid: initial ? 0 : metadata.lastSyncUid });
       const result = applyNaverBookingMails(store, mails);
       const lastSyncUid = Math.max(metadata.lastSyncUid, result.highestUid);
       store.saveSettings({ naverMail: { email: metadata.email || credential.username, provider: "naver", connected: true, lastSyncUid, lastSyncAt: seoulTimestamp() } }, actor);
@@ -110,7 +118,7 @@ async function synchronize(initial: boolean) {
 export async function importInitialNaverBookings() {
   let changed = 0;
   try {
-    const result = await synchronize(true);
+    const result = await synchronizeNaverBookings(true);
     changed = result.changed;
   } catch (error) {
     fail(error);
@@ -121,7 +129,7 @@ export async function importInitialNaverBookings() {
 export async function syncNewNaverBookings() {
   let changed = 0;
   try {
-    const result = await synchronize(false);
+    const result = await synchronizeNaverBookings(false);
     changed = result.changed;
   } catch (error) {
     fail(error);
@@ -146,11 +154,18 @@ export async function disconnectNaverMail() {
   finish("네이버 예약 메일 연결을 해제했습니다.");
 }
 
-export async function runStartupNaverSync() {
-  if (startupDone) return;
-  if (!startupPromise) {
-    // ponytail: single-process startup sync; use a DB lease if multi-process desktop instances are introduced.
-    startupPromise = synchronize(false).then(() => { startupDone = true; }).catch(() => undefined).finally(() => { startupPromise = undefined; });
-  }
-  await startupPromise;
+export function createStartupNaverSync(sync: () => Promise<void>) {
+  let done = false;
+  let pending: Promise<void> | undefined;
+  return async () => {
+    if (done) return;
+    if (!pending) {
+      // ponytail: single-process startup sync; use a DB lease if multi-process desktop instances are introduced.
+      pending = sync().then(() => { done = true; }).catch(() => undefined).finally(() => { pending = undefined; });
+    }
+    await pending;
+  };
 }
+
+const runStartupSync = createStartupNaverSync(async () => { await synchronizeNaverBookings(false); });
+export async function runStartupNaverSync() { await runStartupSync(); }

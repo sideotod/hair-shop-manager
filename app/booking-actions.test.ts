@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import { cancelBookingRecord, changeBookingStatusRecord, requestNaverSyncRecord, saveBookingRecord, saveBookingSettingsRecord } from "../lib/booking";
+import { cancelBookingRecord, changeBookingStatusRecord, saveBookingRecord, saveBookingSettingsRecord } from "../lib/booking";
 import { createSalonStore } from "../lib/salon-store";
 
 function form(values: Record<string, string>) {
@@ -79,11 +79,11 @@ describe("booking actions", () => {
     expect(store.get("bookings", "booking-archive")?.archivedAt).toBeTruthy();
   });
 
-  it("validates reminders and records Naver disabled dry-runs with retry history without credentials", () => {
+  it("validates reminders without persisting retired Naver credential fields", () => {
     const store = createSalonStore(":memory:");
     expect(() => saveBookingRecord(store, form({ customerId: "customer-seed-1", service: "커트", date: "2026-08-03", startTime: "10:15", endTime: "11:00", status: "confirmed", reminderDayBefore: "not-a-flag" }))).toThrow("예약 알림 설정");
     const settings = saveBookingSettingsRecord(store, form({ bookingOpen: "09:30", bookingClose: "21:00", bookingSlotMinutes: "30", reminderDayBefore: "on", naverAccount: "owner@example.com", naverShopName: "수원 본점" }));
-    expect(settings).toMatchObject({ bookingOpen: "09:30", reminderDayBefore: true, naverAccount: "owner@example.com" });
-    expect(requestNaverSyncRecord(store).value).toMatchObject({ status: "disabled", result: "dry-run", actor: "원장" });
+    expect(settings).toMatchObject({ bookingOpen: "09:30", reminderDayBefore: true });
+    expect(settings).not.toHaveProperty("naverAccount");
   });
 });

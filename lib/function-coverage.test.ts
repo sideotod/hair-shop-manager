@@ -47,7 +47,7 @@ describe("FUNCTION.md coverage matrix", () => {
 
   it("tracks all 253 top-level and 10 nested bullets exactly", () => {
     expect([...functionText.matchAll(/^-\s(.+)$/gm)]).toHaveLength(253);
-    expect([...functionText.matchAll(/^\s{2,}-\s(.+)$/gm)]).toHaveLength(10);
+    expect([...functionText.matchAll(/^[ \t]{2,}-[ \t]+(.+)$/gm)]).toHaveLength(10);
     expect(bullets).toHaveLength(263);
     expect(rows).toHaveLength(263);
     expect(rows.map(([feature]) => feature).sort()).toEqual([...bullets].sort());
@@ -83,9 +83,9 @@ describe("FUNCTION.md coverage matrix", () => {
     for (const [feature, status] of rows) if (/(상품|쿠폰|선불권|선불티켓)/.test(feature ?? "")) expect(status, feature).toBe("사용자 승인 제외");
   });
 
-  it("keeps only the Task 10 Naver boundary pending", () => {
+  it("has no pending coverage rows", () => {
     const pending = rows.filter(([, status]) => status === "연동 확인 필요");
-    expect(pending).toHaveLength(11);
+    expect(pending).toHaveLength(0);
     for (const [feature] of pending) expect(feature, feature).toMatch(/네이버/);
     for (const feature of [
       "포인트 시작값/적립 기준/사용 제한",

@@ -31,15 +31,16 @@ describe("BookingsPage", () => {
     expect(page({ view: "period", period: "14" })).toContain("2026-07-31부터 14일");
   });
 
-  it("renders functional reservation, reminder, operating-hours, and disabled Naver controls without a designer field", () => {
+  it("renders functional reservation, reminder, operating-hours, and Naver mail controls without a designer field", () => {
     const html = page({ showNew: true });
 
     expect(html).toContain('aria-label="새 예약 등록"');
     expect(html).toContain('name="reminderDayBefore"');
     expect(html).toContain('name="bookingOpen"');
-    expect(html).toContain('name="naverReservationCode"');
-    expect(html).toContain("Naver 상태 확인 (dry-run)");
-    expect(html).toContain("disabled / dry-run");
+    expect(html).toContain('aria-label="네이버 예약 메일 연결"');
+    expect(html).toContain('name="applicationPassword"');
+    expect(html).toContain("Windows Credential Manager");
+    expect(html).toContain("연결 테스트 및 저장");
     expect(html).not.toContain('name="designer"');
     expect(html).not.toContain('name="staff"');
   });

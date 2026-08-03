@@ -23,7 +23,7 @@
 - Service catalog, expense entry/correction, presets, period totals, and print controls worked.
 - Product and coupon tabs were absent by approved scope. Prepaid remained a payment tender, without separate balance management.
 - Individual/group/scheduled message dry-run and automation settings worked without external delivery claims.
-- Naver integration showed disabled/dry-run state before Task 10 credentials and IMAP implementation.
+- Naver 예약 메일은 IMAP TLS(`imap.naver.com:993`) 수신 전용으로 연결되며 SMTP·발송 기능은 없다.
 - Settings persisted shop and owner display values; notices used encoded redirects without Korean text corruption.
 - Browser console errors and warnings: 0 during final route checks.
 
@@ -45,6 +45,19 @@
 - Revenue `인쇄` opened the native print flow; Escape closed it.
 - `CloseMainWindow()` exited the app and removed the port 3210 listener. A second restart and close produced the same clean shutdown result.
 
+## Naver booking mail scenarios
+
+- Failed mocked connection: invalid Naver email, authentication, search, or parse failure shows a correction message with no password; prior `lastSyncUid` and `lastSyncAt` remain unchanged.
+- Successful mocked connection: connected state shows Naver email, last sync UID/time, and `/bookings` connection workflow; no secret input/value is rendered after connection.
+- Initial import: request and confirmation emails create one local booking per reservation number and record the highest imported UID.
+- Duplicate suppression: repeated UID and repeated reservation mail do not create duplicate bookings; a lower UID cannot overwrite a newer state.
+- Changed/cancelled state: a higher UID change updates booking details and status history; a cancellation archives the booking while preserving that history.
+- Restart checkpoint: startup incremental sync queries only UIDs above the saved checkpoint; one successful sync runs per process and a failed attempt can retry.
+- Secret redaction: application password never appears in argv, URL, SQLite, logs, audit payload, error text, history, or rendered HTML.
+- Disconnect: removes `Hairhaeyo:NaverBookingMail` from Windows Credential Manager and leaves only disconnected public metadata.
+- Disposable Credential Manager smoke: write/read/delete a generated disposable `Hairhaeyo:Task10-*` target; assert read value, then assert absence after delete. Never use a real password.
+- Viewports: at 1280x900 and 1440x1000, verify the eight-step notice, validation/correction state, connected metadata, import/sync controls, retry history, and disconnect control without horizontal overflow.
+
 ## Security and release checks
 
 - Production password hash and per-run 256-bit session secret are supplied to the sidecar environment; plaintext password is not embedded in Rust source.
@@ -53,4 +66,4 @@
 - Standalone packaging removes `.data` before Tauri resources are assembled; the regression test prevents a salon SQLite file from entering the installer.
 - Readiness uses a separate per-run 256-bit health token. Missing or incorrect tokens return 403, and unrelated loopback listeners are rejected.
 - Independent review found one Critical and two Important issues; all three were fixed and the scoped re-review reported no new Critical/Important findings.
-- Eleven Naver-specific coverage rows remain explicitly pending for Task 10. All other former `연동 확인 필요` rows are now implementation, owner replacement, or user-approved exclusion mappings.
+- All 11 Naver-specific coverage rows map to IMAP reservation-mail implementation or its replacement workflow; no coverage rows remain pending.

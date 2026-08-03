@@ -114,7 +114,7 @@ describe("SettingsPage", () => {
   const props = {
     auditEvents: [{ id: "audit-1", occurredAt: "2026-08-03T00:00:00.000Z", actor: "원장", action: "save-settings", kind: "settings", recordId: "1", payload: {} }],
     error: "",
-    naverConfigured: false,
+
     notice: "",
     notices: [{ id: "notice-1", kind: "notices", value: { title: "운영 공지", body: "공지 내용", operator: "원장" }, createdAt: "2026-08-03T00:00:00.000Z", updatedAt: "2026-08-03T00:00:00.000Z", archivedAt: null }],
     settings: { shopName: "강남점", ownerName: "민지", hiddenMenus: ["/messages"], backgroundColor: "#f7f5f6", foregroundColor: "#211a1f" },
@@ -160,11 +160,12 @@ describe("SettingsPage", () => {
     expect(messages).not.toContain('name="messageAutomationEnabled"');
   });
 
-  it("shows non-secret Naver help and reachable notices, FAQ, and audit history", () => {
-    const integrations = renderToStaticMarkup(<SettingsPage {...props} section="integrations" />);
-    expect(integrations).toContain("연동 확인 필요");
-    for (const secret of ["naverAccount", "password", "clientSecret", "비밀키 입력"]) expect(integrations).not.toContain(secret);
-    const help = renderToStaticMarkup(<SettingsPage {...props} section="help" />);
+  it("shows Naver mail metadata and a booking link without credentials", () => {
+    const disconnected = renderToStaticMarkup(<SettingsPage {...props} section="integrations" />);
+    expect(disconnected).toContain('href="/bookings"');
+    const integrations = renderToStaticMarkup(<SettingsPage {...props} settings={{ ...props.settings, naverMail: { email: "owner@naver.com", provider: "naver", connected: true, lastSyncUid: 18372, lastSyncAt: "2026-08-03T15:18:00" } }} section="integrations" />);
+    for (const label of ["owner@naver.com", "18372", "2026-08-03T15:18:00"]) expect(integrations).toContain(label);
+    for (const secret of ["applicationPassword", "clientSecret", "NAVER_RESERVATION_CLIENT_SECRET"]) expect(integrations).not.toContain(secret);    const help = renderToStaticMarkup(<SettingsPage {...props} section="help" />);
     expect(help).toContain("도움말 · FAQ");
     expect(help).toContain("운영 공지");
     expect(help).toContain("설정 변경 이력");
