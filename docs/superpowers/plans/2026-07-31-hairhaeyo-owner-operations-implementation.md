@@ -466,7 +466,7 @@ Launch the built Windows app, verify `수원 본점`, configured owner display n
 
 Fix every Critical and Important finding. Re-run focused tests after each fix and the full verification suite after the final fix.
 
-- [ ] **Step 7: Commit QA, integrate to main, and push**
+- [x] **Step 7: Commit QA, integrate to main, and push**
 
 ```bash
 git add .
