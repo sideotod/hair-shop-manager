@@ -56,7 +56,7 @@
 - `npm run tauri:build` 성공.
 - 실행 파일: `src-tauri/target/release/hairhaeyo.exe`.
 - installer: `src-tauri/target/release/bundle/nsis/Hairhaeyo_0.1.0_x64-setup.exe`.
-- installer 크기: 30,513,889 bytes.
+- installer 크기: 30,513,303 bytes.
 - source, standalone, release의 `windows-credential.ps1` SHA-256가 모두 `B9B3BBBA94736BE016059C1E2DD67D41AB6A70F1A981646A9521F9DEEF242BE0`으로 일치한다.
 - 이전 Tauri runtime smoke에서 sidecar가 `127.0.0.1:3210` login을 제공하고 창 종료 후 listener가 제거되는 것을 확인했다.
 - prebuild가 이전 Tauri resource junction과 `target/*/server` 생성물을 제거한다. 최신 standalone과 release server의 재귀 `src-tauri` 포함 수는 0이다.
