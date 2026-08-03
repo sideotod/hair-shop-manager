@@ -32,6 +32,7 @@
   7. 초기 예약 데이터 불러오기
   8. 앱 실행 시 신규 메일 동기화
 - 신청·확정·변경·취소를 분류하고 예약번호로 통합한다. 같은 UID와 낮은 UID는 무시한다.
+- 발신자, 제목, `dkim=pass`와 `header.d=naver.com`을 모두 확인한다. DKIM 없음·실패·SPF만 통과한 메일은 무시한다.
 - 취소는 예약을 보관 처리하면서 상태 이력과 감사 처리자 `원장`을 유지한다.
 - 초기 import와 이후 신규 UID 증분 동기화를 지원한다. DB 저장이 실패하면 checkpoint를 갱신하지 않는다.
 - 시작 동기화는 프로세스당 성공 1회이며 동시 요청은 같은 Promise를 공유한다. 실패 후에는 재시도할 수 있다.
@@ -46,6 +47,7 @@
 - 1280×900: `clientWidth=1265`, `scrollWidth=1265`, 가로 스크롤 없음.
 - 1440×1000: `clientWidth=1425`, `scrollWidth=1425`, 가로 스크롤 없음.
 - 네이버 8단계 grid, 개인정보 안내, 이메일·비밀번호 입력, 버튼, 재시도 이력의 정렬·clipping 문제 없음.
+- 대체 안내 FAQ와 공식 도움말 4개 링크를 확인했고 1280·1440에서 가로 overflow가 없었다.
 - Pretendard Variable을 로컬에서 사용하며 한국어 label, form control, 표, 차트 label 정렬을 확인했다.
 - 키보드 focus, semantic label, 색상 외 상태 문구를 유지한다.
 
@@ -63,13 +65,13 @@
 
 ## 자동 검증
 
-- Vitest: 30 files, 175/175.
+- Vitest: 30 files, 188/188.
 - TypeScript strict: 통과.
 - Next production build: 12/12 pages.
 - Cargo: 3/3.
 - `npm audit --omit=dev`: 취약점 0.
 - 실제 disposable Credential Manager write/read/delete: 통과.
-- Hairnuri 문자열: 0.
+- 이전 제품명 문자열: 0.
 - coverage pending: 0.
 - secret/static legacy field scan: 0.
 - `FUNCTION.md` 263/263 기능은 route, component, server operation, integration, background job 또는 승인된 대체 흐름에 매핑된다.
