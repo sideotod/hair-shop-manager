@@ -79,8 +79,12 @@ describe("FUNCTION.md coverage matrix", () => {
     }
   });
 
-  it("excludes every product and coupon row and conservatively marks flagged legacy claims", () => {
-    for (const [feature, status] of rows) if (/(상품|쿠폰)/.test(feature ?? "")) expect(status, feature).toBe("사용자 승인 제외");
+  it("excludes pure product and coupon rows while retaining prepaid replacements", () => {
+    for (const [feature, status] of rows) if (/(상품|쿠폰)/.test(feature ?? "") && !/선불/.test(feature ?? "")) expect(status, feature).toBe("사용자 승인 제외");
+    for (const [feature, status] of rows) if (/선불/.test(feature ?? "")) expect(status, feature).toBe("연동 확인 필요");
+  });
+
+  it("conservatively marks flagged legacy claims", () => {
     for (const feature of [
       "포인트 시작값/적립 기준/사용 제한",
       "포인트 시작값/한도/적립 방식",

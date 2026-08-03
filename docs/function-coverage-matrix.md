@@ -61,7 +61,7 @@
 | 고객별 시술 이력 | 구현 | app/customers/page.tsx; app/customer-actions.ts | components/customers/customers-page.test.tsx |
 | 고객별 상품 구매 이력 | 사용자 승인 제외 | docs/function-coverage-matrix.md; components/settings/settings-page.tsx | lib/function-coverage.test.ts; components/settings/settings-page.test.tsx |
 | 고객별 포인트 이력 | 구현 | app/customers/page.tsx; app/customer-actions.ts | components/customers/customers-page.test.tsx |
-| 고객별 쿠폰/선불권 잔액 `[추가확인]` | 사용자 승인 제외 | docs/function-coverage-matrix.md; components/settings/settings-page.tsx | lib/function-coverage.test.ts; components/settings/settings-page.test.tsx |
+| 고객별 쿠폰/선불권 잔액 `[추가확인]` | 연동 확인 필요 | app/sales/page.tsx; app/payment-actions.ts; lib/finance.ts | lib/finance.test.ts; components/sales/payment-form.test.tsx; lib/function-coverage.test.ts |
 | 고객별 예약 이력 `[추가확인]` | 구현 | app/customers/page.tsx; app/customer-actions.ts | components/customers/customers-page.test.tsx |
 | 고객별 문자 발송 이력 `[추가확인]` | 연동 확인 필요 | app/customers/page.tsx; app/customer-actions.ts | components/customers/customers-page.test.tsx |
 | 파워 고객 검색 | 구현 | app/customers/page.tsx; app/customer-actions.ts | components/customers/customers-page.test.tsx |
@@ -143,8 +143,8 @@
 | 메모 | 사용자 승인 제외 | docs/function-coverage-matrix.md; components/settings/settings-page.tsx | lib/function-coverage.test.ts; components/settings/settings-page.test.tsx |
 | 상품 판매 이력 조회 | 사용자 승인 제외 | docs/function-coverage-matrix.md; components/settings/settings-page.tsx | lib/function-coverage.test.ts; components/settings/settings-page.test.tsx |
 | 상품 판매 이력 수정 | 사용자 승인 제외 | docs/function-coverage-matrix.md; components/settings/settings-page.tsx | lib/function-coverage.test.ts; components/settings/settings-page.test.tsx |
-| 선불쿠폰 대분류 설정 | 사용자 승인 제외 | docs/function-coverage-matrix.md; components/settings/settings-page.tsx | lib/function-coverage.test.ts; components/settings/settings-page.test.tsx |
-| 선불티켓/쿠폰명 등록 | 사용자 승인 제외 | docs/function-coverage-matrix.md; components/settings/settings-page.tsx | lib/function-coverage.test.ts; components/settings/settings-page.test.tsx |
+| 선불쿠폰 대분류 설정 | 연동 확인 필요 | app/sales/page.tsx; app/payment-actions.ts; lib/finance.ts | lib/finance.test.ts; components/sales/payment-form.test.tsx; lib/function-coverage.test.ts |
+| 선불티켓/쿠폰명 등록 | 연동 확인 필요 | app/sales/page.tsx; app/payment-actions.ts; lib/finance.ts | lib/finance.test.ts; components/sales/payment-form.test.tsx; lib/function-coverage.test.ts |
 | 쿠폰 가격 등록 | 사용자 승인 제외 | docs/function-coverage-matrix.md; components/settings/settings-page.tsx | lib/function-coverage.test.ts; components/settings/settings-page.test.tsx |
 | 고객별 쿠폰 판매 | 사용자 승인 제외 | docs/function-coverage-matrix.md; components/settings/settings-page.tsx | lib/function-coverage.test.ts; components/settings/settings-page.test.tsx |
 | 쿠폰 차감 | 사용자 승인 제외 | docs/function-coverage-matrix.md; components/settings/settings-page.tsx | lib/function-coverage.test.ts; components/settings/settings-page.test.tsx |
@@ -185,8 +185,8 @@
 | 생일 자동 발송 | 연동 확인 필요 | app/messages/page.tsx; app/message-actions.ts; lib/messages.ts | lib/messages.test.ts; components/messages/messages-page.test.tsx |
 | 예약 당일/전일 발송 | 연동 확인 필요 | app/messages/page.tsx; app/message-actions.ts; lib/messages.ts | lib/messages.test.ts; components/messages/messages-page.test.tsx |
 | 예약 방문일 추가 문구 | 연동 확인 필요 | app/messages/page.tsx; app/message-actions.ts; lib/messages.ts | lib/messages.test.ts; components/messages/messages-page.test.tsx |
-| 선불쿠폰 판매 후 발송 | 사용자 승인 제외 | docs/function-coverage-matrix.md; components/settings/settings-page.tsx | lib/function-coverage.test.ts; components/settings/settings-page.test.tsx |
-| 선불쿠폰 차감 후 발송 | 사용자 승인 제외 | docs/function-coverage-matrix.md; components/settings/settings-page.tsx | lib/function-coverage.test.ts; components/settings/settings-page.test.tsx |
+| 선불쿠폰 판매 후 발송 | 연동 확인 필요 | app/sales/page.tsx; app/payment-actions.ts; lib/finance.ts; app/messages/page.tsx; app/message-actions.ts; lib/messages.ts | lib/finance.test.ts; components/sales/payment-form.test.tsx; lib/messages.test.ts; components/messages/messages-page.test.tsx; lib/function-coverage.test.ts |
+| 선불쿠폰 차감 후 발송 | 연동 확인 필요 | app/sales/page.tsx; app/payment-actions.ts; lib/finance.ts; app/messages/page.tsx; app/message-actions.ts; lib/messages.ts | lib/finance.test.ts; components/sales/payment-form.test.tsx; lib/messages.test.ts; components/messages/messages-page.test.tsx; lib/function-coverage.test.ts |
 | SMS/LMS 문구 편집 | 사용자 승인 제외 | docs/function-coverage-matrix.md; app/messages/page.tsx; components/settings/settings-page.tsx | lib/function-coverage.test.ts; components/messages/messages-page.test.tsx; components/settings/settings-page.test.tsx |
 | 문구 바이트 확인 | 구현 | app/messages/page.tsx; app/message-actions.ts; lib/messages.ts | lib/messages.test.ts; components/messages/messages-page.test.tsx |
 | 발송 예약 시각 설정 | 구현 | app/messages/page.tsx; app/message-actions.ts; lib/messages.ts | lib/messages.test.ts; components/messages/messages-page.test.tsx |

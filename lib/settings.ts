@@ -23,6 +23,7 @@ const knownErrors = new Set([
   "새 비밀번호 확인이 일치하지 않습니다.",
   "공지 제목과 내용을 입력하세요.",
   "공지 길이를 확인하세요.",
+  "예약 추가 문구는 150자 이하로 입력하세요.",
 ]);
 
 function text(formData: FormData, name: string) {
@@ -51,6 +52,7 @@ export function parseShopSettings(formData: FormData, current: JsonObject): Json
     "shopName", "shopPhone", "ownerName", "customerOpenMode", "customerDisplayMode", "defaultGender",
     "customerGrades", "customerGroups", "visitMotives", "reminderText", "helpPhone", "helpEmail", "vatMode",
   ]) if (formData.has(name)) values[name] = text(formData, name);
+  if (formData.has("reminderText") && text(formData, "reminderText").length > 150) throw new Error("예약 추가 문구는 150자 이하로 입력하세요.");
   for (const name of ["shopName", "ownerName"]) if (formData.has(name) && !values[name]) throw new Error("매장명과 원장 표시 이름을 입력하세요.");
   for (const [name, allowed] of [
     ["customerOpenMode", new Set(["same-window", "new-window"])],

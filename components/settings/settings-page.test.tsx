@@ -43,6 +43,11 @@ describe("settings validation", () => {
     expect(parseShopSettings(settingsForm({ bookingNoticeText: "unused" }), {})).toEqual({});
   });
 
+  it("accepts a 150-character reminder and rejects longer text", () => {
+    expect(parseShopSettings(settingsForm({ reminderText: "가".repeat(150) }), {})).toEqual({ reminderText: "가".repeat(150) });
+    expect(() => parseShopSettings(settingsForm({ reminderText: "가".repeat(151) }), {})).toThrow("150자 이하");
+  });
+
   it("confirms and hashes a changed owner password without persisting plaintext", () => {
     const store = createSalonStore(":memory:");
     try {

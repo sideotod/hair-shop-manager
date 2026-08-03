@@ -199,3 +199,59 @@ The full repository suite was not repeated in this fix round. Its four previousl
 - No new dependency, UI framework, provider abstraction, credential storage, product/coupon surface, or prepaid balance manager was added.
 - Shared enforcement lives at the existing queue/settings/auth boundaries; UI status mirrors but does not replace server enforcement.
 - The controller-owned revised plan remains unstaged.
+
+## Fix round 2 — 2026-08-03
+
+### Important findings addressed
+
+- The coverage rule now excludes only pure product/coupon rows. Every row containing `선불` is retained as `연동 확인 필요` with concrete replacement evidence.
+- `선불쿠폰 대분류 설정`, `선불티켓/쿠폰명 등록`, and the mixed `고객별 쿠폰/선불권 잔액` row map to the existing `/sales` immutable payment-ledger flow.
+- `선불쿠폰 판매 후 발송` and `선불쿠폰 차감 후 발송` map to `/sales` payment-ledger evidence plus `/messages` dry-run evidence; no coupon manager or provider delivery claim was added.
+- `parseShopSettings` now rejects `reminderText` longer than 150 characters while accepting exactly 150 characters. The validation message is included in the safe settings-error allowlist.
+
+### Coverage after fix round 2
+
+- Top-level bullets: **253**
+- Nested bullets: **10**
+- Total bullets: **263**
+- `구현`: **153**
+- `원장 1인 대체`: **16**
+- `연동 확인 필요`: **56**
+- `사용자 승인 제외`: **38**
+- `계획`: **0**
+
+### TDD and verification
+
+Regression run before implementation:
+
+```powershell
+npm test -- lib/function-coverage.test.ts components/settings/settings-page.test.tsx
+```
+
+Result: exit 1; **2 test files failed; 2 tests failed and 22 passed**. The failures reproduced the prepaid-row exclusion and missing server-side reminder length validation.
+
+Final focused run:
+
+```powershell
+npm test -- lib/function-coverage.test.ts components/settings/settings-page.test.tsx
+```
+
+Result: exit 0; **2 test files passed, 24 tests passed**.
+
+Strict TypeScript:
+
+```powershell
+npm run typecheck
+```
+
+Result: exit 0; `tsc --noEmit` passed.
+
+Whitespace check:
+
+```powershell
+git diff --check
+```
+
+Result: exit 0; no whitespace errors. Git emitted only LF-to-CRLF conversion warnings.
+
+The controller-owned implementation plan remains unstaged, and no push was performed.
