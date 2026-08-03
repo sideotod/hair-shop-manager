@@ -13,7 +13,7 @@ type HelperRequest =
   | { action: "read"; target: string }
   | { action: "delete"; target: string };
 
-const helperPath = join(process.cwd(), "scripts", "windows-credential.ps1");
+export const resolveWindowsCredentialHelperPath = (cwd = process.cwd()) => join(cwd, "scripts", "windows-credential.ps1");
 
 const runPowerShell: WindowsCredentialProcessRunner = ({ command, args, input }) => new Promise((resolve, reject) => {
   const child = spawn(command, args, { stdio: ["pipe", "pipe", "ignore"], windowsHide: true });
@@ -36,7 +36,7 @@ async function invoke(request: HelperRequest, runner: WindowsCredentialProcessRu
   try {
     response = await runner({
       command: "powershell.exe",
-      args: ["-NoLogo", "-NoProfile", "-NonInteractive", "-ExecutionPolicy", "Bypass", "-File", helperPath],
+      args: ["-NoLogo", "-NoProfile", "-NonInteractive", "-ExecutionPolicy", "Bypass", "-File", resolveWindowsCredentialHelperPath()],
       input: JSON.stringify(request),
     });
   } catch {

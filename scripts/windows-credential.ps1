@@ -82,6 +82,7 @@ try {
                 throw "Credential read failed"
             }
             $secretBytes = $null
+            $credential = $null
             try {
                 $credential = [HairhaeyoCredentialNative]::ReadCredential($pointer)
                 $secretBytes = New-Object byte[] $credential.CredentialBlobSize
@@ -89,6 +90,9 @@ try {
                 Write-Response @{ ok = $true; found = $true; username = $credential.UserName; secret = [Text.Encoding]::UTF8.GetString($secretBytes) }
             } finally {
                 if ($null -ne $secretBytes) { [Array]::Clear($secretBytes, 0, $secretBytes.Length) }
+                if ($null -ne $credential -and $credential.CredentialBlob -ne [IntPtr]::Zero -and $credential.CredentialBlobSize -gt 0) {
+                    [Runtime.InteropServices.Marshal]::Copy((New-Object byte[] $credential.CredentialBlobSize), 0, $credential.CredentialBlob, $credential.CredentialBlobSize)
+                }
                 [HairhaeyoCredentialNative]::CredFree($pointer)
             }
         }

@@ -4,6 +4,7 @@ import { randomUUID } from "node:crypto";
 import {
   deleteWindowsCredential,
   readWindowsCredential,
+  resolveWindowsCredentialHelperPath,
   writeWindowsCredential,
   type WindowsCredentialProcessRunner,
 } from "./windows-credential";
@@ -16,6 +17,10 @@ const runner = (result: { stdout: string; exitCode: number }) => {
 };
 
 describe("Windows Credential Manager boundary", () => {
+  it("resolves helper below packaged Tauri server directory", () => {
+    expect(resolveWindowsCredentialHelperPath("C:\\Hairhaeyo\\resources\\server")).toBe("C:\\Hairhaeyo\\resources\\server\\scripts\\windows-credential.ps1");
+  });
+
   it("writes target, username, and secret through helper stdin only", async () => {
     const run = runner({ stdout: '{"ok":true}', exitCode: 0 });
 

@@ -24,6 +24,10 @@ export function prepareSidecar({ root, nodeExecutable, targetTriple }) {
     rmSync(target, { recursive: true, force: true });
     cpSync(source, target, { recursive: true });
   }
+  const credentialHelper = join(root, "scripts", "windows-credential.ps1");
+  const bundledCredentialHelper = join(standalone, "scripts", "windows-credential.ps1");
+  mkdirSync(dirname(bundledCredentialHelper), { recursive: true });
+  cpSync(credentialHelper, bundledCredentialHelper);
   const binaries = join(root, "src-tauri", "binaries");
   mkdirSync(binaries, { recursive: true });
   cpSync(nodeExecutable, join(binaries, `node-${targetTriple}.exe`));

@@ -20,9 +20,11 @@ describe("prepareSidecar", () => {
     mkdirSync(join(root, ".next", "standalone", ".data"), { recursive: true });
     mkdirSync(join(root, ".next", "static"), { recursive: true });
     mkdirSync(join(root, "public"), { recursive: true });
+    mkdirSync(join(root, "scripts"), { recursive: true });
     writeFileSync(join(root, ".next", "standalone", ".data", "hairhaeyo.sqlite"), "private salon data");
     writeFileSync(join(root, ".next", "static", "asset.txt"), "static");
     writeFileSync(join(root, "public", "public.txt"), "public");
+    writeFileSync(join(root, "scripts", "windows-credential.ps1"), "credential helper");
     const nodeExecutable = join(root, "node.exe");
     writeFileSync(nodeExecutable, "node");
 
@@ -30,6 +32,7 @@ describe("prepareSidecar", () => {
 
     expect(readFileSync(join(root, ".next", "standalone", ".next", "static", "asset.txt"), "utf8")).toBe("static");
     expect(readFileSync(join(root, ".next", "standalone", "public", "public.txt"), "utf8")).toBe("public");
+    expect(readFileSync(join(root, ".next", "standalone", "scripts", "windows-credential.ps1"), "utf8")).toBe("credential helper");
     expect(() => readFileSync(join(root, ".next", "standalone", ".data", "hairhaeyo.sqlite"), "utf8")).toThrow();
     expect(readFileSync(join(root, "src-tauri", "binaries", "node-x86_64-pc-windows-msvc.exe"), "utf8")).toBe("node");
   });
@@ -39,6 +42,8 @@ describe("prepareSidecar", () => {
     roots.push(root);
     mkdirSync(join(root, ".next", "standalone"), { recursive: true });
     mkdirSync(join(root, ".next", "static"), { recursive: true });
+    mkdirSync(join(root, "scripts"), { recursive: true });
+    writeFileSync(join(root, "scripts", "windows-credential.ps1"), "credential helper");
     const nodeExecutable = join(root, "node.exe");
     writeFileSync(nodeExecutable, "node");
 
