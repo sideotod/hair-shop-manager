@@ -6,7 +6,7 @@ import { seoulBusinessDate } from "./seoul-date";
 const paymentLabels = {
   cash: "현금", cashReceipt: "현금영수증", card: "카드", points: "포인트", transfer: "계좌이체", naverPay: "N페이", other: "기타", zeroPay: "제로페이", prepaid: "선불권",
 } as const;
-const colors = ["#5c344f", "#b77d8f", "#5b806d", "#b27a38", "#687078", "#8d7183", "#b84a4a", "#5b6770"];
+const colors = ["#0d3a33", "#2f6b4f", "#8a6a2a", "#5e635c", "#9b3a33", "#3d6b78", "#6d5a86", "#8a5a12"];
 const sum = <T>(items: readonly T[], get: (item: T) => number) => items.reduce((total, item) => total + get(item), 0);
 const dateLabel = (date: string) => `${Number(date.slice(5, 7))}/${Number(date.slice(8, 10))}`;
 const detailText = (details: JsonObject, key: string, fallback: string) => typeof details[key] === "string" ? details[key] : fallback;

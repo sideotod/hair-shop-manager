@@ -1,9 +1,12 @@
 import { renderToStaticMarkup } from "react-dom/server";
-import { describe, expect, it } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import SalesPage from "./page";
 
 describe("SalesPage", () => {
+  beforeEach(() => vi.stubEnv("HAIRHAEYO_DB_PATH", ":memory:"));
+  afterEach(() => vi.unstubAllEnvs());
+
   it("builds server analytics from the immutable ledger for a simple view", async () => {
     const page = await SalesPage({ searchParams: Promise.resolve({ view: "month", cursor: "2026-07-31" }) });
     const analytics = page.props.analytics;

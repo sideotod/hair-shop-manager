@@ -35,7 +35,7 @@ import {
   type RevenueQuery,
 } from "./revenue-query";
 
-const card = "rounded-[14px] border border-[var(--border)] bg-white";
+const card = "rounded-[16px] border border-[var(--border)] bg-[var(--surface)] shadow-[0_1px_2px_rgba(13,21,18,0.03)]";
 const won = (value: number) => `₩${value.toLocaleString("ko-KR")}`;
 const money = (value: number) =>
   `${Math.round(value / 10000).toLocaleString("ko-KR")}만`;
@@ -271,15 +271,15 @@ export function RevenueDashboard({
           <BarChart
             data={rows}
             layout="vertical"
-            margin={{ left: 18, right: 74 }}
+            margin={{ left: 18, right: 88 }}
             onClick={selectChart(kind)}
           >
             <XAxis hide type="number" />
-            <YAxis dataKey="name" tickLine={false} type="category" width={60} />
+            <YAxis dataKey="name" tickLine={false} type="category" width={96} />
             <Bar
               {...chartMotion}
               dataKey="sales"
-              fill="#5c344f"
+              fill="#0d3a33"
               radius={[0, 5, 5, 0]}
             >
               <LabelList dataKey="sales" formatter={(value) => won(Number(value ?? 0))} position="right" />
@@ -423,7 +423,7 @@ export function RevenueDashboard({
             <ChartSurface kind="date" label="매출 추이" onReady={ref("date")}>
               <ResponsiveContainer height="100%" width="100%">
                 <LineChart data={analytics.trend} onClick={selectChart("date")}>
-                  <CartesianGrid stroke="#ece8e3" vertical={false} />
+                  <CartesianGrid stroke="#e0ded7" vertical={false} />
                   <XAxis dataKey="date" tickLine={false} />
                   <YAxis tickFormatter={money} tickLine={false} width={58} />
                   <Tooltip formatter={(value) => won(Number(value))} />
@@ -432,7 +432,7 @@ export function RevenueDashboard({
                     {...motion.trend}
                     dataKey="gross"
                     name="총매출"
-                    stroke="#5c344f"
+                    stroke="#0d3a33"
                     strokeWidth={3}
                     type="monotone"
                   />
@@ -440,7 +440,7 @@ export function RevenueDashboard({
                     {...motion.trend}
                     dataKey="profit"
                     name="샵 수익"
-                    stroke="#5b806d"
+                    stroke="#2f6b4f"
                     strokeWidth={3}
                     type="monotone"
                   />

@@ -131,7 +131,7 @@ describe("SalonStore", () => {
     expect(automations.every(({ value }) => value.operator === "원장")).toBe(true);
     expect(store.listLedger().reduce((total, entry) => total + entry.amountWon, 0)).toBe(29960000);
     expect(store.listLedger().reduce((total, entry) => total + entry.profitWon, 0)).toBe(17390000);
-    expect(store.getSettings()).toMatchObject({ shopName: "수원 본점", ownerName: "원장", smsRemaining: 500 });
+    expect(store.getSettings()).toMatchObject({ shopName: "헤어해요", ownerName: "서원", smsRemaining: 500 });
 
     const seedEvents = store.snapshot().auditEvents;
     expect(seedEvents.filter((event) => event.action === "seed-ledger")).toHaveLength(store.listLedger().length);

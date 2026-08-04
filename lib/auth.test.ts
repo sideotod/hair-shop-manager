@@ -68,9 +68,9 @@ describe("owner authentication", () => {
     const productionHtml = renderToStaticMarkup(await LoginPage({ searchParams: Promise.resolve({}) }));
 
     expect(demoHtml).toContain("로컬 데모 원장 비밀번호");
-    expect(demoHtml).toContain("hairhaeyo");
+    expect(demoHtml).toContain("952200");
     expect(productionHtml).not.toContain("로컬 데모 원장 비밀번호");
-    expect(productionHtml).not.toContain("hairhaeyo</strong>");
+    expect(productionHtml).not.toContain("952200</strong>");
   });
 
   it("requires a safe production session secret and fails closed when it is unavailable", () => {

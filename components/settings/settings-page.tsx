@@ -17,8 +17,8 @@ const sections = [
   ["integrations", "외부 연동"],
   ["help", "도움말 · 공지"],
 ] as const;
-const field = "h-10 w-full rounded-[8px] border border-[var(--border)] bg-white px-3 text-sm focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--brand)]";
-const card = "rounded-[14px] border border-[var(--border)] bg-white p-6";
+const field = "h-10 w-full rounded-[9px] border border-[var(--border)] bg-[var(--surface)] px-3 text-sm focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--brand)]";
+const card = "rounded-[16px] border border-[var(--border)] bg-[var(--surface)] p-6 shadow-[0_1px_2px_rgba(13,21,18,0.03)]";
 
 type Props = {
   settings: JsonObject;
@@ -39,7 +39,7 @@ function SaveButton({ children = "저장" }: { children?: React.ReactNode }) { r
 
 function Owner({ settings }: { settings: JsonObject }) {
   return <div className="space-y-5">
-    <form action={saveShopSettings} aria-label="매장과 원장 정보" className={card}><ReturnTo section="owner" /><h2 className="text-lg font-bold">매장 · 원장 정보</h2><p className="mt-1 text-sm text-[var(--muted)]">표시 이름을 바꿔도 감사 이력의 처리자는 항상 정확히 원장으로 기록됩니다.</p><div className="mt-5 grid grid-cols-3 gap-4"><Field label="매장명"><input className={field} defaultValue={string(settings, "shopName", "수원 본점")} name="shopName" required /></Field><Field label="매장 전화번호"><input className={field} defaultValue={string(settings, "shopPhone")} name="shopPhone" type="tel" /></Field><Field label="원장 표시 이름"><input className={field} defaultValue={string(settings, "ownerName", "원장")} name="ownerName" required /></Field></div><div className="mt-5"><SaveButton /></div></form>
+    <form action={saveShopSettings} aria-label="매장과 원장 정보" className={card}><ReturnTo section="owner" /><h2 className="text-lg font-bold">매장 · 원장 정보</h2><p className="mt-1 text-sm text-[var(--muted)]">표시 이름을 바꿔도 감사 이력의 처리자는 항상 정확히 원장으로 기록됩니다.</p><div className="mt-5 grid grid-cols-3 gap-4"><Field label="매장명"><input className={field} defaultValue={string(settings, "shopName", "헤어해요")} name="shopName" required /></Field><Field label="매장 전화번호"><input className={field} defaultValue={string(settings, "shopPhone")} name="shopPhone" type="tel" /></Field><Field label="원장 표시 이름"><input className={field} defaultValue={string(settings, "ownerName", "서원")} name="ownerName" required /></Field></div><div className="mt-5"><SaveButton /></div></form>
     <form action={changeOwnerPassword} aria-label="원장 비밀번호 변경" className={card}><ReturnTo section="owner" /><h2 className="text-lg font-bold">비밀번호 변경</h2><p className="mt-1 text-sm text-[var(--muted)]">평문 비밀번호는 저장하거나 감사 이력에 기록하지 않습니다.</p><div className="mt-5 grid grid-cols-3 gap-4"><Field label="현재 비밀번호"><input autoComplete="current-password" className={field} name="currentPassword" required type="password" /></Field><Field label="새 비밀번호"><input autoComplete="new-password" className={field} minLength={8} name="newPassword" required type="password" /></Field><Field label="새 비밀번호 확인"><input autoComplete="new-password" className={field} minLength={8} name="confirmPassword" required type="password" /></Field></div><div className="mt-5"><SaveButton>비밀번호 변경</SaveButton></div></form>
   </div>;
 }

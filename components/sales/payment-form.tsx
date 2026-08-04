@@ -5,7 +5,7 @@ import { PAYMENT_METHODS } from "../../lib/finance";
 import type { JsonObject, JsonValue } from "../../lib/salon-domain";
 
 type Customer = { id: string; value: JsonValue };
-const field = "h-10 rounded-[10px] border border-[var(--border)] bg-white px-3 text-[13px] text-[var(--foreground)]";
+const field = "h-10 rounded-[9px] border border-[var(--border)] bg-[var(--surface)] px-3 text-[13px] text-[var(--foreground)]";
 const customerName = (customer: Customer) => { const value = customer.value; return value && typeof value === "object" && !Array.isArray(value) && typeof (value as Record<string, JsonValue>).name === "string" ? (value as Record<string, JsonValue>).name as string : customer.id; };
 
 export function PaymentForm({ customers, customerId, correctionTargetId, error, returnTo = "/sales?tab=payment", settings = {}, today }: { customers: readonly Customer[]; customerId?: string; correctionTargetId?: string; error?: string; returnTo?: string; settings?: JsonObject; today: string }) {

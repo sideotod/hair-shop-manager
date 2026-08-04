@@ -246,7 +246,7 @@ function seed(db: DatabaseSync) {
     }
 
     db.prepare("INSERT INTO settings (id, payload, updated_at) VALUES (1, ?, ?)").run(
-      stringifyJson({ shopName: "수원 본점", ownerName: "원장", smsRemaining: 500 }, "settings"),
+      stringifyJson({ shopName: "헤어해요", ownerName: "서원", smsRemaining: 500 }, "settings"),
       seededAt,
     );
 

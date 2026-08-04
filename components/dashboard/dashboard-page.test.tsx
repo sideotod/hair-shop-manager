@@ -14,13 +14,13 @@ describe("DashboardPage", () => {
 
     expect(html).toContain("HAIRHAEYO");
     expect(html).toContain("헤어해요 · SALON MANAGEMENT");
-    expect(html).toContain("수원 본점");
+    expect(html).toContain("헤어해요");
     expect(html).toContain("원장님");
     expect(html).not.toContain("원장 원장님");
     expect(html).not.toContain("직원");
     expect(html).not.toContain("디자이너");
 
-    for (const label of ["오늘", "고객", "예약", "매출·결제", "문자", "운영 설정", "설정"]) {
+    for (const label of ["운영 현황", "고객", "예약", "매출·결제", "문자", "운영 설정", "설정"]) {
       expect(html).toContain(`>${label}<`);
     }
     expect(html).not.toContain(">상품·쿠폰<");
@@ -141,7 +141,7 @@ describe("DashboardPage", () => {
         overlay={<div role="dialog">고객 상세</div>}
         ownerName="원장"
         settings={{ brandColor: "#123456" }}
-        shopName="수원 본점"
+        shopName="헤어해요"
         smsRemaining={500}
       >
         <main>배경</main>

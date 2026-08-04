@@ -6,8 +6,8 @@ import type { JsonObject, JsonValue, SalonRecord } from "../../lib/salon-domain"
 import { AppShell } from "../app-shell";
 import { NaverMailConnection } from "./naver-mail-connection";
 
-const input = "h-10 rounded-[8px] border border-[var(--border)] bg-white px-3 text-sm";
-const card = "rounded-[14px] border border-[var(--border)] bg-white";
+const input = "h-10 rounded-[9px] border border-[var(--border)] bg-[var(--surface)] px-3 text-sm";
+const card = "rounded-[16px] border border-[var(--border)] bg-[var(--surface)] shadow-[0_1px_2px_rgba(13,21,18,0.03)]";
 const labels: Record<string, string> = { confirmed: "예약", waiting: "대기", completed: "완료", cancelled: "취소" };
 
 type Props = { bookings: readonly SalonRecord<JsonValue>[]; customers: readonly SalonRecord<JsonValue>[]; settings: JsonObject; syncHistory: readonly SalonRecord<JsonValue>[]; date?: string; view?: string; period?: string; showNew?: boolean; error?: string; notice?: string; edit?: string; };
@@ -43,7 +43,7 @@ export function BookingsPage({ bookings, customers, settings, syncHistory, date,
   const previousDate = activeView === "month" ? addCalendarMonths(selectedDate, -1) : addDays(selectedDate, activeView === "period" ? -days : -1);
   const nextDate = activeView === "month" ? addCalendarMonths(selectedDate, 1) : addDays(selectedDate, activeView === "period" ? days : 1);
   const returnTo = link(selectedDate, activeView, period);
-  const shopName = setting(settings, "shopName", "수원 본점"); const ownerName = setting(settings, "ownerName", "원장"); const smsRemaining = typeof settings.smsRemaining === "number" ? settings.smsRemaining : 0;
+  const shopName = setting(settings, "shopName", "헤어해요"); const ownerName = setting(settings, "ownerName", "서원"); const smsRemaining = typeof settings.smsRemaining === "number" ? settings.smsRemaining : 0;
   return <AppShell activeHref="/bookings" customers={customers} ownerName={ownerName} settings={settings} shopName={shopName} smsRemaining={smsRemaining}><main className="min-w-[1032px] px-8 pb-14 pt-8">
     {error && <p className="mb-5 rounded-[10px] border border-[var(--warning)] bg-[var(--warning-soft)] px-4 py-3 text-sm text-[var(--warning)]" role="alert">입력 내용을 수정하세요: {error}</p>}
     {notice && <p className="mb-5 rounded-[10px] border border-[var(--success)] bg-[var(--success-soft)] px-4 py-3 text-sm text-[var(--success)]" role="status">{notice}</p>}

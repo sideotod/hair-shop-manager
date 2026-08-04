@@ -13,7 +13,7 @@ use tauri_plugin_shell::ShellExt;
 const HOST: &str = "127.0.0.1";
 // ponytail: fixed local port; allocate dynamically if multi-instance desktop use is introduced
 const PORT: u16 = 3210;
-const INITIAL_OWNER_PASSWORD_HASH: &str = "scrypt$hairhaeyo-owner-demo$03e3617a25194e3bdb1d1758c9d1075836df1c6d2f85e657a5741ce643ae86ea73b13eeacdf34dda0fbc66d03639cbc8bbf37aa69549cb44ed92a44c7a232549";
+const INITIAL_OWNER_PASSWORD_HASH: &str = "scrypt$hairhaeyo-owner-demo$5f33ba6263e9ed43a89d66c282505cd049de9cbd4a20e5384117ac3c901bf94d7a95e120cb2ba97d47dbf32e51c4c9408ea60310d5ddeb32aab2b1a1aaed6d6f";
 
 fn session_secret() -> std::io::Result<String> {
     let mut bytes = [0_u8; 32];

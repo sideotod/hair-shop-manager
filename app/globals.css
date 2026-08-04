@@ -1,18 +1,21 @@
 @import "tailwindcss";
 
 :root {
-  --background: #f7f5f0;
+  --background: #f2f1ed;
   --surface: #ffffff;
-  --foreground: #202124;
-  --muted: #687078;
-  --brand: #5c344f;
-  --brand-soft: #f0e6eb;
-  --rose: #b77d8f;
-  --success: #5b806d;
-  --warning: #b27a38;
-  --danger: #b84a4a;
-  --border: #e5e0da;
-  --sidebar: #2b2028;
+  --foreground: #191b19;
+  --muted: #5e635c;
+  --brand: #0d3a33;
+  --brand-soft: #e4ebe7;
+  --accent: #8a6a2a;
+  --success: #2f6b4f;
+  --success-soft: #e6efe9;
+  --warning: #8a5a12;
+  --warning-soft: #f4ecdd;
+  --danger: #9b3a33;
+  --danger-soft: #f3e3e1;
+  --border: #e0ded7;
+  --sidebar: #0d1512;
 }
 
 * {
@@ -46,13 +49,18 @@ input:focus-visible,
 select:focus-visible,
 textarea:focus-visible,
 summary:focus-visible {
-  outline: 2px solid var(--rose);
+  outline: 2px solid var(--brand);
   outline-offset: 3px;
 }
 
 .tabular-nums,
 time {
+  font-family: Consolas, "Courier New", monospace;
   font-variant-numeric: tabular-nums;
+}
+
+.wordmark {
+  font-family: Georgia, serif;
 }
 
 .customer-print {

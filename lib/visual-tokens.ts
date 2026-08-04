@@ -1,10 +1,10 @@
 import type { JsonObject } from "./salon-domain";
 
 export const DEFAULT_VISUAL_TOKENS = {
-  backgroundColor: "#f7f5f0",
-  foregroundColor: "#202124",
-  brandColor: "#5c344f",
-  sidebarColor: "#2b2028",
+  backgroundColor: "#f2f1ed",
+  foregroundColor: "#191b19",
+  brandColor: "#0d3a33",
+  sidebarColor: "#0d1512",
 } as const;
 
 export type VisualTokens = { [Key in keyof typeof DEFAULT_VISUAL_TOKENS]: string };

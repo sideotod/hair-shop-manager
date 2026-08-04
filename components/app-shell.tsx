@@ -5,7 +5,7 @@ import type { JsonObject, JsonValue, SalonRecord } from "../lib/salon-domain";
 import { resolveVisualTokens } from "../lib/visual-tokens";
 
 const menu = [
-  ["오늘", "/"],
+  ["운영 현황", "/"],
   ["고객", "/customers"],
   ["예약", "/bookings"],
   ["매출·결제", "/sales"],
@@ -49,8 +49,8 @@ export function AppShell({
   children,
   customers = [],
   smsRemaining = 0,
-  shopName = "수원 본점",
-  ownerName = "원장",
+  shopName = "헤어해요",
+  ownerName = "서원",
   settings = {},
   activeHref = "/",
   overlay,
@@ -78,14 +78,14 @@ export function AppShell({
       <div data-app-shell-background {...(overlay ? { inert: true, "aria-hidden": true } : {})} className="grid min-h-screen w-full grid-cols-[232px_minmax(0,1fr)] bg-[var(--background)] text-[var(--foreground)]">
         <aside className="sticky top-0 flex h-screen flex-col bg-[var(--sidebar)] px-6 py-7 text-white">
           <div>
-            <strong className="block text-[22px] leading-none tracking-[-0.02em]">HAIRHAEYO</strong>
-            <span className="mt-1 block text-[10px] font-medium text-[var(--rose)]">헤어해요 · SALON MANAGEMENT</span>
+            <strong className="wordmark block text-[22px] leading-none tracking-[0.04em]">HAIRHAEYO</strong>
+            <span className="mt-1.5 block text-[10px] font-medium tracking-[0.08em] text-white/70">헤어해요 · SALON MANAGEMENT</span>
           </div>
 
           <nav aria-label="주요 메뉴" className="mt-10 space-y-2">
             {visibleMenu.map(([label, href]) => (
               <Link
-                className={`block rounded-[10px] px-4 py-3 text-sm ${href === activeHref ? "bg-[var(--brand)] font-bold text-white" : "text-[#d8cdd4] hover:bg-white/5 hover:text-white"}`}
+                className={`block rounded-[10px] px-4 py-3 text-sm transition-colors ${href === activeHref ? "bg-[var(--brand)] font-semibold text-white shadow-[inset_0_0_0_1px_rgba(255,255,255,0.08)]" : "text-white/70 hover:bg-white/5 hover:text-white"}`}
                 href={href}
                 key={href}
               >
@@ -94,14 +94,14 @@ export function AppShell({
             ))}
           </nav>
 
-          <div className="mt-auto rounded-[14px] bg-[#382d35] px-4 py-3">
+          <div className="mt-auto rounded-[14px] border border-white/10 bg-white/10 px-4 py-3">
             <strong className="block text-[13px] font-medium">{resolvedShopName}</strong>
-            <span className="mt-1 block text-[11px] text-[#bfb1ba]">영업중 · {setting("bookingOpen", "09:30")}–{setting("bookingClose", "21:00")}</span>
+            <span className="mt-1 block text-[11px] text-white/60">영업중 · {setting("bookingOpen", "09:30")}–{setting("bookingClose", "21:00")}</span>
           </div>
         </aside>
 
         <div className="min-w-0">
-          <header className="flex min-h-20 items-center gap-5 border-b border-[var(--border)] bg-white px-7 text-[13px]">
+          <header className="flex min-h-20 items-center gap-5 border-b border-[var(--border)] bg-[var(--surface)] px-7 text-[13px] shadow-[0_1px_0_rgba(13,21,18,0.02)]">
             <strong className="shrink-0 font-medium">{dateLabel}</strong>
             <form action="/customers" className="flex min-w-0 flex-1 items-center gap-2" method="get" role="search">
               <select aria-label="고객 검색 기준" className="h-10 w-44 rounded-[9px] border border-[var(--border)] bg-white px-3" name="mode">

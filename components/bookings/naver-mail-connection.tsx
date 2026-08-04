@@ -7,7 +7,7 @@ import {
 import { naverMailMetadata } from "../../lib/naver-mail";
 import type { JsonObject, JsonValue, SalonRecord } from "../../lib/salon-domain";
 
-const input = "h-10 rounded-[8px] border border-[var(--border)] bg-white px-3 text-sm focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--brand)]";
+const input = "h-10 rounded-[9px] border border-[var(--border)] bg-[var(--surface)] px-3 text-sm focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--brand)]";
 
 function value(record: SalonRecord<JsonValue>): JsonObject {
   return record.value && typeof record.value === "object" && !Array.isArray(record.value) ? record.value as JsonObject : {};

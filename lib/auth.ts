@@ -2,7 +2,7 @@ import { createHmac, randomBytes, scryptSync, timingSafeEqual } from "node:crypt
 
 import { cookies } from "next/headers";
 
-export const DEMO_OWNER_PASSWORD = "hairhaeyo";
+export const DEMO_OWNER_PASSWORD = "952200";
 export const OWNER_SESSION_COOKIE = "hairhaeyo-owner-session";
 export type AuthEnvironment = Readonly<Record<string, string | undefined>>;
 

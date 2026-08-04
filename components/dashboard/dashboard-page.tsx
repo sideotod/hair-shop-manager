@@ -3,7 +3,7 @@ import Link from "next/link";
 import type { JsonObject, JsonValue, SalonRecord, SalonSnapshot } from "../../lib/salon-domain";
 import { AppShell } from "../app-shell";
 
-const card = "rounded-[14px] border border-[var(--border)] bg-white";
+const card = "rounded-[16px] border border-[var(--border)] bg-[var(--surface)] shadow-[0_1px_2px_rgba(13,21,18,0.03)]";
 const dayNames = ["오늘", "내일", "모레", "글피"] as const;
 const dateFormatter = new Intl.DateTimeFormat("en-CA", { day: "2-digit", month: "2-digit", timeZone: "Asia/Seoul", year: "numeric" });
 const timeFormatter = new Intl.DateTimeFormat("ko-KR", { hour: "2-digit", hour12: false, minute: "2-digit", timeZone: "Asia/Seoul" });
@@ -51,8 +51,8 @@ export function DashboardPage({ snapshot, today = new Date() }: { snapshot: Salo
   const automations = snapshot.records.automations ?? [];
   const notices = snapshot.records.notices ?? [];
   const settings = snapshot.settings;
-  const shopName = typeof settings.shopName === "string" ? settings.shopName : "수원 본점";
-  const ownerName = typeof settings.ownerName === "string" ? settings.ownerName : "원장";
+  const shopName = typeof settings.shopName === "string" ? settings.shopName : "헤어해요";
+  const ownerName = typeof settings.ownerName === "string" ? settings.ownerName : "서원";
   const smsRemaining = typeof settings.smsRemaining === "number" ? settings.smsRemaining : 0;
   const todayKey = dateKey(today) ?? new Date().toISOString().slice(0, 10);
   const customerNames = new Map(customers.map((record) => [record.id, textValue(objectValue(record), "name", record.id)]));
@@ -71,7 +71,7 @@ export function DashboardPage({ snapshot, today = new Date() }: { snapshot: Salo
       <main className="px-8 pb-14 pt-8">
         <div className="flex items-start justify-between gap-6">
           <div>
-            <h1 className="text-[28px] font-bold tracking-[-0.03em]">오늘</h1>
+            <h1 className="text-[30px] font-semibold tracking-[-0.04em]">운영 현황</h1>
             <p className="mt-1 text-[13px] text-[var(--muted)]">예약, 대기, 문자 자동화를 한 화면에서 확인합니다.</p>
           </div>
           <nav aria-label="빠른 작업" className="flex flex-wrap justify-end gap-2">
@@ -85,7 +85,7 @@ export function DashboardPage({ snapshot, today = new Date() }: { snapshot: Salo
           </nav>
         </div>
 
-        {malformedDateCount > 0 && <p className="mt-5 rounded-[10px] border border-[var(--warning)] bg-[#fffaf0] px-4 py-3 text-sm font-bold" role="status">날짜 확인 필요: {malformedDateCount}건</p>}
+        {malformedDateCount > 0 && <p className="mt-5 rounded-[10px] border border-[var(--warning)] bg-[var(--warning-soft)] px-4 py-3 text-sm font-bold" role="status">날짜 확인 필요: {malformedDateCount}건</p>}
 
         <section aria-label="오늘 핵심 지표" className="mt-7 grid grid-cols-4 gap-4">
           {[
@@ -136,7 +136,7 @@ export function DashboardPage({ snapshot, today = new Date() }: { snapshot: Salo
                   const customerId = textValue(waiting, "customerId", "");
                   return (
                     <li className="py-4" key={record.id}>
-                      <div className="flex items-start justify-between gap-4"><div><strong className="block text-sm">{textValue(waiting, "name")}</strong><span className="mt-1 block text-xs text-[var(--muted)]">{textValue(waiting, "memo", "메모 없음")}</span></div><span className="rounded-full bg-[#f6eedc] px-2.5 py-1 text-[11px] font-medium text-[var(--warning)]">상태: 대기</span></div>
+                      <div className="flex items-start justify-between gap-4"><div><strong className="block text-sm">{textValue(waiting, "name")}</strong><span className="mt-1 block text-xs text-[var(--muted)]">{textValue(waiting, "memo", "메모 없음")}</span></div><span className="rounded-full bg-[var(--warning-soft)] px-2.5 py-1 text-[11px] font-medium text-[var(--warning)]">상태: 대기</span></div>
                       <div className="mt-3 flex gap-3 text-xs font-medium"><Link className="text-[var(--brand)]" href={customerId ? `/customers?customer=${customerId}` : `/customers?waiting=${record.id}`}>고객 보기</Link><Link className="text-[var(--brand)]" href={customerId ? `/sales/transactions?customer=${customerId}` : "/customers?new=1"}>{customerId ? "결제 이동" : "고객 등록"}</Link></div>
                     </li>
                   );

@@ -134,7 +134,7 @@ describe("SettingsPage", () => {
 
   it("uses the same visual defaults in the settings form and app shell", () => {
     const html = renderToStaticMarkup(<SettingsPage {...props} settings={{ shopName: "강남점", ownerName: "민지" }} section="customer" />);
-    for (const token of ["#f7f5f0", "#202124", "#5c344f", "#2b2028"]) expect(html.match(new RegExp(token, "g"))?.length).toBeGreaterThanOrEqual(2);
+    for (const token of ["#f2f1ed", "#191b19", "#0d3a33", "#0d1512"]) expect(html.match(new RegExp(token, "g"))?.length).toBeGreaterThanOrEqual(2);
   });
 
   it("renders customer, payment, booking, and dry-run messaging policies", () => {
