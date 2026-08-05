@@ -18,7 +18,7 @@ const sections = [
   ["help", "도움말 · 공지"],
 ] as const;
 const field = "h-10 w-full rounded-[9px] border border-[var(--border)] bg-[var(--surface)] px-3 text-sm focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--brand)]";
-const card = "rounded-[16px] border border-[var(--border)] bg-[var(--surface)] p-6 shadow-[0_1px_2px_rgba(13,21,18,0.03)]";
+const card = "rounded-[8px] border border-[var(--border)] bg-[var(--surface)] p-6 shadow-[0_1px_2px_rgba(13,21,18,0.03)]";
 
 type Props = {
   settings: JsonObject;

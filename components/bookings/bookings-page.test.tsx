@@ -45,6 +45,14 @@ describe("BookingsPage", () => {
     expect(html).not.toContain('name="staff"');
   });
 
+  it("keeps secondary booking settings and Naver connection collapsed by default", () => {
+    const html = page();
+
+    expect(html).toContain('data-booking-settings="true"');
+    expect(html).toContain("예약 설정 · 네이버 예약 메일 연동");
+    expect(html).not.toContain('data-booking-settings="true" open=""');
+  });
+
   it("uses Seoul's calendar date and calendar-month navigation at month ends", () => {
     expect(todayInSeoul(new Date("2026-07-31T15:30:00.000Z"))).toBe("2026-08-01");
     expect(addCalendarMonths("2026-01-31", 1)).toBe("2026-02-28");

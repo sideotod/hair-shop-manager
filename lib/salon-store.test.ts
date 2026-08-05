@@ -4,6 +4,13 @@ import type { JsonValue } from "./salon-domain";
 import { createSalonStore } from "./salon-store";
 
 describe("SalonStore", () => {
+  it("leaves a newly created runtime database empty", () => {
+    const store = createSalonStore(":memory:", { seed: false });
+
+    expect(store.snapshot()).toMatchObject({ records: {}, ledger: [], settings: {}, auditEvents: [] });
+    store.close();
+  });
+
   it("closes its SQLite connection", () => {
     const store = createSalonStore(":memory:");
 

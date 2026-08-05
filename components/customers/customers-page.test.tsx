@@ -1,4 +1,6 @@
 import { renderToStaticMarkup } from "react-dom/server";
+import { readFileSync } from "node:fs";
+import { join } from "node:path";
 import { describe, expect, it } from "vitest";
 
 import { createSalonStore } from "../../lib/salon-store";
@@ -23,6 +25,16 @@ function listRows(html: string) {
 }
 
 describe("CustomersPage", () => {
+  it("keeps the customer workspace scrollable only inside its two panes", () => {
+    const html = page();
+    const styles = readFileSync(join(process.cwd(), "app", "globals.css"), "utf8");
+
+    expect(html).toContain('data-customer-list');
+    expect(html).toContain('aria-label="고객 상세"');
+    expect(styles).toContain('main:has([data-customer-list]) [data-customer-list]');
+    expect(styles).not.toContain('main:has([data-customer-list]) { overflow: auto; }');
+  });
+
   it("omits product and coupon customer-history surfaces", () => {
     const html = page(undefined, { selectedCustomerId: "customer-seed-1" });
 

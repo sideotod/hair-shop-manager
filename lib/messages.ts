@@ -42,7 +42,7 @@ export function queueMessage(store: SalonStore, input: QueueMessageInput) {
   }
 
   const customers = store.list<JsonValue>("customers");
-  const powerMinimum = typeof settings.powerCustomerMinPoints === "number" && settings.powerCustomerMinPoints >= 0 ? settings.powerCustomerMinPoints : 100;
+  const powerMinimum = typeof settings.powerCustomerMinPoints === "number" && settings.powerCustomerMinPoints >= 0 ? settings.powerCustomerMinPoints : 0;
   if (recipientIds.some((id) => !customers.some((customer) => customer.id === id))) throw new Error("알 수 없는 고객입니다.");
   const recipients = eligibleRecipients(customers, input.segment ?? "all", powerMinimum, recipientIds);
   if (!recipients.length) throw new Error("SMS 수신 동의 고객이 없습니다.");

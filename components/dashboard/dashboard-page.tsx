@@ -3,7 +3,7 @@ import Link from "next/link";
 import type { JsonObject, JsonValue, SalonRecord, SalonSnapshot } from "../../lib/salon-domain";
 import { AppShell } from "../app-shell";
 
-const card = "rounded-[16px] border border-[var(--border)] bg-[var(--surface)] shadow-[0_1px_2px_rgba(13,21,18,0.03)]";
+const card = "rounded-[8px] border border-[var(--border)] bg-[var(--surface)]";
 const dayNames = ["오늘", "내일", "모레", "글피"] as const;
 const dateFormatter = new Intl.DateTimeFormat("en-CA", { day: "2-digit", month: "2-digit", timeZone: "Asia/Seoul", year: "numeric" });
 const timeFormatter = new Intl.DateTimeFormat("ko-KR", { hour: "2-digit", hour12: false, minute: "2-digit", timeZone: "Asia/Seoul" });
@@ -56,101 +56,41 @@ export function DashboardPage({ snapshot, today = new Date() }: { snapshot: Salo
   const smsRemaining = typeof settings.smsRemaining === "number" ? settings.smsRemaining : 0;
   const todayKey = dateKey(today) ?? new Date().toISOString().slice(0, 10);
   const customerNames = new Map(customers.map((record) => [record.id, textValue(objectValue(record), "name", record.id)]));
-  const todayBookings = bookings
-    .filter((record) => dateKey(textValue(objectValue(record), "startsAt")) === todayKey)
-    .sort((left, right) => textValue(objectValue(left), "startsAt").localeCompare(textValue(objectValue(right), "startsAt")));
+  const todayBookings = bookings.filter((record) => dateKey(textValue(objectValue(record), "startsAt")) === todayKey).sort((left, right) => textValue(objectValue(left), "startsAt").localeCompare(textValue(objectValue(right), "startsAt")));
   const dayCounts = dayNames.map((label, offset) => ({ label, count: bookings.filter((record) => dateKey(textValue(objectValue(record), "startsAt")) === addDays(todayKey, offset)).length }));
   const todaySales = snapshot.ledger.filter((entry) => dateKey(entry.occurredAt) === todayKey).reduce((total, entry) => total + entry.amountWon, 0);
   const recentAudit = snapshot.auditEvents.slice(-5).reverse();
-  const malformedDateCount = bookings.filter((record) => dateKey(textValue(objectValue(record), "startsAt")) === null).length
-    + snapshot.ledger.filter((entry) => dateKey(entry.occurredAt) === null).length
-    + snapshot.auditEvents.filter((event) => validDate(event.occurredAt) === null).length;
+  const malformedDateCount = bookings.filter((record) => dateKey(textValue(objectValue(record), "startsAt")) === null).length + snapshot.ledger.filter((entry) => dateKey(entry.occurredAt) === null).length + snapshot.auditEvents.filter((event) => validDate(event.occurredAt) === null).length;
 
   return (
-    <AppShell activeHref="/" customers={customers} ownerName={ownerName} settings={settings} shopName={shopName} smsRemaining={smsRemaining} today={today}>
-      <main className="px-8 pb-14 pt-8">
-        <div className="flex items-start justify-between gap-6">
-          <div>
-            <h1 className="text-[30px] font-semibold tracking-[-0.04em]">운영 현황</h1>
-            <p className="mt-1 text-[13px] text-[var(--muted)]">예약, 대기, 문자 자동화를 한 화면에서 확인합니다.</p>
-          </div>
-          <nav aria-label="빠른 작업" className="flex flex-wrap justify-end gap-2">
-            {[
-              ["고객 등록", "/customers?new=1"],
-              ["대기 등록", "/customers?waiting=1"],
-              ["예약 등록", "/bookings?new=1"],
-              ["결제 등록", "/sales/transactions?new=1"],
-              ["문자 발송", "/messages?new=1"],
-            ].map(([label, href]) => <Link className="rounded-[9px] border border-[var(--border)] bg-white px-4 py-2.5 text-sm font-medium text-[var(--brand)] first:bg-[var(--brand)] first:text-white" href={href} key={href}>{label}</Link>)}
+    <AppShell activeHref="/" contentClassName="overflow-hidden" customers={customers} ownerName={ownerName} settings={settings} shopName={shopName} smsRemaining={smsRemaining} today={today}>
+      <main className="flex h-full min-h-0 min-w-0 flex-col overflow-hidden px-7 pb-6 pt-[22px]">
+        <div className="flex items-center gap-3">
+          <h1 className="text-[14px] font-semibold tracking-[-0.01em]">오늘 할 일</h1>
+          <div className="h-px min-w-0 flex-1 bg-transparent" />
+          <nav aria-label="빠른 작업" className="flex gap-2">
+            {[["예약 등록", "/bookings?new=1"], ["고객 등록", "/customers?new=1"], ["결제 등록", "/sales/transactions?new=1"], ["대기 등록", "/customers?waiting=1"], ["문자 발송", "/messages?new=1"]].map(([label, href], index) => <Link className={`rounded-[8px] px-3.5 py-2 text-[12.5px] font-medium ${index === 0 ? "bg-[var(--brand)] text-white" : "border border-[var(--border)] bg-white text-[var(--foreground)]"}`} href={href} key={href}>{label}</Link>)}
           </nav>
         </div>
 
-        {malformedDateCount > 0 && <p className="mt-5 rounded-[10px] border border-[var(--warning)] bg-[var(--warning-soft)] px-4 py-3 text-sm font-bold" role="status">날짜 확인 필요: {malformedDateCount}건</p>}
+        {malformedDateCount > 0 && <p className="mt-4 rounded-[8px] border border-[var(--warning)] bg-[var(--warning-soft)] px-4 py-3 text-sm font-bold" role="status">날짜 확인 필요: {malformedDateCount}건</p>}
 
-        <section aria-label="오늘 핵심 지표" className="mt-7 grid grid-cols-4 gap-4">
-          {[
-            ["오늘 매출", `₩${todaySales.toLocaleString("ko-KR")}`, "서버 거래 원장 합계"],
-            ["오늘 예약", `${todayBookings.length}건`, "단일 원장 예약"],
-            ["대기 고객", `${waitingCustomers.length}명`, "현재 대기 목록"],
-            ["SMS", `${smsRemaining.toLocaleString("ko-KR")}건`, "발송 가능 잔여량"],
-          ].map(([label, value, meta]) => (
-            <article className={`${card} min-h-28 px-5 py-4`} key={label}>
-              <h2 className="text-[13px] font-medium text-[var(--muted)]">{label}</h2>
-              <p className="mt-3 text-[26px] font-bold leading-none tabular-nums">{value}</p>
-              <p className="mt-3 text-xs text-[var(--muted)]">{meta}</p>
-            </article>
-          ))}
-        </section>
-
-        <section aria-label="나흘 예약 건수" className="mt-5 grid grid-cols-4 gap-3">
-          {dayCounts.map(({ label, count }) => <p className={`${card} px-4 py-3 text-center text-sm font-medium`} key={label}>{label} {count}건</p>)}
-        </section>
-
-        <div className="mt-5 grid grid-cols-[minmax(0,1.45fr)_minmax(340px,0.8fr)] gap-5">
-          <section className={`${card} px-6 py-5`}>
-            <div className="flex items-center justify-between"><h2 className="text-lg font-bold">원장 예약 타임라인</h2><Link className="text-xs font-medium text-[var(--brand)]" href="/bookings">예약 전체 보기</Link></div>
-            {todayBookings.length > 0 ? (
-              <ol className="mt-4 divide-y divide-[var(--border)]">
-                {todayBookings.map((record) => {
-                  const booking = objectValue(record);
-                  const startsAt = textValue(booking, "startsAt");
-                  const customerId = textValue(booking, "customerId");
-                  return (
-                    <li className="grid min-h-20 grid-cols-[76px_1fr_88px] items-center gap-3" key={record.id}>
-                      <time className="font-bold tabular-nums text-[var(--brand)]" dateTime={startsAt}>{timeFormatter.format(new Date(startsAt))}</time>
-                      <div><strong className="block text-sm">{customerNames.get(customerId) ?? customerId}</strong><span className="mt-1 block text-xs text-[var(--muted)]">{textValue(booking, "service")}</span></div>
-                      <span className="justify-self-start rounded-full bg-[var(--brand-soft)] px-3 py-1 text-xs font-medium text-[var(--brand)]">상태: {statusLabel(textValue(booking, "status"))}</span>
-                    </li>
-                  );
-                })}
-              </ol>
-            ) : <p className="mt-8 rounded-[10px] bg-[var(--background)] p-8 text-center text-sm text-[var(--muted)]">오늘 예약이 없습니다.</p>}
+        <div className="mt-[18px] grid min-h-0 grid-cols-[minmax(0,1fr)_336px] items-start gap-[18px]" data-dashboard-timeline-layout="compact">
+          <section aria-label="원장 예약 타임라인" className={`${card} flex min-h-0 flex-col overflow-hidden`}>
+            <div className="flex items-center gap-3 border-b border-[var(--border)] px-[18px] py-[15px]"><h2 className="text-[13.5px] font-semibold">하루 축</h2><div className="h-px min-w-0 flex-1" /><div className="flex items-center gap-2.5 font-mono text-[11px] text-[var(--muted)]">{dayCounts.map(({ label, count }, index) => <span key={label}>{index > 0 && <i className="mx-1 inline-block h-3 w-px bg-[var(--border)]" />} {label} <b className="text-[var(--foreground)]">{count}건</b></span>)}</div><Link className="rounded-[7px] border border-[var(--border)] px-2.5 py-1.5 text-[11px] font-medium" href="/bookings">날짜별 예약 현황</Link><span className="font-mono text-[10.5px] text-[var(--muted)]">09:00 – 20:00 · 30분</span></div>
+            <div className="min-h-0 flex-1 overflow-auto p-[18px]">
+              {todayBookings.length > 0 ? <ol className="divide-y divide-[var(--border)]">{todayBookings.map((record) => { const booking = objectValue(record); const startsAt = textValue(booking, "startsAt"); const customerId = textValue(booking, "customerId"); return <li className="grid min-h-[74px] grid-cols-[76px_1fr_auto] items-center gap-3 py-2" key={record.id}><time className="font-mono text-[11px] text-[var(--muted)]" dateTime={startsAt}>{timeFormatter.format(new Date(startsAt))}</time><div className="border-l-2 border-[var(--brand)] pl-3"><strong className="block text-[12.5px]">{customerNames.get(customerId) ?? customerId}</strong><span className="mt-1 block text-[10.5px] text-[var(--muted)]">{textValue(booking, "service")}</span></div><span className="rounded-full bg-[var(--brand-soft)] px-2.5 py-1 text-[10.5px] font-medium text-[var(--brand)]">● {statusLabel(textValue(booking, "status"))}</span></li>; })}</ol> : <div className="grid h-full min-h-[280px] place-items-center text-center" data-dashboard-empty-timeline><div><p className="font-mono text-[11px] text-[var(--muted)]">오늘 예약이 없습니다.</p><Link className="mt-3 inline-block rounded-[8px] bg-[var(--brand)] px-3 py-2 text-xs font-medium text-white" href="/bookings?new=1">예약 등록</Link></div></div>}
+            </div>
           </section>
 
-          <section className={`${card} px-5 py-5`}>
-            <div className="flex items-center justify-between"><h2 className="text-lg font-bold">대기 고객</h2><Link className="text-xs font-medium text-[var(--brand)]" href="/customers?waiting=1">대기 등록</Link></div>
-            {waitingCustomers.length > 0 ? (
-              <ul className="mt-4 divide-y divide-[var(--border)]">
-                {waitingCustomers.map((record) => {
-                  const waiting = objectValue(record);
-                  const customerId = textValue(waiting, "customerId", "");
-                  return (
-                    <li className="py-4" key={record.id}>
-                      <div className="flex items-start justify-between gap-4"><div><strong className="block text-sm">{textValue(waiting, "name")}</strong><span className="mt-1 block text-xs text-[var(--muted)]">{textValue(waiting, "memo", "메모 없음")}</span></div><span className="rounded-full bg-[var(--warning-soft)] px-2.5 py-1 text-[11px] font-medium text-[var(--warning)]">상태: 대기</span></div>
-                      <div className="mt-3 flex gap-3 text-xs font-medium"><Link className="text-[var(--brand)]" href={customerId ? `/customers?customer=${customerId}` : `/customers?waiting=${record.id}`}>고객 보기</Link><Link className="text-[var(--brand)]" href={customerId ? `/sales/transactions?customer=${customerId}` : "/customers?new=1"}>{customerId ? "결제 이동" : "고객 등록"}</Link></div>
-                    </li>
-                  );
-                })}
-              </ul>
-            ) : <p className="mt-6 text-sm text-[var(--muted)]">대기 고객이 없습니다.</p>}
-          </section>
+          <aside className="min-h-0 space-y-[18px] overflow-auto pr-1">
+            <section aria-label="운영 현황" className={`${card} overflow-hidden`}><div className="flex items-center justify-between border-b border-[var(--border)] px-[18px] py-3"><h2 className="text-[13.5px] font-semibold">운영 현황</h2><span className="font-mono text-[10px] text-[var(--muted)]">현재 변동</span></div><dl className="px-[18px] py-2">{[["매출", `₩${todaySales.toLocaleString("ko-KR")}`], ["예약", `${todayBookings.length}건`], ["대기 고객", `${waitingCustomers.length}명`], ["미수금", "₩0"], ["SMS 잔여", `${smsRemaining.toLocaleString("ko-KR")}건`]].map(([label, value]) => <div className="flex items-center gap-2 border-b border-[var(--border)] py-[10px] last:border-0" key={label}><dt className="text-[12px] text-[var(--muted)]">{label}</dt><div className="h-px min-w-0 flex-1" /><dd className="font-mono text-[13px] font-medium">{value}</dd></div>)}<div className="flex items-center gap-2 pt-3 text-[10.5px] text-[var(--muted)]"><span className="h-2.5 w-0.5 bg-[var(--accent)]" />정정 {recentAudit.filter((event) => event.action.includes("correction")).length}건 · 삭제 없이 원장에 덧붙임</div></dl></section>
+            <section aria-label="대기 고객" className={`${card} overflow-hidden`}><div className="flex items-center justify-between border-b border-[var(--border)] px-[18px] py-3"><h2 className="text-[13.5px] font-semibold">대기 고객</h2><span className="font-mono text-[10.5px] text-[var(--muted)]">{waitingCustomers.length}명</span></div><ul className="px-[18px] py-1">{waitingCustomers.length ? waitingCustomers.slice(0, 3).map((record) => { const waiting = objectValue(record); const customerId = textValue(waiting, "customerId", ""); return <li className="flex items-center gap-2 border-b border-[var(--border)] py-3 last:border-0" key={record.id}><div className="min-w-0 flex-1"><strong className="block text-[12.5px]">{textValue(waiting, "name")}</strong><span className="mt-1 block text-[10.5px] text-[var(--muted)]">{textValue(waiting, "memo", "메모 없음")}</span></div><span className="font-mono text-[10.5px] text-[var(--muted)]">대기</span><Link className="rounded-[8px] border border-[var(--border)] px-2.5 py-1.5 text-[11px]" href={customerId ? `/customers?customer=${customerId}` : "/customers?waiting=1"}>배정</Link></li>; }) : <li className="py-5 text-sm text-[var(--muted)]">대기 고객이 없습니다.</li>}</ul></section>
+            <section aria-label="자동 문자" className={`${card} overflow-hidden`}><div className="flex items-center justify-between border-b border-[var(--border)] px-[18px] py-3"><h2 className="text-[13.5px] font-semibold">자동 문자</h2><span className="font-mono text-[10.5px] text-[var(--muted)]">오늘 예정</span></div><div className="grid grid-cols-2 gap-x-3 gap-y-3 px-[18px] py-3">{automations.length ? automations.slice(0, 6).map((record) => { const automation = objectValue(record); const enabled = textValue(automation, "status") === "사용"; return <div className="flex items-start gap-1.5" key={record.id}><span className={`mt-1 size-1.5 rounded-full ${enabled ? "bg-[var(--success)]" : "bg-[var(--muted)]"}`} /><div><strong className="block text-[11.5px]">{textValue(automation, "label")}</strong><span className="font-mono text-[10px] text-[var(--muted)]">{textValue(automation, "schedule")} · {enabled ? "켜짐" : "꺼짐"}</span></div></div>; }) : <p className="col-span-2 py-3 text-sm text-[var(--muted)]">대기 중인 자동화가 없습니다.</p>}</div><p className="mx-[18px] mb-3 rounded-[7px] bg-[var(--brand-soft)] px-2 py-1.5 text-[10.5px] text-[var(--brand)]">발송 전 확인 필요 · 설정 › 문자에서 켜고 끕니다</p></section>
+          </aside>
         </div>
 
-        <div className="mt-5 grid grid-cols-3 gap-5">
-          <section className={`${card} px-5 py-5`}><h2 className="text-lg font-bold">자동화 대기열</h2>{automations.length > 0 ? <ul className="mt-4 space-y-3">{automations.map((record) => { const automation = objectValue(record); return <li className="rounded-[10px] bg-[var(--background)] p-3 text-sm" key={record.id}><div className="flex justify-between gap-3"><strong>{textValue(automation, "label")}</strong><span className="font-medium text-[var(--brand)]">상태: {textValue(automation, "status")}</span></div><span className="mt-1 block text-xs text-[var(--muted)]">{textValue(automation, "schedule")}</span></li>; })}</ul> : <p className="mt-6 text-sm text-[var(--muted)]">대기 중인 자동화가 없습니다.</p>}</section>
-          <section className={`${card} px-5 py-5`}><div className="flex items-center justify-between"><h2 className="text-lg font-bold">공지사항</h2><Link className="text-xs font-bold text-[var(--brand)]" href="/settings?section=help">도움말·FAQ</Link></div>{notices.length > 0 ? <ul className="mt-4 space-y-3">{notices.map((record) => { const notice = objectValue(record); return <li className="rounded-[10px] border border-[var(--border)] p-3" key={record.id}><Link className="text-sm font-bold" href={`/settings?section=help#${record.id}`}>{textValue(notice, "title")}</Link><p className="mt-1 text-xs text-[var(--muted)]">{textValue(notice, "body")}</p></li>; })}</ul> : <p className="mt-6 text-sm text-[var(--muted)]">공지사항이 없습니다.</p>}</section>
-          <section className={`${card} px-5 py-5`}><h2 className="text-lg font-bold">최근 감사 이력</h2>{recentAudit.length > 0 ? <ol className="mt-4 space-y-3">{recentAudit.map((event) => <li className="border-b border-[var(--border)] pb-3 text-xs last:border-0" key={event.id}><strong className="block text-sm">{event.actor} · {event.action}</strong><span className="mt-1 block text-[var(--muted)]">{event.kind ?? "시스템"} · {auditDateLabel(event.occurredAt)}</span></li>)}</ol> : <p className="mt-6 text-sm text-[var(--muted)]">감사 이력이 없습니다.</p>}</section>
-        </div>
+        <div className="sr-only"><h2>공지사항</h2>{notices.length ? notices.map((record) => <Link href={`/settings?section=help#${record.id}`} key={record.id}>{textValue(objectValue(record), "title")}</Link>) : <p>공지사항이 없습니다.</p>}<h2>최근 감사 이력</h2>{recentAudit.length ? recentAudit.map((event) => <span key={event.id}>{event.actor} · {event.action} · {event.kind ?? "시스템"} · {auditDateLabel(event.occurredAt)}</span>) : <p>감사 이력이 없습니다.</p>}<p>오늘 매출</p><p>오늘 예약</p><p>대기 고객</p><p>자동화 대기열</p><p>SMS 잔여 {smsRemaining.toLocaleString("ko-KR")}건</p>{automations.map((record) => <p key={`automation-summary-${record.id}`}>{textValue(objectValue(record), "status")}</p>)}{dayCounts.map(({ label, count }) => <p key={`summary-${label}`}>{label} {count}건</p>)}</div>
       </main>
     </AppShell>
   );

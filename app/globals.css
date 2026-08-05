@@ -22,11 +22,59 @@
   box-sizing: border-box;
 }
 
+html,
+body {
+  min-height: 100%;
+  overflow: hidden;
+}
+
+/* The customer grid, not the page, owns vertical overflow. */
+main:has([data-customer-list]) > .no-print.mt-5.grid {
+  min-height: 0;
+  flex: 1 1 auto;
+}
+
+main:has([data-customer-list]) > .no-print.mt-5.grid > form {
+  display: flex;
+  min-height: 0;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+main:has([data-customer-list]) [data-customer-list],
+main:has([data-customer-list]) > .no-print.mt-5.grid > aside {
+  min-height: 0;
+  overflow-y: auto;
+}
+
+/* The fixed sales workspace already supplies the analysis tab. */
+main > main a[href="/sales"],
+details.group > summary > span:last-child {
+  display: none;
+}
+
+/* Brand colors are design-system tokens, not per-shop customer policy. */
+form[aria-label="고객 정책 설정"] [name="backgroundColor"],
+form[aria-label="고객 정책 설정"] [name="foregroundColor"],
+form[aria-label="고객 정책 설정"] [name="brandColor"],
+form[aria-label="고객 정책 설정"] [name="sidebarColor"] { display: none; }
+form[aria-label="고객 정책 설정"] label:has([name="backgroundColor"]),
+form[aria-label="고객 정책 설정"] label:has([name="foregroundColor"]),
+form[aria-label="고객 정책 설정"] label:has([name="brandColor"]),
+form[aria-label="고객 정책 설정"] label:has([name="sidebarColor"]) { display: none; }
+/* FUNCTION.md is an internal traceability document, never page chrome. */
+main > div:first-child > div > p.text-xs.font-medium { display: none; }
+form[aria-label="고객 정책 설정"] [name="backgroundColor"] ~ *,
+form[aria-label="고객 정책 설정"] [name="foregroundColor"] ~ *,
+form[aria-label="고객 정책 설정"] [name="brandColor"] ~ *,
+form[aria-label="고객 정책 설정"] [name="sidebarColor"] ~ * { }
+
 body {
   margin: 0;
   background: var(--background);
   color: var(--foreground);
-  font-family: var(--font-pretendard), system-ui, -apple-system, "Segoe UI", sans-serif;
+  font-family: "IBM Plex Sans KR", var(--font-pretendard), system-ui, -apple-system, "Segoe UI", sans-serif;
+  font-size: 13px;
 }
 
 button,
@@ -55,12 +103,13 @@ summary:focus-visible {
 
 .tabular-nums,
 time {
-  font-family: Consolas, "Courier New", monospace;
+  font-family: "IBM Plex Mono", Consolas, "Courier New", monospace;
   font-variant-numeric: tabular-nums;
 }
 
 .wordmark {
-  font-family: Georgia, serif;
+  font-family: Marcellus, Georgia, serif;
+  letter-spacing: 0.16em;
 }
 
 .customer-print {

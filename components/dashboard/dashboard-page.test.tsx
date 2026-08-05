@@ -72,6 +72,10 @@ describe("DashboardPage", () => {
     expect(html).toContain("대기 중인 자동화가 없습니다.");
     expect(html).toContain("공지사항이 없습니다.");
     expect(html).toContain("감사 이력이 없습니다.");
+    expect(html).toContain('data-dashboard-empty-timeline="true"');
+    expect(html).toContain("min-h-[280px]");
+    expect(html).toContain('data-dashboard-timeline-layout="compact"');
+    expect(html).toContain("items-start");
   });
 
   it("excludes malformed dates and renders an explicit correction warning", () => {

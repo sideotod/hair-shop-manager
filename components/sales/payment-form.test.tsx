@@ -27,4 +27,12 @@ describe("PaymentForm", () => {
     expect(html).toContain('<option value="separate" selected="">별도</option>');
     expect(html).toContain('name="cardFeeRate" value="2.75"');
   });
+
+  it("keeps payment tenders readable across the full payment workspace", () => {
+    const html = renderToStaticMarkup(<PaymentForm customers={[]} today="2026-08-01" />);
+
+    expect(html).toContain("w-full max-w-none");
+    expect(html).toContain('data-payment-method-grid="true"');
+    expect(html).toContain("grid-cols-2");
+  });
 });

@@ -11,6 +11,24 @@ function page(props: Partial<React.ComponentProps<typeof MessagesPage>> = {}) {
 }
 
 describe("MessagesPage", () => {
+  it("provides three keyboard-reachable workflow tabs", () => {
+    const html = page();
+
+    expect(html).toContain('aria-label="문자 작업 영역"');
+    expect(html).toContain('href="#compose"');
+    expect(html).toContain('href="#automation"');
+    expect(html).toContain('href="#history"');
+  });
+
+  it("keeps long recipient choices and previews inside bounded work areas", () => {
+    const html = page();
+
+    expect(html).toContain('data-message-recipient-list');
+    expect(html).toContain('data-message-recipient-preview');
+    expect(html).toContain('max-h-72');
+    expect(html).toContain('max-h-[480px]');
+  });
+
   it("renders desktop dry-run composition, recipient preview, and automation controls", () => {
     const html = page();
 

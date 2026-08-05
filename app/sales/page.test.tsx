@@ -15,10 +15,14 @@ describe("SalesPage", () => {
   });
   it("opens payment registration on the sales tab with a preselected customer", async () => {
     const page = await SalesPage({ searchParams: Promise.resolve({ tab: "payment", customer: "customer-seed-2" }) });
-    expect(renderToStaticMarkup(page)).toContain('value="customer-seed-2" selected=""');
+    const html = renderToStaticMarkup(page);
+    expect(html).toContain('value="customer-seed-2" selected=""');
+    expect(html).toContain('aria-label="매출 조회"');
   });
   it("opens the expense and reconciliation tab from the same ledger snapshot", async () => {
     const page = await SalesPage({ searchParams: Promise.resolve({ tab: "expenses" }) });
-    expect(renderToStaticMarkup(page)).toContain("기간 정산");
+    const html = renderToStaticMarkup(page);
+    expect(html).toContain("기간 정산");
+    expect(html).toContain('aria-label="매출 조회"');
   });
 });

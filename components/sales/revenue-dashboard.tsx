@@ -35,7 +35,7 @@ import {
   type RevenueQuery,
 } from "./revenue-query";
 
-const card = "rounded-[16px] border border-[var(--border)] bg-[var(--surface)] shadow-[0_1px_2px_rgba(13,21,18,0.03)]";
+const card = "rounded-[8px] border border-[var(--border)] bg-[var(--surface)] shadow-[0_1px_2px_rgba(13,21,18,0.03)]";
 const won = (value: number) => `₩${value.toLocaleString("ko-KR")}`;
 const money = (value: number) =>
   `${Math.round(value / 10000).toLocaleString("ko-KR")}만`;

@@ -3,6 +3,8 @@ import Link from "next/link";
 import { logoutOwner } from "../app/auth-actions";
 import type { JsonObject, JsonValue, SalonRecord } from "../lib/salon-domain";
 import { resolveVisualTokens } from "../lib/visual-tokens";
+import { SalesControls } from "./sales/sales-controls";
+import { revenueRange, type RevenueQuery } from "./sales/revenue-query";
 
 const menu = [
   ["운영 현황", "/"],
@@ -12,6 +14,15 @@ const menu = [
   ["문자", "/messages"],
   ["운영 설정", "/operations"],
   ["설정", "/settings"],
+] as const;
+const menuGroups = [
+  { label: "운영", items: menu.slice(0, 3) },
+  { label: "정산", items: menu.slice(3, 5) },
+  { label: "관리", items: menu.slice(5) },
+] as const;
+const settingsSections = [
+  ["owner", "매장 · 원장 계정"], ["customer", "고객 정책"], ["payment", "결제 정책"],
+  ["booking", "예약"], ["messages", "문자 자동화"], ["integrations", "외부 연동"], ["help", "도움말 · 공지"],
 ] as const;
 
 const searchModes = [
@@ -36,6 +47,7 @@ type AppShellProps = {
   settings?: JsonObject;
   activeHref?: string;
   overlay?: React.ReactNode;
+  contentClassName?: string;
   today?: Date;
 };
 
@@ -54,6 +66,7 @@ export function AppShell({
   settings = {},
   activeHref = "/",
   overlay,
+  contentClassName = "overflow-auto overscroll-contain",
   today = new Date(),
 }: AppShellProps) {
   const setting = (key: string, fallback: string) => typeof settings[key] === "string" ? settings[key] : fallback;
@@ -61,11 +74,14 @@ export function AppShell({
   const resolvedOwnerName = setting("ownerName", ownerName);
   const resolvedSmsRemaining = typeof settings.smsRemaining === "number" ? settings.smsRemaining : smsRemaining;
   const hiddenMenus = new Set(Array.isArray(settings.hiddenMenus) ? settings.hiddenMenus.filter((value): value is string => typeof value === "string") : []);
-  const visibleMenu = menu.filter(([, href]) => !hiddenMenus.has(href));
+  const visibleGroups = menuGroups.map(({ label, items }) => ({ label, items: items.filter(([, href]) => !hiddenMenus.has(href)) })).filter(({ items }) => items.length > 0);
   const customerTarget = settings.customerOpenMode === "new-window" ? "_blank" : undefined;
   const ownerLabel = resolvedOwnerName === "원장" ? "원장님" : `${resolvedOwnerName} 원장님`;
   const dateLabel = new Intl.DateTimeFormat("ko-KR", { dateStyle: "full", timeZone: "Asia/Seoul" }).format(today);
   const resolvedVisualTokens = resolveVisualTokens(settings);
+  const workspace = settings.salesWorkspace;
+  const workspaceQuery = workspace && typeof workspace === "object" && !Array.isArray(workspace) ? (workspace as { query?: RevenueQuery; tab?: unknown }) : null;
+  const salesControls = workspaceQuery?.query && (workspaceQuery.tab === "payment" || workspaceQuery.tab === "expenses") ? <SalesControls label={revenueRange(workspaceQuery.query).label} query={workspaceQuery.query} tab={workspaceQuery.tab} /> : null;
   const visualTokens = {
     "--background": resolvedVisualTokens.backgroundColor,
     "--foreground": resolvedVisualTokens.foregroundColor,
@@ -75,40 +91,39 @@ export function AppShell({
 
   return (
     <div data-app-shell-token-scope style={visualTokens}>
-      <div data-app-shell-background {...(overlay ? { inert: true, "aria-hidden": true } : {})} className="grid min-h-screen w-full grid-cols-[232px_minmax(0,1fr)] bg-[var(--background)] text-[var(--foreground)]">
-        <aside className="sticky top-0 flex h-screen flex-col bg-[var(--sidebar)] px-6 py-7 text-white">
+      <div data-app-shell-background {...(overlay ? { inert: true, "aria-hidden": true } : {})} className="grid h-screen min-h-screen w-full grid-cols-[232px_minmax(0,1fr)] overflow-hidden bg-[var(--background)] text-[var(--foreground)]">
+        <aside className="flex h-screen min-h-0 flex-col bg-[var(--sidebar)] px-5 pb-[22px] pt-[26px] text-white">
           <div>
-            <strong className="wordmark block text-[22px] leading-none tracking-[0.04em]">HAIRHAEYO</strong>
+            <strong className="wordmark block text-[21px] leading-none tracking-[0.16em]">HAIRHAEYO</strong>
             <span className="mt-1.5 block text-[10px] font-medium tracking-[0.08em] text-white/70">헤어해요 · SALON MANAGEMENT</span>
           </div>
 
-          <nav aria-label="주요 메뉴" className="mt-10 space-y-2">
-            {visibleMenu.map(([label, href]) => (
-              <Link
-                className={`block rounded-[10px] px-4 py-3 text-sm transition-colors ${href === activeHref ? "bg-[var(--brand)] font-semibold text-white shadow-[inset_0_0_0_1px_rgba(255,255,255,0.08)]" : "text-white/70 hover:bg-white/5 hover:text-white"}`}
-                href={href}
-                key={href}
-              >
-                {label}
-              </Link>
-            ))}
+          <nav aria-label="주요 메뉴" className="mt-[26px] space-y-1">
+            {visibleGroups.map(({ label: groupLabel, items }) => <section className="mb-[18px] last:mb-0" key={groupLabel}><p className="px-3 pb-2 pt-0 font-mono text-[9px] font-medium tracking-[0.16em] text-white/40">{groupLabel}</p>{items.map(([label, href]) => href === "/settings" ? (
+              <details className="group" key={href} open={activeHref === "/settings"}>
+                <summary className={`flex cursor-pointer list-none items-center gap-2.5 rounded-[8px] px-3 py-[9px] text-[13px] ${activeHref === "/settings" ? "bg-white/10 font-semibold text-white" : "text-white/60 hover:bg-white/5 hover:text-white"}`}><span aria-hidden="true" className={`h-[13px] w-0.5 rounded-[1px] ${activeHref === "/settings" ? "bg-[var(--accent)]" : "bg-transparent"}`} /><span className="flex-1">{label}</span></summary>
+                <div className="ml-5 mt-1 space-y-0.5 border-l border-white/15 pl-2">{settingsSections.map(([section, sectionLabel]) => <Link className="block rounded-[4px] px-2.5 py-1.5 text-[11px] text-white/55 hover:bg-white/5 hover:text-white" href={`/settings?section=${section}`} key={section}>{sectionLabel}</Link>)}</div>
+              </details>
+            ) : <Link className={`flex items-center gap-2.5 rounded-[8px] px-3 py-[9px] text-[13px] transition-colors ${href === activeHref ? "bg-white/10 font-semibold text-white" : "text-white/60 hover:bg-white/5 hover:text-white"}`} href={href} key={href}><span aria-hidden="true" className={`h-[13px] w-0.5 rounded-[1px] ${href === activeHref ? "bg-[var(--accent)]" : "bg-transparent"}`} />{label}</Link>)}</section>)}
           </nav>
 
-          <div className="mt-auto rounded-[14px] border border-white/10 bg-white/10 px-4 py-3">
+          <div className="mt-auto rounded-[6px] border border-white/5 bg-white/[0.06] px-[13px] py-3">
             <strong className="block text-[13px] font-medium">{resolvedShopName}</strong>
-            <span className="mt-1 block text-[11px] text-white/60">영업중 · {setting("bookingOpen", "09:30")}–{setting("bookingClose", "21:00")}</span>
+            <span className="mt-1 block font-mono text-[10px] text-white/50">● 영업중 {setting("bookingOpen", "09:00")}–{setting("bookingClose", "20:00")}</span>
+            <form action={logoutOwner} className="mt-3"><button className="text-[11px] text-white/50 hover:text-white" type="submit">로그아웃</button></form>
           </div>
         </aside>
 
-        <div className="min-w-0">
-          <header className="flex min-h-20 items-center gap-5 border-b border-[var(--border)] bg-[var(--surface)] px-7 text-[13px] shadow-[0_1px_0_rgba(13,21,18,0.02)]">
-            <strong className="shrink-0 font-medium">{dateLabel}</strong>
-            <form action="/customers" className="flex min-w-0 flex-1 items-center gap-2" method="get" role="search">
-              <select aria-label="고객 검색 기준" className="h-10 w-44 rounded-[9px] border border-[var(--border)] bg-white px-3" name="mode">
+        <div className="flex min-h-0 min-w-0 flex-col overflow-hidden">
+          <header className="flex h-[72px] shrink-0 items-center gap-5 border-b border-[var(--border)] bg-white px-7 text-[13px]">
+            <div className="flex shrink-0 flex-col gap-0.5"><strong className="text-[19px] font-semibold tracking-[-0.01em]">오늘</strong><span className="font-mono text-[10.5px] text-[var(--muted)]">{dateLabel}</span></div>
+            <div className="h-px min-w-0 flex-1" />
+            <form action="/customers" className="flex h-10 w-[340px] shrink-0 items-center gap-2 rounded-[4px] bg-[var(--background)] px-3" method="get" role="search">
+              <select aria-label="고객 검색 기준" className="h-7 w-[76px] rounded-[5px] border border-[var(--border)] bg-white px-2 text-[10.5px] text-[var(--brand)]" name="mode">
                 {searchModes.map(([value, label]) => <option key={value} value={value}>{label}</option>)}
               </select>
-              <input aria-label="고객 검색어" className="h-10 min-w-0 flex-1 rounded-[9px] border border-[var(--border)] px-3" name="query" placeholder="고객 검색" />
-              <button className="h-10 rounded-[9px] bg-[var(--brand)] px-4 font-medium text-white" type="submit">검색</button>
+              <input aria-label="고객 검색어" className="h-7 min-w-0 flex-1 bg-transparent px-1 text-[12px] outline-none" name="query" placeholder="고객 검색" />
+              <button className="sr-only" type="submit">검색</button>
             </form>
             {customers.length > 0 && (
               <details className="relative shrink-0">
@@ -120,12 +135,11 @@ export function AppShell({
                 </ul>
               </details>
             )}
-            <Link className="shrink-0 text-[var(--muted)]" href="/settings?section=help">도움말</Link>
-            <span className="shrink-0 rounded-full bg-[var(--brand-soft)] px-3 py-2 font-medium text-[var(--brand)]">SMS 잔여 {resolvedSmsRemaining.toLocaleString("ko-KR")}건</span>
-            <Link className="shrink-0 font-medium" href="/settings?section=owner">{ownerLabel}</Link>
-            <form action={logoutOwner}><button className="shrink-0 text-[var(--muted)]" type="submit">로그아웃</button></form>
+            <Link className="shrink-0 text-[11px] text-[var(--muted)]" href="/settings?section=help">도움말</Link>
+            <span className="shrink-0 rounded-[6px] bg-[var(--brand-soft)] px-2.5 py-1.5 font-mono text-[11.5px] font-medium text-[var(--brand)]">SMS {resolvedSmsRemaining.toLocaleString("ko-KR")}</span>
+            <Link aria-label={ownerLabel} className="flex shrink-0 items-center gap-2 font-medium" href="/settings?section=owner"><span aria-hidden="true" className="grid size-7 place-items-center rounded-full bg-[var(--sidebar)] text-[10px] text-white">서</span><span className="text-[12px]">{resolvedOwnerName}</span></Link>
           </header>
-          {children}
+          <div className={`min-h-0 flex-1 ${contentClassName}`}>{salesControls}{children}</div>
         </div>
       </div>
       {overlay}

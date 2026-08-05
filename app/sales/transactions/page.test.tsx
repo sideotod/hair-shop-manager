@@ -13,7 +13,7 @@ describe("TransactionsPage", () => {
     expect(html).toContain("ledger-seed-1");
     expect(html).toContain("결제");
     expect(html).not.toContain("담당자");
-    expect(html).toContain("min-w-[1100px]");
+    expect(html).toContain("min-w-[960px]");
   });
   it("shows an empty state and forwards the selected customer to payment", async () => {
     const html = renderToStaticMarkup(await TransactionsPage({ searchParams: Promise.resolve({ view: "day", cursor: "2026-07-31", customer: "customer-seed-2" }) }));
@@ -33,5 +33,11 @@ describe("TransactionsPage", () => {
     expect(html).toContain('role="alert"');
     expect(html).toContain("이미 환불된 결제입니다.");
     expect(html).toContain("customer=customer-seed-2");
+  });
+
+  it("keeps every transaction column in the 1280px desktop workspace", async () => {
+    const html = renderToStaticMarkup(await TransactionsPage({ searchParams: Promise.resolve({ view: "month", cursor: "2026-07-31" }) }));
+
+    expect(html).toContain("min-w-[960px]");
   });
 });

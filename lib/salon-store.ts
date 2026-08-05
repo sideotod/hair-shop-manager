@@ -268,11 +268,11 @@ function seed(db: DatabaseSync) {
   });
 }
 
-export function createSalonStore(filename = process.env.HAIRHAEYO_DB_PATH || join(process.cwd(), ".data", "hairhaeyo.sqlite")): SalonStore {
+export function createSalonStore(filename = process.env.HAIRHAEYO_DB_PATH || join(process.cwd(), ".data", "hairhaeyo.sqlite"), options: { seed?: boolean } = {}): SalonStore {
   if (filename !== ":memory:") mkdirSync(dirname(filename), { recursive: true });
   const db = new DatabaseSync(filename);
   createSchema(db);
-  seed(db);
+  if (options.seed ?? filename === ":memory:") seed(db);
 
   const findRecord = <T extends JsonValue>(kind: RecordKind, id: string) => {
     const row = db.prepare("SELECT * FROM records WHERE kind = ? AND id = ?").get(kind, id) as RecordRow | undefined;
