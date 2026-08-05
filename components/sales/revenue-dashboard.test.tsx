@@ -2,14 +2,14 @@ import type { ReactNode } from "react";
 import { renderToStaticMarkup } from "react-dom/server";
 import { describe, expect, it, vi } from "vitest";
 
-const routerReplace = vi.hoisted(() => vi.fn());
-vi.mock("next/navigation", () => ({ useRouter: () => ({ replace: routerReplace }) }));
+const routerPush = vi.hoisted(() => vi.fn());
+vi.mock("next/navigation", () => ({ useRouter: () => ({ push: routerPush }) }));
 vi.mock("recharts", async (importOriginal) => ({ ...(await importOriginal<typeof import("recharts")>()), BarChart: ({ children }: { children: ReactNode }) => <div data-bar-chart>{children}</div>, LineChart: ({ children }: { children: ReactNode }) => <div data-line-chart>{children}</div>, PieChart: ({ children }: { children: ReactNode }) => <div data-pie-chart>{children}</div>, ResponsiveContainer: ({ children }: { children: ReactNode }) => children }));
 
 import { buildRevenueAnalytics, buildRevenueTransactions } from "../../lib/revenue-data";
 import { createSalonStore } from "../../lib/salon-store";
 import { dismissRevenueDrawer, revenueDrawerFocusTarget, RevenueDetailDrawer } from "./revenue-detail-drawer";
-import { focusChartSurface, replaceRevenueQuery, resolveRevenueSelection, restoreRevenueDrawerFocus, revenueChartMotion, revenueChartMotions, RevenueDashboard } from "./revenue-dashboard";
+import { focusChartSurface, pushRevenueQuery, resolveRevenueSelection, restoreRevenueDrawerFocus, revenueChartMotion, revenueChartMotions, RevenueDashboard } from "./revenue-dashboard";
 
 function analytics() { const store = createSalonStore(":memory:"); try { const snapshot = store.snapshot(); return buildRevenueAnalytics(buildRevenueTransactions(snapshot.ledger, snapshot.records.customers ?? []), { view: "month", cursor: "2026-07-31" }, "2026-07-31"); } finally { store.close(); } }
 
@@ -22,7 +22,7 @@ describe("RevenueDashboard", () => {
 
   it("renders owner-only KPIs, simplified navigation, CSV, print, permanent bar labels, and accessible chart values", () => {
     const html = renderToStaticMarkup(<RevenueDashboard analytics={analytics()} query={{ view: "month", cursor: "2026-07-31" }} />);
-    for (const text of ["오늘 매출", "이번 달 매출", "누적 매출", "일별", "월별", "누적", "결제 등록", "CSV 내보내기", "인쇄", "시술 카테고리", "성별 매출", "신규 · 재방문", "정산"]) expect(html).toContain(text);
+    for (const text of ["총 매출", "실결제", "VAT", "지출", "샵 수익", "일별", "월별", "누적", "결제 등록", "CSV 내보내기", "인쇄", "시술 카테고리", "성별 매출", "신규 · 재방문", "정산"]) expect(html).toContain(text);
     expect(html).not.toContain("담당자");
     expect(html.match(/data-revenue-chart=/g)).toHaveLength(5);
     expect(html.match(/<table/g)).toHaveLength(6);
@@ -39,8 +39,8 @@ describe("RevenueDashboard", () => {
   });
 
   it("navigates with the simple server query and restores drawer focus", () => {
-    replaceRevenueQuery({ replace: routerReplace }, { view: "day", cursor: "2026-07-31" });
-    expect(routerReplace).toHaveBeenCalledWith("?view=day&cursor=2026-07-31");
+    pushRevenueQuery({ push: routerPush }, { view: "day", cursor: "2026-07-31" });
+    expect(routerPush).toHaveBeenCalledWith("?view=day&cursor=2026-07-31");
     const trigger = { focus: vi.fn() }; expect(focusChartSurface(trigger)).toBe(trigger); restoreRevenueDrawerFocus(false, trigger); expect(trigger.focus).toHaveBeenCalledTimes(2);
   });
 });

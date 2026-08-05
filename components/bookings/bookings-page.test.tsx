@@ -69,4 +69,11 @@ describe("BookingsPage", () => {
     expect(html).toContain('name="returnTo"');
     expect(html).toContain("/bookings?date=2026-07-31&amp;view=period&amp;period=14&amp;new=1");
   });
+  it("closes registration and saves back to the current calendar context", () => {
+    const html = page({ date: "2026-07-31", view: "period", period: "14", showNew: true });
+
+    expect(html).toContain('data-dialog-close="true"');
+    expect(html).toContain('/bookings?date=2026-07-31&amp;view=period&amp;period=14');
+    expect(html).not.toContain('value="/bookings?date=2026-07-31&amp;view=period&amp;period=14&amp;new=1"');
+  });
 });

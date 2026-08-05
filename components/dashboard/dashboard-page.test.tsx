@@ -49,7 +49,7 @@ describe("DashboardPage", () => {
     expect(html).toContain("운영 안내");
     expect(html).toContain("최근 감사 이력");
 
-    for (const href of ["/customers?new=1", "/customers?waiting=1", "/bookings?new=1", "/sales/transactions?new=1", "/messages?new=1"]) {
+    for (const href of ["/customers?new=1", "/customers?waiting=1", "/bookings?new=1", "/sales?tab=payment", "/messages?new=1"]) {
       expect(html).toContain(`href="${href}"`);
     }
   });

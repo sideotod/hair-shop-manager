@@ -142,7 +142,7 @@ export function AppShell({
           <div className={`min-h-0 flex-1 ${contentClassName}`}>{salesControls}{children}</div>
         </div>
       </div>
-      {overlay}
+      {overlay && <div data-app-overlay>{overlay}</div>}
     </div>
   );
 }

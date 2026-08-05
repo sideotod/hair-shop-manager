@@ -14,7 +14,7 @@ Playwright checks of the login, dashboard, customers, customer registration, boo
 
 ## Scope
 
-Modify shared presentation rules only. Keep routes, forms, server actions, data contracts, copy, and existing page-level workflows intact.
+Modify shared presentation rules and navigation context. Keep forms, server actions, data contracts, and financial calculations intact.
 
 ### Shared layout
 
@@ -34,16 +34,28 @@ Modify shared presentation rules only. Keep routes, forms, server actions, data 
 - Constrain overlay height to the viewport and allow its content to scroll.
 - Prevent background layout from moving while an overlay is open.
 
+### Navigation continuity
+
+- Every user-facing button, link, tab, row action, and form outcome must have a visible or browser-history return path to its origin.
+- Preserve route context such as date, period, tab, selected customer, and filters across drill-down, registration, correction, save, cancel, and close actions.
+- Verify each supported flow as A → B → A in Playwright at 1280px and 1440px.
+
+### Figma fidelity
+
+- Audit all 13 top-level Figma screens in file `gCb7z7fyz5BvvOADlCv0yu` against their implemented routes.
+- Rebuild the sales analysis information hierarchy to match Figma screen `03 매출·결제`: period controls, five KPI cards, daily trend list, service bars, payment list, and expense list.
+- Keep stable header, tab, KPI, chart, and card geometry during interactions.
+
 ## Implementation Boundaries
 
 - Reuse existing AppShell and existing CSS variables; do not introduce a component library or dependency.
 - Add only the smallest shared class names needed for stable header actions and overlays.
-- Do not redesign charts, data structures, forms, routes, or financial UI behavior.
+- Do not change data structures or financial UI behavior.
 
 ## Verification
 
 - Add focused tests for shared shell class contracts and overlay markup where existing component tests cover the affected screens.
-- Use Playwright at 1280px and 1440px to check that opening registration leaves the trigger's layout position unchanged, overlay content is visible, and no horizontal overflow appears.
+- Use Playwright at 1280px and 1440px to check every supported click flow, return path, overlay, selection state, and visual geometry.
 - Run TypeScript and relevant Vitest tests.
 
 ## Non-goals

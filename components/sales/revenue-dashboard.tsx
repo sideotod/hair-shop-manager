@@ -6,16 +6,8 @@ import { useEffect, useRef, useState, useSyncExternalStore } from "react";
 import {
   Bar,
   BarChart,
-  CartesianGrid,
-  Cell,
   LabelList,
-  Legend,
-  Line,
-  LineChart,
-  Pie,
-  PieChart,
   ResponsiveContainer,
-  Tooltip,
   XAxis,
   YAxis,
 } from "recharts";
@@ -37,8 +29,6 @@ import {
 
 const card = "rounded-[8px] border border-[var(--border)] bg-[var(--surface)] shadow-[0_1px_2px_rgba(13,21,18,0.03)]";
 const won = (value: number) => `₩${value.toLocaleString("ko-KR")}`;
-const money = (value: number) =>
-  `${Math.round(value / 10000).toLocaleString("ko-KR")}만`;
 export function revenueChartMotion(
   reduced: boolean,
   begin = 0,
@@ -78,11 +68,11 @@ export function focusChartSurface<T extends Pick<HTMLElement, "focus"> | null>(
   target?.focus();
   return target;
 }
-export function replaceRevenueQuery(
-  router: { replace: (href: string) => void },
+export function pushRevenueQuery(
+  router: { push: (href: string) => void },
   query: RevenueQuery,
 ) {
-  router.replace(`?${serializeRevenueQuery(query)}`);
+  router.push(`?${serializeRevenueQuery(query)}`);
 }
 export function restoreRevenueDrawerFocus(
   open: boolean,
@@ -254,7 +244,7 @@ export function RevenueDashboard({
       surfaces.current[kind] = element ?? undefined;
     };
   const navigate = (direction: -1 | 1) =>
-    replaceRevenueQuery(
+    pushRevenueQuery(
       router,
       direction < 0 ? previousRevenueQuery(query) : nextRevenueQuery(query),
     );
@@ -318,10 +308,10 @@ export function RevenueDashboard({
         <div className="flex items-start justify-between gap-6">
           <div>
             <h1 className="text-[28px] font-bold tracking-[-0.03em]">
-              매출 분석
+              매출·결제
             </h1>
             <p className="mt-1 text-[13px] text-[var(--muted)]">
-              결제 기록 한 곳에서 보는 매출과 정산입니다.
+              결제 기록과 정산을 같은 기준으로 확인합니다.
             </p>
           </div>
           <div className="flex gap-2">
@@ -350,13 +340,13 @@ export function RevenueDashboard({
           </Link>
           <Link
             className="rounded-[10px] border border-[var(--border)] bg-white px-4 py-2 text-sm font-medium"
-            href="?tab=payment"
+            href={`?${serializeRevenueQuery(query)}&tab=payment`}
           >
             결제 등록
           </Link>
           <Link
             className="rounded-[10px] border border-[var(--border)] bg-white px-4 py-2 text-sm font-medium"
-            href="?tab=expenses"
+            href={`?${serializeRevenueQuery(query)}&tab=expenses`}
           >
             지출·정산
           </Link>
@@ -401,61 +391,30 @@ export function RevenueDashboard({
         </section>
         <section
           aria-label="매출 핵심 지표"
-          className="mt-4 grid grid-cols-3 gap-4"
+          className="mt-4 grid grid-cols-5 gap-3"
         >
           {[
-            ["오늘 매출", analytics.totals.today],
-            ["이번 달 매출", analytics.totals.month],
-            ["누적 매출", analytics.totals.total],
+            ["총 매출", analytics.settlement.find((row) => row.name === "총 매출")?.value ?? 0],
+            ["실결제", analytics.settlement.find((row) => row.name === "실결제")?.value ?? 0],
+            ["VAT", analytics.settlement.find((row) => row.name === "VAT")?.value ?? 0],
+            ["지출", analytics.settlement.find((row) => row.name === "지출")?.value ?? 0],
+            ["샵 수익", analytics.settlement.find((row) => row.name === "샵 수익")?.value ?? 0],
           ].map(([label, value]) => (
-            <article className={`${card} px-5 py-4`} key={String(label)}>
+            <article className={`${card} px-4 py-4`} key={String(label)}>
               <h2 className="text-[13px] font-medium text-[var(--muted)]">
                 {label}
               </h2>
-              <p className="mt-3 text-[27px] font-bold leading-none tabular-nums">
+              <p className="mt-3 text-[20px] font-bold leading-none tabular-nums">
                 {won(Number(value))}
               </p>
             </article>
           ))}
         </section>
-        <div className="mt-5 grid grid-cols-2 gap-5">
-          <ChartCard kind="date" title="매출 · 샵 수익 추이">
-            <ChartSurface kind="date" label="매출 추이" onReady={ref("date")}>
-              <ResponsiveContainer height="100%" width="100%">
-                <LineChart data={analytics.trend} onClick={selectChart("date")}>
-                  <CartesianGrid stroke="#e0ded7" vertical={false} />
-                  <XAxis dataKey="date" tickLine={false} />
-                  <YAxis tickFormatter={money} tickLine={false} width={58} />
-                  <Tooltip formatter={(value) => won(Number(value))} />
-                  <Legend />
-                  <Line
-                    {...motion.trend}
-                    dataKey="gross"
-                    name="총매출"
-                    stroke="#0d3a33"
-                    strokeWidth={3}
-                    type="monotone"
-                  />
-                  <Line
-                    {...motion.trend}
-                    dataKey="profit"
-                    name="샵 수익"
-                    stroke="#2f6b4f"
-                    strokeWidth={3}
-                    type="monotone"
-                  />
-                </LineChart>
-              </ResponsiveContainer>
-            </ChartSurface>
-            <ValueButtons
-              items={analytics.trend.map((row) => ({
-                key: row.date,
-                text: `${row.date} ${won(row.gross)}`,
-              }))}
-              kind="date"
-              label="매출"
-              onSelect={(key, source) => open("date", key, source)}
-            />
+        <div className="mt-5 grid grid-cols-[minmax(0,2fr)_392px] gap-5">
+          <ChartCard kind="date" title="일별 추이">
+            <div className="max-h-[280px] divide-y divide-[var(--border)] overflow-y-auto" data-revenue-chart="date" ref={ref("date")}>
+              {analytics.trend.map((row) => <button aria-label={`${row.date} 매출 상세 보기`} className="grid w-full grid-cols-[1fr_auto] items-center gap-4 py-3 text-left text-sm hover:bg-[var(--background)] focus-visible:outline-2 focus-visible:outline-[var(--brand)]" data-revenue-selection={`date:${row.date}`} key={row.date} onClick={(event) => open("date", row.date, event.currentTarget)} type="button"><span className="font-medium">{row.date}</span><span className="font-mono font-semibold tabular-nums">{won(row.gross)}</span></button>)}
+            </div>
             <DataTable
               caption="일별 매출 표"
               rows={analytics.trend.map((row) => ({
@@ -464,41 +423,10 @@ export function RevenueDashboard({
               }))}
             />
           </ChartCard>
-          <ChartCard kind="payment" title="결제수단 비중">
-            <ChartSurface
-              kind="payment"
-              label="결제수단"
-              onReady={ref("payment")}
-            >
-              <ResponsiveContainer height="100%" width="100%">
-                <PieChart onClick={selectChart("payment")}>
-                  <Pie
-                    {...motion.payment}
-                    data={analytics.payments}
-                    dataKey="amount"
-                    innerRadius={62}
-                    nameKey="name"
-                    outerRadius={96}
-                    paddingAngle={3}
-                  >
-                    {analytics.payments.map((item) => (
-                      <Cell fill={item.color} key={item.name} />
-                    ))}
-                  </Pie>
-                  <Tooltip formatter={(value) => won(Number(value))} />
-                  <Legend />
-                </PieChart>
-              </ResponsiveContainer>
-            </ChartSurface>
-            <ValueButtons
-              items={analytics.payments.map((row) => ({
-                key: row.name,
-                text: `${row.name} ${row.value}%`,
-              }))}
-              kind="payment"
-              label="결제수단"
-              onSelect={(key, source) => open("payment", key, source)}
-            />
+          <ChartCard kind="payment" title="결제 수단">
+            <div className="max-h-[280px] divide-y divide-[var(--border)] overflow-y-auto" data-revenue-chart="payment" ref={ref("payment")}>
+              {analytics.payments.map((row) => <button aria-label={`${row.name} 결제수단 상세 보기`} className="grid w-full grid-cols-[1fr_auto_auto] items-center gap-4 py-3 text-left text-sm hover:bg-[var(--background)] focus-visible:outline-2 focus-visible:outline-[var(--brand)]" data-revenue-selection={`payment:${row.name}`} key={row.name} onClick={(event) => open("payment", row.name, event.currentTarget)} type="button"><span className="font-medium">{row.name}</span><span className="text-[var(--muted)]">{row.value}%</span><span className="font-mono font-semibold tabular-nums">{won(row.amount)}</span></button>)}
+            </div>
             <DataTable
               caption="결제수단 표"
               rows={analytics.payments.map((row) => ({

@@ -129,4 +129,10 @@ describe("CustomersPage", () => {
     expect(newHtml).toContain('<option value="male" selected="">남성</option>');
     expect(existingHtml).toContain('<option value="female" selected="">여성</option>');
   });
+  it("closes registration without losing the current customer filters", () => {
+    const html = page(undefined, { mode: "phone", query: "010", segment: "sales", salesThreshold: "500000", showNew: true });
+
+    expect(html).toContain('data-dialog-close="true"');
+    expect(html).toContain('/customers?mode=phone&amp;query=010&amp;segment=sales&amp;salesThreshold=500000');
+  });
 });

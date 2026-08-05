@@ -69,7 +69,7 @@ export function DashboardPage({ snapshot, today = new Date() }: { snapshot: Salo
           <h1 className="text-[14px] font-semibold tracking-[-0.01em]">오늘 할 일</h1>
           <div className="h-px min-w-0 flex-1 bg-transparent" />
           <nav aria-label="빠른 작업" className="flex gap-2">
-            {[["예약 등록", "/bookings?new=1"], ["고객 등록", "/customers?new=1"], ["결제 등록", "/sales/transactions?new=1"], ["대기 등록", "/customers?waiting=1"], ["문자 발송", "/messages?new=1"]].map(([label, href], index) => <Link className={`rounded-[8px] px-3.5 py-2 text-[12.5px] font-medium ${index === 0 ? "bg-[var(--brand)] text-white" : "border border-[var(--border)] bg-white text-[var(--foreground)]"}`} href={href} key={href}>{label}</Link>)}
+            {[["예약 등록", "/bookings?new=1"], ["고객 등록", "/customers?new=1"], ["결제 등록", "/sales?tab=payment"], ["대기 등록", "/customers?waiting=1"], ["문자 발송", "/messages?new=1"]].map(([label, href], index) => <Link className={`rounded-[8px] px-3.5 py-2 text-[12.5px] font-medium ${index === 0 ? "bg-[var(--brand)] text-white" : "border border-[var(--border)] bg-white text-[var(--foreground)]"}`} href={href} key={href}>{label}</Link>)}
           </nav>
         </div>
 
