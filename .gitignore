@@ -4,6 +4,8 @@ out/
 coverage/
 .codegraph/
 .data/
+!.data/
+!.data/hairhaeyo.sqlite
 src-tauri/target/
 src-tauri/gen/
 src-tauri/binaries/
