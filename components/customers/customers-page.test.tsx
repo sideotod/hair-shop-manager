@@ -135,4 +135,12 @@ describe("CustomersPage", () => {
     expect(html).toContain('data-dialog-close="true"');
     expect(html).toContain('/customers?mode=phone&amp;query=010&amp;segment=sales&amp;salesThreshold=500000');
   });
+
+  it("closes registration back onto the selected customer", () => {
+    const html = page(undefined, { mode: "phone", query: "010", selectedCustomerId: "customer-seed-1", showNew: true });
+    const close = html.match(/data-dialog-close="true" href="([^"]+)"/)?.[1] ?? html.match(/href="([^"]+)"[^>]*data-dialog-close="true"/)?.[1] ?? "";
+
+    expect(close).toContain("customer=customer-seed-1");
+    expect(close).not.toContain("new=1");
+  });
 });

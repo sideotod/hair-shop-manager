@@ -48,6 +48,13 @@ describe("OperationsPage", () => {
     expect(print).toContain("임대료");
   });
 
+  it("leaves the shell chrome to the route layout instead of rendering its own", () => {
+    const html = renderToStaticMarkup(<OperationsPage {...props} activeTab="expenses" />);
+
+    expect(html).not.toContain('data-app-shell-background');
+    expect(html).not.toContain('aria-label="주요 메뉴"');
+  });
+
   it("shows explicit empty and input-error states", () => {
     const page = renderToStaticMarkup(<OperationsPage {...props} activeTab="expenses" error="지출 금액을 입력하세요." ledger={[]} />);
 
