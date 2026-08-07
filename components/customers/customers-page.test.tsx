@@ -143,4 +143,45 @@ describe("CustomersPage", () => {
     expect(close).toContain("customer=customer-seed-1");
     expect(close).not.toContain("new=1");
   });
+
+  // 858명을 한 화면에 흘리던 목록을 서버에서 자른다. 인쇄 양식만 전량을 유지한다.
+  it("pages the list, clamps out-of-range pages, and still prints every customer", () => {
+    const store = createSalonStore(":memory:");
+    const many = Array.from({ length: 120 }, (_, index) => ({
+      id: `bulk-${index}`, kind: "customers" as const, value: { name: `고객${index}`, phone: `010-0000-${String(index).padStart(4, "0")}` },
+      createdAt: "2026-01-01T00:00:00.000Z", updatedAt: "2026-01-01T00:00:00.000Z", archivedAt: null,
+    }));
+
+    const first = page(store, { customers: many });
+    const third = page(store, { customers: many, page: "3" });
+    const beyond = page(store, { customers: many, page: "999" });
+    const garbage = page(store, { customers: many, page: "abc" });
+
+    expect(listRows(first)).toHaveLength(50);
+    expect(listRows(first)[0]).toBe("bulk-0");
+    expect(listRows(third)).toHaveLength(20);
+    // 범위를 벗어난 페이지는 빈 목록이 아니라 마지막 페이지로 접힌다.
+    expect(listRows(beyond)).toEqual(listRows(third));
+    expect(listRows(garbage)).toEqual(listRows(first));
+    expect(first).toContain('aria-label="고객 목록 페이지"');
+    // 첫 페이지의 "이전"은 링크가 아니라 비활성 표시여야 한다.
+    expect(first).toContain('aria-disabled="true"');
+    expect(first).toContain("page=2");
+    // 인쇄 표는 페이지와 무관하게 전량이다. 1페이지 HTML 에도 마지막 고객이 들어 있어야 한다.
+    expect(listRows(first)).not.toContain("bulk-119");
+    expect(first).toContain("고객119");
+  });
+
+  it("carries the active filters across pages and drops the open modal", () => {
+    const store = createSalonStore(":memory:");
+    const many = Array.from({ length: 120 }, (_, index) => ({
+      id: `bulk-${index}`, kind: "customers" as const, value: { name: `고객${index}`, phone: `010-0000-${String(index).padStart(4, "0")}` },
+      createdAt: "2026-01-01T00:00:00.000Z", updatedAt: "2026-01-01T00:00:00.000Z", archivedAt: null,
+    }));
+    const html = page(store, { customers: many, mode: "name", query: "고객", searchParams: { mode: "name", query: "고객", new: "1" }, showNew: true });
+    const next = html.match(/href="([^"]*page=2[^"]*)"/)?.[1] ?? "";
+
+    expect(next).toContain("mode=name");
+    expect(next).not.toContain("new=1");
+  });
 });

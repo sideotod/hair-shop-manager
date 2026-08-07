@@ -25,6 +25,7 @@ export default async function Page({ searchParams }: { searchParams: Promise<Rec
       ledger={ledger}
       messages={store.list("messages")}
       mode={value(params.mode)}
+      page={value(params.page)}
       printLayout={value(params.printLayout)}
       query={value(params.query)}
       segment={segment}
