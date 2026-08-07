@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import { eligibleRecipients, messageBytes, messageType, queueMessage, saveAutomationRule } from "./messages";
+import { eligibleRecipients, forRecipientPicker, messageBytes, messageType, queueMessage, saveAutomationRule } from "./messages";
 import type { JsonObject } from "./salon-domain";
 import { createSalonStore } from "./salon-store";
 
@@ -90,5 +90,21 @@ describe("message rules", () => {
 
     expect(rule.value).toMatchObject({ label: "신규 안내", text: "안녕", bytes: 6, channel: "SMS", status: "사용", operator: "원장" });
     expect(store.snapshot().auditEvents.find((event) => event.recordId === rule.id)?.actor).toBe("원장");
+  });
+
+  // 문자 화면으로 넘어가는 고객 payload 에서 화면이 쓰지 않는 필드를 잘라낸다.
+  it("keeps only the four recipient fields and preserves segment eligibility", () => {
+    const store = createSalonStore(":memory:");
+    store.save("customers", "trim-me", { name: "자를 고객", phone: "010-1111-2222", memo: "비밀 메모", address: "서울시 어딘가", gender: "female", points: 900, smsOptIn: true }, "원장");
+    const trimmed = forRecipientPicker(store.list("customers"));
+    const target = trimmed.find(({ id }) => id === "trim-me")!;
+
+    expect(Object.keys(target.value as JsonObject).sort()).toEqual(["gender", "name", "points", "smsOptIn"]);
+    // 주소·메모·전화번호는 이 화면에서 쓰지 않으니 경계를 넘지 않는다.
+    expect(JSON.stringify(trimmed)).not.toContain("비밀 메모");
+    expect(JSON.stringify(trimmed)).not.toContain("010-1111-2222");
+    // id 와 분류 기준은 남아서 대상 선별이 그대로 동작한다.
+    expect(eligibleRecipients(trimmed, "women").map(({ id }) => id)).toContain("trim-me");
+    expect(eligibleRecipients(trimmed, "power", 500).map(({ id }) => id)).toContain("trim-me");
   });
 });

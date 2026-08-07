@@ -184,4 +184,17 @@ describe("CustomersPage", () => {
     expect(next).toContain("mode=name");
     expect(next).not.toContain("new=1");
   });
+
+  // 일괄 수정 체크박스와 페이지 링크가 같은 폼 안에 있다. 페이지를 넘기면 체크가 조용히 풀리므로 미리 알린다.
+  it("warns that checked customers are cleared when paging", () => {
+    const store = createSalonStore(":memory:");
+    const many = Array.from({ length: 120 }, (_, index) => ({
+      id: `bulk-${index}`, kind: "customers" as const, value: { name: `고객${index}`, phone: `010-0000-${String(index).padStart(4, "0")}` },
+      createdAt: "2026-01-01T00:00:00.000Z", updatedAt: "2026-01-01T00:00:00.000Z", archivedAt: null,
+    }));
+
+    expect(page(store, { customers: many })).toContain("체크한 고객은 페이지를 넘기면 해제됩니다.");
+    // 페이지가 하나뿐이면 넘길 곳이 없으니 경고도 없다.
+    expect(page(store)).not.toContain("체크한 고객은 페이지를 넘기면 해제됩니다.");
+  });
 });

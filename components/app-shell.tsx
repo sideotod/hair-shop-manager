@@ -74,11 +74,11 @@ export function AppShell({
         <aside data-app-sidebar className="flex h-screen min-h-0 flex-col bg-[var(--sidebar)] px-5 pb-[22px] pt-[26px] text-white">
           <div>
             <strong className="wordmark block text-[21px] leading-none tracking-[3.4px]">HAIRHAEYO</strong>
-            <span className="mt-1.5 block text-[9.5px] font-medium tracking-[2.6px] text-[var(--accent)]">SALON LEDGER</span>
+            <span className="mt-1.5 block text-[9.5px] font-medium tracking-[2.6px] text-[var(--accent-on-sidebar)]">SALON LEDGER</span>
           </div>
 
           <nav aria-label="주요 메뉴" className="mt-[26px] space-y-1">
-            {visibleGroups.map(({ label: groupLabel, items }) => <section className="mb-[18px] last:mb-0" key={groupLabel}><p className="px-3 pb-2 pt-0 font-mono text-[9px] font-medium tracking-[0.16em] text-white/40">{groupLabel}</p>{items.map(({ label, path }) => path === "/settings" ? (
+            {visibleGroups.map(({ label: groupLabel, items }) => <section className="mb-[18px] last:mb-0" key={groupLabel}><p className="px-3 pb-2 pt-0 font-mono text-[9px] font-medium tracking-[0.16em] text-white/55">{groupLabel}</p>{items.map(({ label, path }) => path === "/settings" ? (
               <details className="group" key={path} open={activeHref === "/settings"}>
                 <summary aria-current={activeHref === "/settings" ? "page" : undefined} className={`flex cursor-pointer list-none items-center gap-2.5 rounded-[var(--radius-control)] px-3 py-[9px] text-[13px] ${activeHref === "/settings" ? "bg-[var(--surface)]/10 font-semibold text-white" : "text-white/60 hover:bg-[var(--surface)]/5 hover:text-white"}`}><span aria-hidden="true" className={`h-[13px] w-0.5 rounded-[1px] ${activeHref === "/settings" ? "bg-[var(--accent)]" : "bg-transparent"}`} /><span className="flex-1">{label}</span></summary>
                 <div className="ml-5 mt-1 space-y-0.5 border-l border-white/15 pl-2">{settingsSections.map(([section, sectionLabel]) => <Link className="block rounded-[var(--radius-chip)] px-2.5 py-1.5 text-[11px] text-white/55 hover:bg-[var(--surface)]/5 hover:text-white" href={`/settings?section=${section}`} key={section}>{sectionLabel}</Link>)}</div>

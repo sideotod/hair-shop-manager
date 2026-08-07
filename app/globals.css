@@ -17,6 +17,9 @@
   /* --accent 를 --warning-soft 배지 위에 얹으면 4.20:1 로 본문 기준(4.5)에 못 미친다.
      같은 골드 계열을 유지하면서 한 단계만 어둡게 잡은 값. #f4ecdd 위에서 5.6:1. */
   --accent-ink: #6d5219;
+  /* 같은 골드를 어두운 --sidebar(#0d1512) 위에 얹으면 3.69:1 로 9px 라벨 기준(4.5)에 못 미친다.
+     사이드바 쪽만 한 단계 밝게 잡은 값. #0d1512 위에서 4.79:1. */
+  --accent-on-sidebar: #a07c31;
   --success: #2f6b4f;
   --success-soft: #e6efe9;
   --warning: #8a5a12;

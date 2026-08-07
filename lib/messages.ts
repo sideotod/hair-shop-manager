@@ -23,6 +23,19 @@ export function eligibleRecipients(customers: readonly SalonRecord<JsonValue>[],
   });
 }
 
+/**
+ * 문자 화면이 고객에게서 실제로 읽는 값은 위 두 함수가 보는 네 개(name·smsOptIn·gender·points)뿐이다.
+ * 고객 한 명은 24개 필드(주소·메모·생일·시술이력…)를 들고 있어서, 858명을 통째로 클라이언트 컴포넌트에
+ * 넘기면 경계를 579KB가 건너간다. 쓰지 않는 필드를 서버에서 잘라 80KB로 줄인다.
+ * 발송 자격은 `queueMessage`가 저장소 원본으로 다시 검증하므로, 잘라 보내도 권한 판단은 바뀌지 않는다.
+ */
+export function forRecipientPicker(customers: readonly SalonRecord<JsonValue>[]): SalonRecord<JsonValue>[] {
+  return customers.map((customer) => {
+    const { name, smsOptIn, gender, points } = value(customer);
+    return { ...customer, value: { name, smsOptIn, gender, points } };
+  });
+}
+
 type QueueMessageInput = { requestKey: string; text: string; recipientIds?: readonly string[]; segment?: MessageSegment; scheduledAt?: string; now?: Date };
 
 export function queueMessage(store: SalonStore, input: QueueMessageInput) {
