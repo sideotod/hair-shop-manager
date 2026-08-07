@@ -1,16 +1,29 @@
 import { renderToStaticMarkup } from "react-dom/server";
 import { describe, expect, it } from "vitest";
 
+import type { AuditEvent, LedgerEntry } from "../../lib/salon-domain";
 import { createSalonStore } from "../../lib/salon-store";
 import { AppShell } from "../app-shell";
-import { DashboardPage } from "./dashboard-page";
+import { DashboardPage, type DashboardData } from "./dashboard-page";
 
 const today = new Date("2026-07-31T03:00:00.000Z");
 
+/** 라우트(`app/(shell)/page.tsx`)가 하는 좁은 조회를 테스트에서 재현한다. */
+function seededData(): DashboardData {
+  const store = createSalonStore(":memory:");
+  const snapshot = store.snapshot();
+  return {
+    malformedLedgerDates: store.countMalformedDates(),
+    recentAudit: store.recentAuditEvents(5),
+    records: snapshot.records,
+    settings: snapshot.settings,
+    todayLedger: snapshot.ledger,
+  };
+}
+
 describe("DashboardPage", () => {
   it("renders the owner operations dashboard from one salon snapshot", () => {
-    const snapshot = createSalonStore(":memory:").snapshot();
-    const html = renderToStaticMarkup(<DashboardPage snapshot={snapshot} today={today} />);
+    const html = renderToStaticMarkup(<DashboardPage data={seededData()} today={today} />);
 
     expect(html).not.toContain("직원");
     expect(html).not.toContain("디자이너");
@@ -37,15 +50,16 @@ describe("DashboardPage", () => {
   });
 
   it("uses the configured owner label and renders explicit empty states", () => {
-    const seeded = createSalonStore(":memory:").snapshot();
-    const snapshot = {
+    const seeded = seededData();
+    const data: DashboardData = {
       ...seeded,
+      malformedLedgerDates: 0,
+      recentAudit: [],
       records: {},
-      ledger: [],
-      auditEvents: [],
       settings: { ...seeded.settings, ownerName: "이수진", smsRemaining: 0 },
+      todayLedger: [],
     };
-    const html = renderToStaticMarkup(<DashboardPage snapshot={snapshot} today={today} />);
+    const html = renderToStaticMarkup(<DashboardPage data={data} today={today} />);
 
     expect(html).toContain("SMS 잔여 0건");
     expect(html).toContain("오늘 예약이 없습니다.");
@@ -60,9 +74,39 @@ describe("DashboardPage", () => {
   });
 
   it("excludes malformed dates and renders an explicit correction warning", () => {
-    const seeded = createSalonStore(":memory:").snapshot();
-    const snapshot = {
+    const seeded = seededData();
+    const malformedLedger: LedgerEntry = {
+      id: "ledger-malformed",
+      requestKey: "malformed-ledger-date",
+      kind: "payment",
+      occurredAt: "not-a-date",
+      correctionOf: null,
+      grossWon: 999999999,
+      amountWon: 999999999,
+      discountWon: 0,
+      vatWon: 0,
+      feeWon: 0,
+      expenseWon: 0,
+      incentiveWon: 0,
+      pointsWon: 0,
+      couponWon: 0,
+      profitWon: 999999999,
+      details: {},
+    };
+    const malformedAudit: AuditEvent = {
+      id: "audit-malformed",
+      occurredAt: "not-a-date",
+      actor: "원장",
+      action: "malformed-audit",
+      kind: "audit",
+      recordId: null,
+      payload: null,
+    };
+    const data: DashboardData = {
       ...seeded,
+      // 원장 1행 + 감사 1행이 깨졌다. 라우트는 이 값을 SQL 이 아니라 날짜 열 스캔으로 센다.
+      malformedLedgerDates: 2,
+      recentAudit: [malformedAudit],
       records: {
         ...seeded.records,
         bookings: [
@@ -77,36 +121,10 @@ describe("DashboardPage", () => {
           },
         ],
       },
-      ledger: [{
-        id: "ledger-malformed",
-        requestKey: "malformed-ledger-date",
-        kind: "payment",
-        occurredAt: "not-a-date",
-        correctionOf: null,
-        grossWon: 999999999,
-        amountWon: 999999999,
-        discountWon: 0,
-        vatWon: 0,
-        feeWon: 0,
-        expenseWon: 0,
-        incentiveWon: 0,
-        pointsWon: 0,
-        couponWon: 0,
-        profitWon: 999999999,
-        details: {},
-      }],
-      auditEvents: [{
-        id: "audit-malformed",
-        occurredAt: "not-a-date",
-        actor: "원장",
-        action: "malformed-audit",
-        kind: "audit",
-        recordId: null,
-        payload: null,
-      }],
+      todayLedger: [malformedLedger],
     };
 
-    const html = renderToStaticMarkup(<DashboardPage snapshot={snapshot} today={today} />);
+    const html = renderToStaticMarkup(<DashboardPage data={data} today={today} />);
 
     expect(html).toContain("날짜 확인 필요: 3건");
     expect(html).toContain("오늘 1건");

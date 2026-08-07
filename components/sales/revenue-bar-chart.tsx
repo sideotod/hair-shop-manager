@@ -149,7 +149,7 @@ export function RevenueBarChart({
                       />
                     </span>
                     <span
-                      className={`mt-[6px] block truncate text-center text-[11px] tabular-nums ${
+                      className={`mt-[6px] block whitespace-nowrap text-center text-[11px] tabular-nums ${
                         point.state === "in-progress" ? "font-semibold text-[var(--accent)]" : "text-[var(--muted)]"
                       }`}
                     >

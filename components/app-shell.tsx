@@ -66,7 +66,7 @@ export function AppShell({
 
   return (
     <div data-app-shell-token-scope style={visualTokens}>
-      <div data-app-shell-background className="grid h-screen min-h-screen w-full grid-cols-[232px_minmax(0,1fr)] overflow-hidden bg-[var(--background)] text-[var(--foreground)]">
+      <div data-app-shell-background className="grid h-screen min-h-screen w-full min-w-[1264px] grid-cols-[232px_minmax(0,1fr)] overflow-hidden bg-[var(--background)] text-[var(--foreground)]">
         <aside className="flex h-screen min-h-0 flex-col bg-[var(--sidebar)] px-5 pb-[22px] pt-[26px] text-white">
           <div>
             <strong className="wordmark block text-[21px] leading-none tracking-[3.4px]">HAIRHAEYO</strong>

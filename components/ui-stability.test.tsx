@@ -1,3 +1,6 @@
+import { readFileSync, readdirSync } from "node:fs";
+import { join, relative } from "node:path";
+
 import { renderToStaticMarkup } from "react-dom/server";
 import { describe, expect, it } from "vitest";
 
@@ -21,7 +24,43 @@ describe("UI stability", () => {
     expect(html).toContain('aria-label="고객 등록"');
     expect(html).toContain('role="dialog"');
   });
+
+  /**
+   * 잘림 방지 가드.
+   *
+   * 셸(`app-shell.tsx:119`)이 이미 `min-h-0 flex-1 overflow-auto` 단일 스크롤 컨테이너를 갖는다.
+   * 본문 `<main>` 이 다시 `h-full ... overflow-hidden` 세로 flex 가 되면 자식은 `flex-shrink:1` 기본값이라
+   * 내용이 뷰포트보다 크면 **눌리고**, `overflow-hidden` 때문에 스크롤도 안 된다.
+   *
+   * 브라우저 실측(1440×900, prod):
+   *   /          main h=637 scrollH=754  · 오른쪽 aside bottom=826 vs 스크롤러 bottom=709 → "자동 문자" 117px 소실
+   *   /customers 고객 정책 form h=112 scrollH=512 → 400px 소실
+   *   /bookings /sales /messages /operations /settings 는 이 조합이 없어 clipped=0
+   */
+  it("본문 main 이 셸 스크롤러와 경쟁하지 않는다", () => {
+    const offenders: string[] = [];
+    for (const file of tsxFiles("components")) {
+      const source = readFileSync(file, "utf8");
+      const pattern = /<main\b([\s\S]{0,400}?)>/g;
+      let match: RegExpExecArray | null;
+      while ((match = pattern.exec(source))) {
+        if (!/\bh-full\b/.test(match[1]) || !/\boverflow-hidden\b/.test(match[1])) continue;
+        const line = source.slice(0, match.index).split("\n").length;
+        offenders.push(`${relative(process.cwd(), file).replaceAll("\\", "/")}:${line}`);
+      }
+    }
+    expect(offenders).toEqual([]);
+  });
 });
+
+function tsxFiles(dir: string, found: string[] = []) {
+  for (const entry of readdirSync(dir, { withFileTypes: true })) {
+    const full = join(dir, entry.name);
+    if (entry.isDirectory()) tsxFiles(full, found);
+    else if (entry.name.endsWith(".tsx") && !entry.name.includes(".test.")) found.push(full);
+  }
+  return found;
+}
 
 describe("Sales workspace tab row", () => {
   /**

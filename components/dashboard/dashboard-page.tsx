@@ -3,7 +3,7 @@ import Link from "next/link";
 import { button } from "../button";
 import { bookingSettings } from "../../lib/booking";
 import { displayStatus, minutesOfDay, railHeight, railHourMarks, railOffset, railTotalHeight, statusStyles } from "../../lib/day-rail";
-import type { JsonObject, JsonValue, SalonRecord, SalonSnapshot } from "../../lib/salon-domain";
+import type { AuditEvent, JsonObject, JsonValue, LedgerEntry, SalonRecord } from "../../lib/salon-domain";
 
 const card = "rounded-[var(--radius-card)] border border-[var(--border)] bg-[var(--surface)] shadow-[0_1px_2px_rgba(13,21,18,0.04),0_14px_30px_-20px_rgba(13,21,18,0.25)]";
 const dayNames = ["오늘", "내일", "모레", "글피"] as const;
@@ -51,13 +51,28 @@ function gapLabel(minutes: number, waitingCount: number) {
   return waitingCount > 0 ? `${minutes}분 비어 있음 · 대기 고객 ${waitingCount}명 배정 가능` : `${minutes}분 비어 있음`;
 }
 
-export function DashboardPage({ snapshot, today = new Date() }: { snapshot: SalonSnapshot; today?: Date }) {
-  const customers = snapshot.records.customers ?? [];
-  const bookings = snapshot.records.bookings ?? [];
-  const waitingCustomers = snapshot.records["waiting-customers"] ?? [];
-  const automations = snapshot.records.automations ?? [];
-  const notices = snapshot.records.notices ?? [];
-  const settings = snapshot.settings;
+/**
+ * 대시보드가 실제로 읽는 것만 받는다. 예전엔 `SalonSnapshot` 전체(모든 kind + 원장 5,576행 +
+ * 감사 6,435행, 실측 76.07ms)를 받아놓고 원장에선 "오늘 합계", 감사에선 "마지막 5행"만 썼다.
+ */
+export type DashboardData = {
+  readonly records: Readonly<Record<string, readonly SalonRecord<JsonValue>[]>>;
+  readonly settings: Readonly<JsonObject>;
+  /** 오늘 영업일 원장 행만. 합계는 여기서 낸다. */
+  readonly todayLedger: readonly LedgerEntry[];
+  /** 최신순 5행. */
+  readonly recentAudit: readonly AuditEvent[];
+  /** 원장 + 감사에서 날짜가 깨진 행 수. 예약 쪽은 `records.bookings` 에서 직접 센다. */
+  readonly malformedLedgerDates: number;
+};
+
+export function DashboardPage({ data, today = new Date() }: { data: DashboardData; today?: Date }) {
+  const customers = data.records.customers ?? [];
+  const bookings = data.records.bookings ?? [];
+  const waitingCustomers = data.records["waiting-customers"] ?? [];
+  const automations = data.records.automations ?? [];
+  const notices = data.records.notices ?? [];
+  const settings = data.settings;
   const shopName = typeof settings.shopName === "string" ? settings.shopName : "헤어해요";
   const ownerName = typeof settings.ownerName === "string" ? settings.ownerName : "서원";
   const smsRemaining = typeof settings.smsRemaining === "number" ? settings.smsRemaining : 0;
@@ -65,9 +80,9 @@ export function DashboardPage({ snapshot, today = new Date() }: { snapshot: Salo
   const customerNames = new Map(customers.map((record) => [record.id, textValue(objectValue(record), "name", record.id)]));
   const todayBookings = bookings.filter((record) => dateKey(textValue(objectValue(record), "startsAt")) === todayKey).sort((left, right) => textValue(objectValue(left), "startsAt").localeCompare(textValue(objectValue(right), "startsAt")));
   const dayCounts = dayNames.map((label, offset) => ({ label, count: bookings.filter((record) => dateKey(textValue(objectValue(record), "startsAt")) === addDays(todayKey, offset)).length }));
-  const todaySales = snapshot.ledger.filter((entry) => dateKey(entry.occurredAt) === todayKey).reduce((total, entry) => total + entry.amountWon, 0);
-  const recentAudit = snapshot.auditEvents.slice(-5).reverse();
-  const malformedDateCount = bookings.filter((record) => dateKey(textValue(objectValue(record), "startsAt")) === null).length + snapshot.ledger.filter((entry) => dateKey(entry.occurredAt) === null).length + snapshot.auditEvents.filter((event) => validDate(event.occurredAt) === null).length;
+  const todaySales = data.todayLedger.filter((entry) => dateKey(entry.occurredAt) === todayKey).reduce((total, entry) => total + entry.amountWon, 0);
+  const recentAudit = data.recentAudit;
+  const malformedDateCount = bookings.filter((record) => dateKey(textValue(objectValue(record), "startsAt")) === null).length + data.malformedLedgerDates;
 
   const policy = bookingSettings({
     bookingOpen: typeof settings.bookingOpen === "string" ? settings.bookingOpen : undefined,
@@ -111,7 +126,7 @@ export function DashboardPage({ snapshot, today = new Date() }: { snapshot: Salo
   const enabledAutomations = automations.filter((record) => textValue(objectValue(record), "status") === "사용").length;
 
   return (
-      <main className="flex h-full min-h-0 min-w-0 flex-col overflow-hidden px-7 pb-6 pt-5">
+      <main className="flex min-w-0 flex-col px-7 pb-6 pt-5">
         <div className="flex items-center gap-3">
           <h1 className="text-[14px] font-semibold tracking-[-0.01em]">오늘 할 일</h1>
           <div className="h-px min-w-0 flex-1 bg-transparent" />
