@@ -12,19 +12,19 @@ export default async function Page({ searchParams }: { searchParams: Promise<Rec
   const params = await searchParams;
   const store = createSalonStore();
   try {
-    const snapshot = store.snapshot();
+    // 예약 화면은 원장·감사 이력을 한 줄도 쓰지 않는다. snapshot()은 그 둘을 전량 읽는다 (A4-3).
     return <BookingsPage
-      bookings={snapshot.records.bookings ?? []}
-      customers={snapshot.records.customers ?? []}
+      bookings={store.list("bookings")}
+      customers={store.list("customers")}
       date={value(params.date)}
       edit={value(params.edit)}
       error={value(params.error)}
       notice={value(params.notice)}
       period={value(params.period)}
       searchParams={params}
-      settings={snapshot.settings}
+      settings={store.getSettings()}
       showNew={value(params.new) === "1"}
-      syncHistory={snapshot.records["naver-syncs"] ?? []}
+      syncHistory={store.list("naver-syncs")}
       view={value(params.view)}
     />;
   } finally {

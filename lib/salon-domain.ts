@@ -112,6 +112,8 @@ export type LedgerUnit = "day" | "month" | "year";
 export type SalonStore = {
   close(): void;
   list<T extends JsonValue = JsonValue>(kind: RecordKind): readonly SalonRecord<T>[];
+  /** Newest `limit` active records of one kind. Cheaper than `list()` when the caller only shows a few. */
+  listRecent<T extends JsonValue = JsonValue>(kind: RecordKind, limit: number): readonly SalonRecord<T>[];
   get<T extends JsonValue = JsonValue>(kind: RecordKind, id: string): SalonRecord<T> | null;
   save<T extends JsonValue>(kind: RecordKind, id: string, value: T, actor: string): SalonRecord<T>;
   archive(kind: RecordKind, id: string, actor: string): SalonRecord<JsonValue>;
@@ -120,6 +122,8 @@ export type SalonStore = {
   listLedger(): readonly LedgerEntry[];
   /** Ledger rows in `[start, endExclusive)` by business date. */
   listLedgerRange(start: string, endExclusive: string): readonly LedgerEntry[];
+  /** One customer's ledger rows. Cheaper than `listLedger()` when only a selected customer is shown. */
+  listLedgerByCustomer(customerId: string): readonly LedgerEntry[];
   /** Grouped totals over `[start, endExclusive)`. Ascending by key. */
   aggregateLedger(start: string, endExclusive: string, unit: LedgerUnit): readonly LedgerAggregateRow[];
   /** Settlement totals over `[start, endExclusive)`. */
@@ -128,5 +132,7 @@ export type SalonStore = {
   ledgerBounds(): { readonly first: string; readonly last: string } | null;
   getSettings(): JsonObject;
   saveSettings(values: JsonObject, actor: string): JsonObject;
+  /** Audit rows for the given kinds only. `snapshot()` reads the whole table (6,435행 · 2.2MB). */
+  listAuditEvents(kinds: readonly string[]): readonly AuditEvent[];
   snapshot(): SalonSnapshot;
 };

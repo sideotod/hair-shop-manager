@@ -12,25 +12,31 @@ export default async function Page({ searchParams }: { searchParams: Promise<Rec
   const params = await searchParams;
   const store = createSalonStore();
   try {
-    const snapshot = store.snapshot();
+    const segment = value(params.segment);
+    const selectedCustomerId = value(params.customer);
+    // 원장 전량(5,576행)이 필요한 건 매출·최근방문·미방문 분류뿐이다. 그 밖에는 선택 고객 이력만 쓴다.
+    // snapshot()은 여기에 더해 감사 이력 6,435행까지 읽어 응답을 690KB로 부풀린다 (A4-3).
+    const ledger = segment === "sales" || segment === "recent" || segment === "nonvisit"
+      ? store.listLedger()
+      : selectedCustomerId ? store.listLedgerByCustomer(selectedCustomerId) : [];
     return <CustomersPage
-      bookings={snapshot.records.bookings ?? []}
-      customers={snapshot.records.customers ?? []}
-      ledger={snapshot.ledger}
-      messages={snapshot.records.messages ?? []}
+      bookings={store.list("bookings")}
+      customers={store.list("customers")}
+      ledger={ledger}
+      messages={store.list("messages")}
       mode={value(params.mode)}
       printLayout={value(params.printLayout)}
       query={value(params.query)}
-      segment={value(params.segment)}
+      segment={segment}
       segmentValue={value(params.segmentValue)}
-      selectedCustomerId={value(params.customer)}
+      selectedCustomerId={selectedCustomerId}
       salesThreshold={value(params.salesThreshold)}
       searchParams={params}
-      settings={snapshot.settings}
+      settings={store.getSettings()}
       showNew={value(params.new) === "1"}
       showWaiting={value(params.waiting) === "1"}
       today={new Date()}
-      waitingCustomers={snapshot.records["waiting-customers"] ?? []}
+      waitingCustomers={store.list("waiting-customers")}
     />;
   } finally {
     store.close();

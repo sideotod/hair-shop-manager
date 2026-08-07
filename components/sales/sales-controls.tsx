@@ -1,5 +1,6 @@
 import Link from "next/link";
 
+import { button } from "../button";
 import {
   nextRevenueQuery,
   previousRevenueQuery,
@@ -7,16 +8,17 @@ import {
   type RevenueQuery,
 } from "./revenue-query";
 
-const card = "rounded-[var(--radius-card)] border border-[var(--border)] bg-[var(--surface)] shadow-[0_1px_2px_rgba(13,21,18,0.03)]";
+const card = "rounded-[var(--radius-card)] border border-[var(--border)] bg-[var(--surface)] shadow-[0_1px_2px_rgba(13,21,18,0.04),0_14px_30px_-20px_rgba(13,21,18,0.25)]";
 
 /**
  * 활성/비활성이 같은 박스 크기를 쓰도록 `border` 를 양쪽 모두에 둔다.
  * 예전에는 활성일 때만 테두리가 빠져 1px 씩 줄이 흔들렸다.
  */
 export function navChip(active: boolean) {
-  return `rounded-[var(--radius-control)] border px-4 py-2 text-sm font-medium ${active ? "border-[var(--brand)] bg-[var(--brand)] text-white" : "border-[var(--border)] bg-[var(--surface)]"}`;
+  return button("md", active ? "primary" : "secondary");
 }
-const arrow = "no-print rounded border border-[var(--border)] px-3 py-2 aria-disabled:pointer-events-none aria-disabled:opacity-40";
+const arrow = button("md", "secondary", "no-print aria-disabled:pointer-events-none aria-disabled:opacity-40");
+
 
 /** 매출 워크스페이스 전체가 쓰는 단일 기간 목록. 탭마다 다르게 재구현하지 않는다. */
 const viewOptions = [["day", "일별"], ["week", "주별"], ["month", "월별"], ["year", "연도"], ["total", "누적"]] as const;
@@ -35,7 +37,7 @@ export function SalesControls({ query, label, tab }: { query: RevenueQuery; labe
       <Link aria-current={tab === "payment" ? "page" : undefined} className={navChip(tab === "payment")} href={href(query, "payment")}>결제 등록</Link>
       <Link aria-current={tab === "expenses" ? "page" : undefined} className={navChip(tab === "expenses")} href={href(query, "expenses")}>지출/정산</Link>
     </nav>
-    <nav aria-label="매출 조회" className={`${card} mt-4 flex items-center justify-between p-4`}>
+    <nav aria-label="매출 조회" className={`${card} mt-5 flex items-center justify-between p-5`}>
       <div className="no-print flex gap-2">
         {viewOptions.map(([view, viewLabel]) => <Link aria-current={query.view === view ? "page" : undefined} className={navChip(query.view === view)} data-sales-period={view} href={href({ ...query, view }, tab)} key={view}>{viewLabel}</Link>)}
       </div>

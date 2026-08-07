@@ -407,6 +407,9 @@ export function createSalonStore(filename = process.env.HAIRHAEYO_DB_PATH || joi
     listLedgerRange(start: string, endExclusive: string) {
       return (db.prepare("SELECT * FROM ledger WHERE occurred_at >= ? AND occurred_at < ? ORDER BY occurred_at, rowid").all(start, endExclusive) as LedgerRow[]).map(ledgerFromRow);
     },
+    listLedgerByCustomer(customerId: string) {
+      return (db.prepare("SELECT * FROM ledger WHERE customer_id = ? ORDER BY occurred_at, rowid").all(customerId) as LedgerRow[]).map(ledgerFromRow);
+    },
     aggregateLedger(start: string, endExclusive: string, unit: LedgerUnit) {
       // occurred_at is a UTC ISO string, and seoulBusinessDate() is identical to its
       // UTC calendar date: Seoul is UTC+9 and the business day starts at Seoul 09:00,
@@ -460,6 +463,14 @@ export function createSalonStore(filename = process.env.HAIRHAEYO_DB_PATH || joi
         addAudit(db, "save-settings", "settings", "1", actor, { before, after }, timestamp);
         return after;
       });
+    },
+    listRecent<T extends JsonValue = JsonValue>(kind: RecordKind, limit: number) {
+      return (db.prepare("SELECT * FROM records WHERE kind = ? AND archived_at IS NULL ORDER BY created_at DESC, id DESC LIMIT ?").all(kind, Math.max(0, Math.trunc(limit))) as RecordRow[]).map(recordFromRow<T>);
+    },
+    listAuditEvents(kinds: readonly string[]) {
+      if (kinds.length === 0) return [];
+      const holes = kinds.map(() => "?").join(", ");
+      return (db.prepare(`SELECT * FROM audit_events WHERE kind IN (${holes}) ORDER BY rowid`).all(...kinds) as AuditRow[]).map(auditFromRow);
     },
     snapshot() {
       const records: Record<string, readonly SalonRecord<JsonValue>[]> = {};

@@ -4,6 +4,7 @@ import { changeOwnerPassword, saveNotice, saveShopSettings } from "../../app/set
 import type { AuditEvent, JsonObject, JsonValue, SalonRecord } from "../../lib/salon-domain";
 import { naverMailMetadata } from "../../lib/naver-mail";
 import { settingsErrorMessage } from "../../lib/settings";
+import { button } from "../button";
 import { NaverMailReplacementGuide } from "../bookings/naver-mail-connection";
 
 const sections = [
@@ -16,7 +17,7 @@ const sections = [
   ["help", "도움말 · 공지"],
 ] as const;
 const field = "h-10 w-full rounded-[var(--radius-control)] border border-[var(--border)] bg-[var(--surface)] px-3 text-sm focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--brand)]";
-const card = "rounded-[var(--radius-card)] border border-[var(--border)] bg-[var(--surface)] p-6 shadow-[0_1px_2px_rgba(13,21,18,0.03)]";
+const card = "rounded-[var(--radius-card)] border border-[var(--border)] bg-[var(--surface)] p-6 shadow-[0_1px_2px_rgba(13,21,18,0.04),0_14px_30px_-20px_rgba(13,21,18,0.25)]";
 
 type Props = {
   settings: JsonObject;
@@ -33,7 +34,7 @@ function bool(settings: JsonObject, key: string, fallback = false) { return type
 function object(record: SalonRecord<JsonValue>) { return typeof record.value === "object" && record.value !== null && !Array.isArray(record.value) ? record.value as JsonObject : {}; }
 function Field({ children, label }: { children: React.ReactNode; label: string }) { return <label className="grid gap-1.5 text-xs font-medium text-[var(--muted)]"><span>{label}</span>{children}</label>; }
 function ReturnTo({ section }: { section: string }) { return <><input name="returnTo" type="hidden" value={`/settings?section=${section}`} /><input name="section" type="hidden" value={section} /></>; }
-function SaveButton({ children = "저장" }: { children?: React.ReactNode }) { return <button className="rounded-[var(--radius-control)] bg-[var(--brand)] px-5 py-3 text-sm font-bold text-white focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--brand)]" type="submit">{children}</button>; }
+function SaveButton({ children = "저장" }: { children?: React.ReactNode }) { return <button className={button("lg", "primary", "focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--brand)]")} type="submit">{children}</button>; }
 
 function Owner({ settings }: { settings: JsonObject }) {
   return <div className="space-y-5">
@@ -71,5 +72,5 @@ function Help({ settings, notices, auditEvents }: Pick<Props, "settings" | "noti
 
 export function SettingsPage({ settings, notices, auditEvents, section, error, notice }: Props) {
   const active = sections.some(([key]) => key === section) ? section! : "owner";
-  return <main className="min-w-[1032px] px-7 pb-6 pt-5"><div><p className="text-sm text-[var(--muted)]">단일 원장 데스크톱 운영 정책을 그룹별로 관리합니다. 현재 구역: {sections.find(([key]) => key === active)?.[1] ?? "매장"} · 원장 계정</p></div>{error && <p aria-live="assertive" className="mt-5 rounded-[var(--radius-card)] border border-[var(--danger)] bg-[var(--danger-soft)] px-4 py-3 text-sm text-[var(--danger)]" role="alert">입력 내용을 수정하세요: {settingsErrorMessage(new Error(error))}</p>}{notice && <p className="mt-5 rounded-[var(--radius-card)] border border-[var(--success)] bg-[var(--success-soft)] px-4 py-3 text-sm text-[var(--success)]" role="status">{notice}</p>}<div className="mt-7 grid grid-cols-[240px_minmax(0,1fr)] items-start gap-6"><nav aria-label="설정 구역" className="sticky top-24 rounded-[var(--radius-card)] border border-[var(--border)] bg-[var(--surface)] p-3">{sections.map(([key, label]) => <Link aria-current={active === key ? "page" : undefined} className={`block rounded-[var(--radius-control)] px-4 py-3 text-sm font-medium ${active === key ? "bg-[var(--brand)] text-white" : "hover:bg-[var(--background)]"}`} href={`/settings?section=${key}`} key={key}>{label}</Link>)}</nav><section aria-label={`${sections.find(([key]) => key === active)?.[1]} 설정`}>{active === "owner" ? <Owner settings={settings} /> : active === "customer" ? <Customer settings={settings} /> : active === "payment" ? <Payment settings={settings} /> : active === "booking" ? <Booking settings={settings} /> : active === "messages" ? <Messages settings={settings} /> : active === "integrations" ? <Integrations settings={settings} /> : <Help auditEvents={auditEvents} notices={notices} settings={settings} />}</section></div></main>;
+  return <main className="min-w-[1032px] px-7 pb-6 pt-5"><div><p className="text-sm text-[var(--muted)]">단일 원장 데스크톱 운영 정책을 그룹별로 관리합니다. 현재 구역: {sections.find(([key]) => key === active)?.[1] ?? "매장"} · 원장 계정</p></div>{error && <p aria-live="assertive" className="mt-5 rounded-[var(--radius-card)] border border-[var(--danger)] bg-[var(--danger-soft)] px-4 py-3 text-sm text-[var(--danger)]" role="alert">입력 내용을 수정하세요: {settingsErrorMessage(new Error(error))}</p>}{notice && <p className="mt-5 rounded-[var(--radius-card)] border border-[var(--success)] bg-[var(--success-soft)] px-4 py-3 text-sm text-[var(--success)]" role="status">{notice}</p>}<div className="mt-5 grid grid-cols-[240px_minmax(0,1fr)] items-start gap-5"><nav aria-label="설정 구역" className="sticky top-24 rounded-[var(--radius-card)] border border-[var(--border)] bg-[var(--surface)] p-3">{sections.map(([key, label]) => <Link aria-current={active === key ? "page" : undefined} className={button("md", active === key ? "primary" : "quiet", "w-full justify-start")} href={`/settings?section=${key}`} key={key}>{label}</Link>)}</nav><section aria-label={`${sections.find(([key]) => key === active)?.[1]} 설정`}>{active === "owner" ? <Owner settings={settings} /> : active === "customer" ? <Customer settings={settings} /> : active === "payment" ? <Payment settings={settings} /> : active === "booking" ? <Booking settings={settings} /> : active === "messages" ? <Messages settings={settings} /> : active === "integrations" ? <Integrations settings={settings} /> : <Help auditEvents={auditEvents} notices={notices} settings={settings} />}</section></div></main>;
 }

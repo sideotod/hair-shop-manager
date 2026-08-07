@@ -1,5 +1,6 @@
 import Link from "next/link";
 
+import { chartShell, chartWell } from "./revenue-chart-style";
 import type { RevenueAggregatePoint, RevenuePointState } from "../../lib/revenue-aggregate";
 
 const won = (value: number) => `₩${value.toLocaleString("ko-KR")}`;
@@ -20,6 +21,13 @@ const stateText: Record<RevenuePointState, string> = {
   "in-progress": "진행 중",
   error: "집계 오류",
 };
+
+/** 말풍선이 카드 밖으로 새지 않게 앞·중간·뒤 세 구간으로 정렬을 바꾼다. */
+function tooltipAlign(index: number, length: number) {
+  if (index < length / 3) return "left-0";
+  if (index > (length * 2) / 3) return "right-0";
+  return "left-1/2 -translate-x-1/2";
+}
 
 function Delta({ label, value }: { label: string; value: number | null }) {
   return (
@@ -75,11 +83,11 @@ export function RevenueBarChart({
   const hasFuture = points.some((point) => point.state === "future");
 
   return (
-    <section className={`flex flex-col rounded-[var(--radius-card)] border border-[var(--border)] bg-[var(--surface)] shadow-[0_1px_2px_rgba(13,21,18,0.03)]`}>
-      <header className="px-5 pb-4 pt-4">
-        <h2 className="text-[13px] font-semibold text-[var(--muted)]">{title}</h2>
-        <p className="mt-1 flex items-baseline gap-3">
-          <strong className="font-mono text-[22px] font-semibold leading-none tabular-nums">{won(total)}</strong>
+    <section className={chartShell}>
+      <header className="px-5 pb-4 pt-[18px]">
+        <h2 className="text-[10px] font-semibold tracking-[0.04em] text-[var(--muted)]">{title}</h2>
+        <p className="mt-[9px] flex items-baseline gap-3">
+          <strong className="font-mono text-[22px] font-semibold leading-none tracking-[-0.015em] tabular-nums">{won(total)}</strong>
           <span className="text-[12px] text-[var(--muted)]">
             {label} · {count.toLocaleString("ko-KR")}건
           </span>
@@ -93,69 +101,86 @@ export function RevenueBarChart({
       {points.length === 0 ? (
         <p className="border-t border-[var(--border)] px-5 py-12 text-center text-[12px] text-[var(--muted)]">{emptyText}</p>
       ) : (
-        <div className="flex gap-3 border-t border-[var(--border)] px-5 pb-3 pt-4">
-          <div className="flex w-[48px] shrink-0 flex-col justify-between py-[1px] text-right font-mono text-[11px] tabular-nums text-[var(--muted)]">
-            {max > 0 ? (
-              <>
-                <span>{tick(max)}</span>
-                <span>{tick(Math.round(max / 2))}</span>
-                <span>0</span>
-              </>
-            ) : (
-              <span className="mt-auto">0</span>
-            )}
-          </div>
-          <ol className="flex min-w-0 flex-1 items-stretch gap-[3px]" style={{ height: "196px" }}>
-            {points.map((point) => {
-              const interactive = point.gross !== null;
-              // 0원 막대는 높이 0으로 두고, 값이 있는 막대는 최소 2px 남겨 눈에 보이게 한다.
-              const height = max > 0 && point.gross ? Math.max((point.gross / max) * 100, 1.5) : 0;
-              const body = (
+        <div className="border-t border-[var(--border)] px-4 pb-3 pt-4">
+          <div className={`flex gap-3 ${chartWell} px-4 pb-3 pt-4`}>
+            <div className="flex w-[48px] shrink-0 flex-col justify-between py-[1px] text-right font-mono text-[11px] tabular-nums text-[var(--muted)]">
+              {max > 0 ? (
                 <>
-                  <span className="relative flex min-h-0 flex-1 items-end justify-center">
-                    <span
-                      aria-hidden="true"
-                      className={`w-full rounded-t-[var(--radius-chip)] ${
-                        point.state === "in-progress"
-                          ? "border border-b-0 border-dashed border-[var(--accent)] bg-[var(--brand-soft)]"
-                          : point.hasCorrection
-                            ? "bg-[var(--accent)]"
-                            : "bg-[var(--brand)]"
-                      }`}
-                      style={{ height: `${height}%` }}
-                    />
-                  </span>
-                  <span
-                    className={`mt-[6px] block truncate text-center text-[11px] tabular-nums ${
-                      point.state === "in-progress" ? "font-semibold text-[var(--accent)]" : "text-[var(--muted)]"
-                    }`}
-                  >
-                    {point.label}
-                  </span>
+                  <span>{tick(max)}</span>
+                  <span>{tick(Math.round(max / 2))}</span>
+                  <span>0</span>
                 </>
-              );
-              const shell = "flex h-full min-w-0 flex-1 flex-col rounded-[var(--radius-chip)] px-[1px]";
-              return (
-                <li className="flex min-w-0 flex-1" key={point.key}>
-                  {interactive ? (
-                    <Link
-                      aria-label={`${point.label} ${won(point.gross ?? 0)}${stateText[point.state] ? `, ${stateText[point.state]}` : ""}. 자세히 보기`}
-                      className={`${shell} hover:bg-[var(--brand-soft)]/60 focus-visible:outline-2 focus-visible:outline-offset-[-2px] focus-visible:outline-[var(--brand)]`}
-                      data-revenue-bar={point.key}
-                      data-revenue-bar-state={point.state}
-                      href={drilldownHref(point.key)}
-                    >
-                      {body}
-                    </Link>
-                  ) : (
-                    <span className={shell} data-revenue-bar={point.key} data-revenue-bar-state={point.state}>
-                      {body}
+              ) : (
+                <span className="mt-auto">0</span>
+              )}
+            </div>
+            <ol className="relative flex min-w-0 flex-1 items-stretch gap-[3px]" style={{ height: "196px" }}>
+              {/* 눈금선은 막대 뒤로 물러난다. 데이터가 앞이다. */}
+              <span aria-hidden="true" className="pointer-events-none absolute inset-x-0 top-0 border-t border-dashed border-[var(--border)]" />
+              <span aria-hidden="true" className="pointer-events-none absolute inset-x-0 top-1/2 border-t border-dashed border-[var(--border)]" />
+              {points.map((point, index) => {
+                const interactive = point.gross !== null;
+                // 0원 막대는 높이 0으로 두고, 값이 있는 막대는 최소 2px 남겨 눈에 보이게 한다.
+                const height = max > 0 && point.gross ? Math.max((point.gross / max) * 100, 1.5) : 0;
+                const body = (
+                  <>
+                    <span className="relative flex min-h-0 flex-1 items-end justify-center">
+                      {interactive && point.gross ? (
+                        <span
+                          aria-hidden="true"
+                          className={`pointer-events-none absolute z-10 whitespace-nowrap rounded-[var(--radius-control)] border border-[var(--border)] bg-[var(--surface)] px-2.5 py-1.5 text-[11px] leading-tight opacity-0 shadow-[0_8px_24px_-10px_rgba(13,21,18,0.45)] transition-opacity duration-200 ease-[cubic-bezier(0.32,0.72,0,1)] group-hover:opacity-100 group-focus-visible:opacity-100 ${tooltipAlign(index, points.length)}`}
+                          // 높은 막대 위에 띄우면 말풍선이 플롯 밖으로 나가 헤더를 덮는다. 그럴 땐 막대 안쪽으로 내린다.
+                          style={height > 62 ? { top: `calc(${100 - height}% + 6px)` } : { bottom: `calc(${height}% + 6px)` }}
+                        >
+                          <span className="block text-[var(--muted)]">{point.key}</span>
+                          <strong className="mt-[2px] block font-mono tabular-nums">{won(point.gross)}</strong>
+                        </span>
+                      ) : null}
+                      <span
+                        aria-hidden="true"
+                        className={`w-full origin-bottom rounded-t-[var(--radius-chip)] transition-[filter,opacity] duration-200 ease-[cubic-bezier(0.32,0.72,0,1)] ${
+                          point.state === "in-progress"
+                            ? "border border-b-0 border-dashed border-[var(--accent)] bg-[var(--brand-soft)]"
+                            : point.hasCorrection
+                              ? "bg-[linear-gradient(180deg,var(--accent)_0%,color-mix(in_srgb,var(--accent)_72%,var(--surface))_100%)] shadow-[inset_0_1px_0_rgba(255,255,255,0.22)]"
+                              : "bg-[linear-gradient(180deg,var(--brand)_0%,color-mix(in_srgb,var(--brand)_74%,var(--surface))_100%)] shadow-[inset_0_1px_0_rgba(255,255,255,0.18)]"
+                        }`}
+                        style={{ height: `${height}%` }}
+                      />
                     </span>
-                  )}
-                </li>
-              );
-            })}
-          </ol>
+                    <span
+                      className={`mt-[6px] block truncate text-center text-[11px] tabular-nums ${
+                        point.state === "in-progress" ? "font-semibold text-[var(--accent)]" : "text-[var(--muted)]"
+                      }`}
+                    >
+                      {point.label}
+                    </span>
+                  </>
+                );
+                const shell =
+                  "group relative flex h-full min-w-0 flex-1 flex-col rounded-[var(--radius-chip)] px-[1px] transition-colors duration-200 ease-[cubic-bezier(0.32,0.72,0,1)]";
+                return (
+                  <li className="flex min-w-0 flex-1" key={point.key}>
+                    {interactive ? (
+                      <Link
+                        aria-label={`${point.label} ${won(point.gross ?? 0)}${stateText[point.state] ? `, ${stateText[point.state]}` : ""}. 자세히 보기`}
+                        className={`${shell} hover:bg-[var(--brand-soft)]/60 focus-visible:outline-2 focus-visible:outline-offset-[-2px] focus-visible:outline-[var(--brand)]`}
+                        data-revenue-bar={point.key}
+                        data-revenue-bar-state={point.state}
+                        href={drilldownHref(point.key)}
+                      >
+                        {body}
+                      </Link>
+                    ) : (
+                      <span className={shell} data-revenue-bar={point.key} data-revenue-bar-state={point.state}>
+                        {body}
+                      </span>
+                    )}
+                  </li>
+                );
+              })}
+            </ol>
+          </div>
         </div>
       )}
       <table className="sr-only">

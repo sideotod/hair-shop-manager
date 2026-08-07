@@ -3,6 +3,7 @@
 import { useEffect, useRef } from "react";
 
 import type { RevenueAnalyticsView } from "./revenue-analytics";
+import { button } from "../button";
 import { serializeRevenueQuery, type RevenueQuery } from "./revenue-query";
 
 export type RevenueSelection = { kind: "date" | "payment" | "service"; key: string };
@@ -34,7 +35,7 @@ export function RevenueDetailDrawer({ analytics, onClose, query, selection }: { 
     const target = revenueDrawerFocusTarget(event.key, event.shiftKey, event.currentTarget.ownerDocument.activeElement, closeRef.current, linkRef.current);
     if (target) { event.preventDefault(); target.focus(); }
   }} role="dialog" tabIndex={-1}>
-    <div className="flex items-start justify-between gap-4"><div><p className="text-xs font-medium text-[var(--muted)]">{analytics.selectedPeriod.label}</p><h2 className="mt-1 text-xl font-bold" id="revenue-detail-title">{selection.key} {detail.label} 상세</h2></div><button className="rounded-[var(--radius-control)] border border-[var(--border)] px-3 py-2 text-xs font-medium focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--brand)]" data-revenue-drawer-close onClick={() => dismissRevenueDrawer(null, onClose)} ref={closeRef} type="button">닫기</button></div>
+    <div className="flex items-start justify-between gap-4"><div><p className="text-xs font-medium text-[var(--muted)]">{analytics.selectedPeriod.label}</p><h2 className="mt-1 text-xl font-bold" id="revenue-detail-title">{selection.key} {detail.label} 상세</h2></div><button className={button("sm", "secondary", "focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--brand)]")} data-revenue-drawer-close onClick={() => dismissRevenueDrawer(null, onClose)} ref={closeRef} type="button">닫기</button></div>
     <dl className="mt-8 grid gap-3">{detail.rows.map(([label, value]) => <div className="flex items-center justify-between rounded-[var(--radius-card)] bg-[var(--background)] px-4 py-3" key={label}><dt className="text-sm text-[var(--muted)]">{label}</dt><dd className="font-bold tabular-nums">{typeof value === "number" ? `₩${value.toLocaleString("ko-KR")}` : value ?? "데이터 없음"}</dd></div>)}</dl>
     <a className="mt-8 flex h-11 items-center justify-center rounded-[var(--radius-card)] bg-[var(--brand)] text-sm font-medium text-white focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--brand)]" data-revenue-drawer-link href={`/sales/transactions?${params}`} ref={linkRef}>거래 기록에서 환불·정정</a>
   </aside>;

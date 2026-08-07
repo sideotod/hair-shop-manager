@@ -2,11 +2,13 @@
 
 import { useEffect, useRef, useState, useSyncExternalStore } from "react";
 
+import { button } from "../button";
 import { ModalHost } from "../modal-host";
 import { PageToolbar } from "../page-toolbar";
 import type { JsonObject } from "../../lib/salon-domain";
 import type { RevenueAnalyticsView } from "./revenue-analytics";
 import { RevenueBarChart } from "./revenue-bar-chart";
+import { chartEase, chartShell, chartWell } from "./revenue-chart-style";
 import { RevenueDayChart } from "./revenue-day-chart";
 import type { RevenueAggregatePoint, RevenueSummary } from "../../lib/revenue-aggregate";
 import {
@@ -19,8 +21,8 @@ import {
   type RevenueQuery,
 } from "./revenue-query";
 
-const card = "rounded-[var(--radius-card)] border border-[var(--border)] bg-[var(--surface)] shadow-[0_1px_2px_rgba(13,21,18,0.03)]";
-const chartCard = card;
+const card = "rounded-[var(--radius-card)] border border-[var(--border)] bg-[var(--surface)] shadow-[0_1px_2px_rgba(13,21,18,0.04),0_14px_30px_-20px_rgba(13,21,18,0.25)]";
+const chartCard = chartShell;
 
 /** 서버가 계산해 넘기는 차트 입력. 프런트는 이 값을 다시 합산하지 않는다 (§14). */
 export type RevenueSeries = {
@@ -40,7 +42,7 @@ export function revenueChartMotion(
     isAnimationActive: !reduced,
     animationBegin: reduced ? 0 : begin,
     animationDuration: reduced ? 0 : duration,
-    animationEasing: "ease-out" as const,
+    animationEasing: chartEase,
   };
 }
 export function revenueChartMotions(reduced: boolean) {
@@ -99,8 +101,11 @@ export function resolveRevenueSelection(
   return items[index] ? { kind, key: items[index].name } : null;
 }
 
-/** Figma 6:2 단일 색상 램프. 순위가 곧 농도. 값은 토큰에서만 나온다 (A2-7). */
-const barFills = ["var(--brand)", ...[80, 68, 56, 44].map((pct) => `color-mix(in srgb, var(--success) ${pct}%, transparent)`)];
+/**
+ * 단일 색상(brand) 램프. 순위가 곧 농도다 (A2-7).
+ * `transparent` 대신 `--surface` 로 섞어 불투명하게 만든다 — 움푹한 우물 위에서도 대비가 유지된다.
+ */
+const barFills = ["var(--brand)", ...[78, 62, 48, 36].map((pct) => `color-mix(in srgb, var(--brand) ${pct}%, var(--surface))`)];
 export function barFill(index: number) {
   return barFills[Math.min(index, barFills.length - 1)];
 }
@@ -121,9 +126,9 @@ function ChartCard({
   meta?: string;
 }) {
   return (
-    <section className={`${chartCard} flex flex-col overflow-hidden`}>
-      <div className="flex items-center justify-between px-[18px] pb-[13px] pt-[15px]">
-        <h2 className="text-[14px] font-semibold" id={`revenue-chart-${kind}-title`}>
+    <section className={`${chartCard} overflow-hidden`}>
+      <div className="flex items-center justify-between px-[18px] pb-[13px] pt-[16px]">
+        <h2 className="text-[10px] font-semibold tracking-[0.04em] text-[var(--muted)]" id={`revenue-chart-${kind}-title`}>
           {title}
         </h2>
         {meta && <span className="text-[11.5px] text-[var(--muted)]">{meta}</span>}
@@ -220,19 +225,20 @@ export function RevenueDashboard({
     (kind: RevenueSelection["kind"]) => (element: HTMLDivElement | null) => {
       surfaces.current[kind] = element ?? undefined;
     };
-  // CSV\uB294 \uC11C\uBC84 \uB77C\uC6B0\uD2B8\uAC00 \uB9CC\uB4E0\uB2E4. data: URL\uB85C \uB9CC\uB4E4\uBA74 \uB204\uC801 \uAE30\uAC04\uC5D0\uC11C \uBB38\uC11C\uAC00 1MB \uAC00\uAE4C\uC774 \uCEE4\uC9C4\uB2E4 (A4-5).
+  // CSV는 서버 라우트가 만든다. data: URL로 만들면 누적 기간에서 문서가 1MB 가까이 커진다 (A4-5).
   const csvHref = `/sales/revenue-csv?${serializeRevenueQuery(query)}`;
-  // KPI\uB294 \uC11C\uBC84 \uC9D1\uACC4\uC5D0\uC11C \uD544\uB4DC\uB85C \uC9C1\uC811 \uC77D\uB294\uB2E4. \uC774\uB984 \uBB38\uC790\uC5F4\uB85C \uCC3E\uC9C0 \uC54A\uB294\uB2E4 (A3-8).
+  // KPI는 서버 집계에서 필드로 직접 읽는다. 이름 문자열로 찾지 않는다 (A3-8).
   const settled = (name: string) => analytics.settlement.find((row) => row.name === name)?.value ?? 0;
   const kpis: readonly { label: string; value: number; delta?: number | null }[] = [
-    { label: "\uCD1D \uB9E4\uCD9C", value: summary ? summary.gross : settled("\uCD1D \uB9E4\uCD9C"), delta: summary?.deltaPrevious ?? null },
-    { label: "\uC2E4\uACB0\uC81C", value: summary ? summary.netPaid : settled("\uC2E4\uACB0\uC81C") },
+    { label: "총 매출", value: summary ? summary.gross : settled("총 매출"), delta: summary?.deltaPrevious ?? null },
+    { label: "실결제", value: summary ? summary.netPaid : settled("실결제") },
     { label: "VAT", value: summary ? summary.vat : settled("VAT") },
-    { label: "\uC9C0\uCD9C", value: summary ? summary.expense : settled("\uC9C0\uCD9C") },
-    { label: "\uC0F5 \uC218\uC775", value: summary ? summary.profit : settled("\uC0F5 \uC218\uC775") },
+    { label: "지출", value: summary ? summary.expense : settled("지출") },
+    { label: "샵 수익", value: summary ? summary.profit : settled("샵 수익") },
   ];
   const serviceTotal = analytics.services.reduce((total, row) => total + row.sales, 0);
   const serviceMax = Math.max(0, ...analytics.services.map((row) => row.sales));
+  const paymentMax = Math.max(0, ...analytics.payments.map((row) => row.amount));
   const bars = (
     kind: "service",
     rows: readonly { name: string; sales: number; count: number }[],
@@ -257,13 +263,13 @@ export function RevenueDashboard({
               </span>
               {/* 항목이 하나면 막대는 항상 100%라 비교 정보가 없다. 막대 대신 사실을 쓴다 (A2-2). */}
               {rows.length > 1 ? (
-                <span className="relative h-[22px] min-w-0 flex-1 overflow-clip">
+                <span className={`relative h-[22px] min-w-0 flex-1 overflow-clip ${chartWell} rounded-[var(--radius-chip)]`}>
                   <span
-                    className="absolute left-0 top-[2px] h-[18px] w-full origin-left rounded-[var(--radius-chip)]"
+                    className="absolute left-0 top-[2px] h-[18px] w-full origin-left rounded-[var(--radius-chip)] shadow-[inset_0_1px_0_rgba(255,255,255,0.2)]"
                     style={{
                       background: barFill(index),
                       transform: `scaleX(${barScale(row.sales, serviceMax)})`,
-                      transition: chartMotion.isAnimationActive ? `transform ${chartMotion.animationDuration}ms ease-out ${chartMotion.animationBegin}ms` : undefined,
+                      transition: chartMotion.isAnimationActive ? `transform ${chartMotion.animationDuration}ms ${chartEase} ${chartMotion.animationBegin}ms` : undefined,
                     }}
                   />
                 </span>
@@ -301,16 +307,16 @@ export function RevenueDashboard({
           <span className="ml-3 font-mono text-[12px]">{analytics.selectedPeriod.start} ~ {analytics.selectedPeriod.end}</span>
         </div>
         <SalesControls label={analytics.selectedPeriod.label} query={query} />
-        <PageToolbar className="mt-6" description={<>결제 기록과 정산을 같은 기준으로 확인합니다. {analytics.selectedPeriod.start} ~ {analytics.selectedPeriod.end}</>} noPrint>
+        <PageToolbar className="mt-5" description={<>결제 기록과 정산을 같은 기준으로 확인합니다. {analytics.selectedPeriod.start} ~ {analytics.selectedPeriod.end}</>} noPrint>
           <button
-            className="h-10 rounded-[var(--radius-card)] border border-[var(--border)] bg-[var(--surface)] px-4 text-[13px] font-medium text-[var(--brand)]"
+            className={button("md", "secondary", "text-[var(--brand)]")}
             onClick={() => window.print()}
             type="button"
           >
             인쇄
           </button>
           <a
-            className="flex h-10 items-center rounded-[var(--radius-card)] bg-[var(--brand)] px-5 text-[13px] font-medium text-white"
+            className={button("md", "primary")}
             download={`hairhaeyo-revenue-${analytics.selectedPeriod.start}_${analytics.selectedPeriod.end}.csv`}
             href={csvHref}
           >
@@ -319,14 +325,14 @@ export function RevenueDashboard({
         </PageToolbar>
         <section
           aria-label="매출 핵심 지표"
-          className="mt-4 grid grid-cols-5 gap-3"
+          className="mt-5 grid grid-cols-5 gap-3"
         >
           {kpis.map(({ label, value, delta }) => (
-            <article className={`${card} px-[16px] py-[13px]`} key={label}>
-              <h2 className="text-[11.5px] text-[var(--muted)]">
+            <article className={`${card} px-[16px] py-[13px] transition-shadow duration-300 ease-[cubic-bezier(0.32,0.72,0,1)] hover:shadow-[0_1px_2px_rgba(13,21,18,0.05),0_20px_36px_-22px_rgba(13,21,18,0.35)]`} key={label}>
+              <h2 className="text-[10px] font-semibold tracking-[0.04em] text-[var(--muted)]">
                 {label}
               </h2>
-              <p className="mt-[6px] font-mono text-[17px] font-semibold leading-none tabular-nums">
+              <p className="mt-[8px] font-mono text-[17px] font-semibold leading-none tracking-[-0.015em] tabular-nums">
                 {won(value)}
               </p>
               {delta !== undefined && (
@@ -381,7 +387,37 @@ export function RevenueDashboard({
         <div className="mt-5 grid grid-cols-[minmax(0,2fr)_392px] gap-5">
           <ChartCard kind="payment" title="결제 수단">
             <div className="max-h-[280px] divide-y divide-[var(--border)] overflow-y-auto" data-revenue-chart="payment" ref={ref("payment")}>
-              {analytics.payments.map((row) => <button aria-label={`${row.name} 결제수단 상세 보기`} className="grid w-full grid-cols-[1fr_auto_auto] items-center gap-4 py-3 text-left text-sm hover:bg-[var(--background)] focus-visible:outline-2 focus-visible:outline-[var(--brand)]" data-revenue-selection={`payment:${row.name}`} key={row.name} onClick={(event) => open("payment", row.name, event.currentTarget)} type="button"><span className="font-medium">{row.name}</span><span className="text-[var(--muted)]">{analytics.payments.length > 1 ? `${row.value}%` : "전액"}</span><span className="font-mono font-semibold tabular-nums">{won(row.amount)}</span></button>)}
+              {analytics.payments.map((row, index) => (
+                <button
+                  aria-label={`${row.name} 결제수단 상세 보기`}
+                  className="grid w-full grid-cols-[92px_minmax(0,1fr)_auto] items-center gap-4 py-[10px] text-left text-sm transition-colors duration-200 ease-[cubic-bezier(0.32,0.72,0,1)] hover:bg-[var(--background)] focus-visible:outline-2 focus-visible:outline-[var(--brand)]"
+                  data-revenue-selection={`payment:${row.name}`}
+                  key={row.name}
+                  onClick={(event) => open("payment", row.name, event.currentTarget)}
+                  type="button"
+                >
+                  <span className="flex items-center gap-2">
+                    <span className="text-[12.5px] font-semibold">{row.name}</span>
+                    <span className="text-[11.5px] text-[var(--muted)]">{analytics.payments.length > 1 ? `${row.value}%` : "전액"}</span>
+                  </span>
+                  {/* 항목이 하나면 막대는 항상 100%라 비교 정보가 없다 (A2-2). */}
+                  {analytics.payments.length > 1 ? (
+                    <span className={`relative h-[22px] min-w-0 overflow-clip ${chartWell} rounded-[var(--radius-chip)]`}>
+                      <span
+                        className="absolute left-0 top-[2px] h-[18px] w-full origin-left rounded-[var(--radius-chip)] shadow-[inset_0_1px_0_rgba(255,255,255,0.2)]"
+                        style={{
+                          background: barFill(index),
+                          transform: `scaleX(${barScale(row.amount, paymentMax)})`,
+                          transition: motion.service.isAnimationActive ? `transform ${motion.service.animationDuration}ms ${chartEase}` : undefined,
+                        }}
+                      />
+                    </span>
+                  ) : (
+                    <span className="min-w-0 text-[11.5px] text-[var(--muted)]">이 기간의 유일한 결제 수단입니다.</span>
+                  )}
+                  <span className="font-mono text-[12px] font-medium tabular-nums">{won(row.amount)}</span>
+                </button>
+              ))}
             </div>
             <DataTable
               caption="결제수단 표"
@@ -393,8 +429,8 @@ export function RevenueDashboard({
           </ChartCard>
           {bars("service", analytics.services, "시술 카테고리", motion.service)}
           <section className={`${card} p-5`}>
-            <h2 className="text-[17px] font-bold">정산</h2>
-            <table className="mt-4 w-full text-sm">
+            <h2 className="text-[10px] font-semibold tracking-[0.04em] text-[var(--muted)]">정산</h2>
+            <table className="mt-3 w-full text-sm">
               <tbody>
                 {analytics.settlement.map((row) => (
                   <tr

@@ -17,3 +17,6 @@ npm-debug.log*
 .playwright-mcp/
 .impeccable/
 .tmp-figma/
+.claude/
+.agents/
+skills-lock.json

@@ -102,8 +102,8 @@ export function AppShell({
             </form>
             {customers.length > 0 && (
               <details className="relative shrink-0">
-                <summary className="cursor-pointer list-none text-[var(--brand)]">고객 바로가기</summary>
-                <ul aria-label="고객 검색 결과 바로가기" className="absolute right-0 z-20 mt-3 w-52 rounded-[var(--radius-card)] border border-[var(--border)] bg-[var(--surface)] p-2 shadow-lg">
+                <summary className="cursor-pointer list-none text-[var(--brand)]">최근 고객</summary>
+                <ul aria-label="최근 고객 바로가기" className="absolute right-0 z-20 mt-3 w-52 rounded-[var(--radius-card)] border border-[var(--border)] bg-[var(--surface)] p-2 shadow-lg">
                   {customers.map((customer) => (
                     <li key={customer.id}><Link className={`block rounded-[var(--radius-control)] px-3 hover:bg-[var(--brand-soft)] ${settings.customerDisplayMode === "compact" ? "py-1" : "py-2"}`} href={`/customers?customer=${customer.id}`} target={customerTarget}>{customerName(customer)}</Link></li>
                   ))}
@@ -114,7 +114,9 @@ export function AppShell({
             <span className="shrink-0 rounded-[var(--radius-control)] bg-[var(--brand-soft)] px-2.5 py-1.5 font-mono text-[11.5px] font-medium text-[var(--brand)]">SMS {resolvedSmsRemaining.toLocaleString("ko-KR")}</span>
             <Link aria-label={ownerLabel} className="flex shrink-0 items-center gap-2 font-medium" href="/settings?section=owner"><span aria-hidden="true" className="grid size-7 place-items-center rounded-full bg-[var(--sidebar)] text-[10px] text-white">서</span><span className="text-[12px]">{resolvedOwnerName}</span></Link>
           </header>
-          <div className="min-h-0 flex-1 overflow-auto overscroll-contain" data-app-content>{children}</div>
+          {/* `scrollbar-gutter: stable` — 스크롤바가 생기는 화면(/sales, /messages)만 본문 폭이 15px 좁아져
+              오른쪽 끝이 화면마다 1412px ↔ 1397px 로 튀었다. 자리를 항상 비워 두면 폭이 고정된다. */}
+          <div className="min-h-0 flex-1 overflow-auto overscroll-contain [scrollbar-gutter:stable]" data-app-content>{children}</div>
         </div>
       </div>
     </div>

@@ -8,7 +8,8 @@ import { createSalonStore } from "../../lib/salon-store";
  */
 export default async function ShellLayout({ children }: { children: React.ReactNode }) {
   const store = createSalonStore();
-  // 셸에는 설정과 고객 목록만 필요하다. `snapshot()` 은 감사 로그 전량까지 읽는다.
-  try { return <ShellFrame customers={store.list("customers")} settings={store.getSettings()}>{children}</ShellFrame>; }
+  // 헤더 바로가기는 최근 고객 몇 명만 보여준다. 전체 조회는 858행·681KB 를 모든 셸 경로에 실었다.
+  // 전체 탐색은 헤더 검색폼(`/customers`)이 맡는다.
+  try { return <ShellFrame customers={store.listRecent("customers", 8)} settings={store.getSettings()}>{children}</ShellFrame>; }
   finally { store.close(); }
 }
