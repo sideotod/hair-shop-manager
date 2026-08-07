@@ -16,12 +16,12 @@ import {
   type RevenueSelection,
 } from "./revenue-detail-drawer";
 import { SalesControls } from "./sales-controls";
+import { surface as card } from "../surface";
 import {
   serializeRevenueQuery,
   type RevenueQuery,
 } from "./revenue-query";
 
-const card = "rounded-[var(--radius-card)] border border-[var(--border)] bg-[var(--surface)] shadow-[0_1px_2px_rgba(13,21,18,0.04),0_14px_30px_-20px_rgba(13,21,18,0.25)]";
 const chartCard = chartShell;
 
 /** 서버가 계산해 넘기는 차트 입력. 프런트는 이 값을 다시 합산하지 않는다 (§14). */

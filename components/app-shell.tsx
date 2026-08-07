@@ -5,6 +5,7 @@ import { searchModes } from "../lib/customer-search";
 import { activeNavigationItem, matchNavigationItem, navigationItems } from "../lib/navigation";
 import type { JsonObject, JsonValue, SalonRecord } from "../lib/salon-domain";
 import { resolveVisualTokens } from "../lib/visual-tokens";
+import { floatingShadow } from "./surface";
 
 const groupOrder = ["운영", "정산", "관리"] as const;
 const menuGroups = groupOrder.map((label) => ({ label, items: navigationItems.filter((item) => item.group === label) }));
@@ -103,7 +104,7 @@ export function AppShell({
             {customers.length > 0 && (
               <details className="relative shrink-0">
                 <summary className="cursor-pointer list-none text-[var(--brand)]">최근 고객</summary>
-                <ul aria-label="최근 고객 바로가기" className="absolute right-0 z-20 mt-3 w-52 rounded-[var(--radius-card)] border border-[var(--border)] bg-[var(--surface)] p-2 shadow-lg">
+                <ul aria-label="최근 고객 바로가기" className={`absolute right-0 z-20 mt-3 w-52 rounded-[var(--radius-card)] border border-[var(--border)] bg-[var(--surface)] p-2 ${floatingShadow}`}>
                   {customers.map((customer) => (
                     <li key={customer.id}><Link className={`block rounded-[var(--radius-control)] px-3 hover:bg-[var(--brand-soft)] ${settings.customerDisplayMode === "compact" ? "py-1" : "py-2"}`} href={`/customers?customer=${customer.id}`} target={customerTarget}>{customerName(customer)}</Link></li>
                   ))}

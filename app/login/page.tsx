@@ -1,5 +1,6 @@
 import { loginOwner } from "../auth-actions";
 import { DEMO_OWNER_PASSWORD, isDemoMode } from "../../lib/auth";
+import { surface } from "../../components/surface";
 
 export default async function LoginPage({ searchParams }: { searchParams: Promise<{ error?: string }> }) {
   const invalid = (await searchParams).error === "1";
@@ -7,7 +8,7 @@ export default async function LoginPage({ searchParams }: { searchParams: Promis
 
   return (
     <main className="grid min-h-screen place-items-center bg-[var(--background)] px-8">
-      <section className="w-full max-w-md rounded-[var(--radius-card)] border border-[var(--border)] bg-[var(--surface)] p-9 shadow-sm" aria-labelledby="login-title">
+      <section className={`w-full max-w-md p-8 ${surface}`} aria-labelledby="login-title">
         <p className="text-xs font-bold tracking-[0.18em] text-[var(--brand)]">HAIRHAEYO</p>
         <h1 className="mt-3 text-2xl font-bold" id="login-title">원장 로그인</h1>
         <p className="mt-2 text-sm text-[var(--muted)]">헤어해요 운영 화면은 원장 계정만 사용할 수 있습니다.</p>

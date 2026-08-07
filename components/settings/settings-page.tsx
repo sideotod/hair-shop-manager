@@ -5,6 +5,7 @@ import type { AuditEvent, JsonObject, JsonValue, SalonRecord } from "../../lib/s
 import { naverMailMetadata } from "../../lib/naver-mail";
 import { settingsErrorMessage } from "../../lib/settings";
 import { button } from "../button";
+import { card } from "../surface";
 import { NaverMailReplacementGuide } from "../bookings/naver-mail-connection";
 
 const sections = [
@@ -17,7 +18,8 @@ const sections = [
   ["help", "도움말 · 공지"],
 ] as const;
 const field = "h-10 w-full rounded-[var(--radius-control)] border border-[var(--border)] bg-[var(--surface)] px-3 text-sm focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--brand)]";
-const card = "rounded-[var(--radius-card)] border border-[var(--border)] bg-[var(--surface)] p-6 shadow-[0_1px_2px_rgba(13,21,18,0.04),0_14px_30px_-20px_rgba(13,21,18,0.25)]";
+
+
 
 type Props = {
   settings: JsonObject;

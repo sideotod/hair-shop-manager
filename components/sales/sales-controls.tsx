@@ -8,7 +8,7 @@ import {
   type RevenueQuery,
 } from "./revenue-query";
 
-const card = "rounded-[var(--radius-card)] border border-[var(--border)] bg-[var(--surface)] shadow-[0_1px_2px_rgba(13,21,18,0.04),0_14px_30px_-20px_rgba(13,21,18,0.25)]";
+import { surface as card } from "../surface";
 
 /**
  * 활성/비활성이 같은 박스 크기를 쓰도록 `border` 를 양쪽 모두에 둔다.

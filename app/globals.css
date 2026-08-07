@@ -81,10 +81,28 @@ svg text {
   font: inherit;
 }
 
+/*
+ * 곡선 하나로 통일한다. `ease` 는 감속이 약해 짧은 전환에서 "그냥 색이 바뀐 것"처럼 읽힌다.
+ * `cubic-bezier(0.32,0.72,0,1)` 은 스프링에 가까운 감속으로, 같은 150ms 안에서도 무게가 느껴진다.
+ * (차트가 이미 쓰는 곡선 — `revenue-chart-style.ts` 의 `chartEase` 와 같은 값이다.)
+ * 지속시간은 늘리지 않는다. 운영 화면은 클릭 후 기다리는 시간이 곧 손해다.
+ */
 button,
 a {
   -webkit-tap-highlight-color: transparent;
-  transition: color 150ms ease, background-color 150ms ease, border-color 150ms ease, box-shadow 150ms ease;
+  transition: color 150ms cubic-bezier(0.32, 0.72, 0, 1), background-color 150ms cubic-bezier(0.32, 0.72, 0, 1),
+    border-color 150ms cubic-bezier(0.32, 0.72, 0, 1), box-shadow 150ms cubic-bezier(0.32, 0.72, 0, 1),
+    transform 120ms cubic-bezier(0.32, 0.72, 0, 1);
+}
+
+/*
+ * 눌림 피드백. `transform` 은 레이아웃을 건드리지 않으므로 주변 요소가 밀리지 않는다.
+ * 활성 메뉴(`aria-current`)의 지속 상태는 여전히 색·테두리만 쓴다 — 여기는 포인터를 누른
+ * 순간에만 걸리고 떼면 되돌아온다.
+ */
+button:active,
+a:active {
+  transform: scale(0.985);
 }
 
 /* 모션 축소를 요청한 사용자에겐 전환·애니메이션을 끈다. 색은 즉시 바뀌므로 정보는 그대로다. */
@@ -96,6 +114,12 @@ a {
     animation-iteration-count: 1 !important;
     transition-duration: 0.01ms !important;
     scroll-behavior: auto !important;
+  }
+
+  /* 눌림 축소도 함께 끈다. 위 규칙은 전환만 없애고 변형 자체는 남긴다. */
+  button:active,
+  a:active {
+    transform: none;
   }
 }
 
@@ -112,7 +136,33 @@ a {
 }
 
 [data-revenue-draw] {
-  animation: revenue-draw 720ms cubic-bezier(0.32, 0.72, 0, 1) both;
+  animation: revenue-draw 480ms cubic-bezier(0.32, 0.72, 0, 1) both;
+}
+
+/*
+ * 화면 위로 올라오는 표면은 "어디서 왔는지"를 짧게 보여준다.
+ * 다이얼로그는 배경 딤 위로 가운데에서 솟고, 드로어는 오른쪽 가장자리에서 들어온다.
+ * 방향 자체가 닫는 방향을 알려주므로 장식이 아니라 정보다.
+ * 위 `prefers-reduced-motion` 규칙이 0.01ms 로 눌러 즉시 완성형이 된다.
+ */
+@keyframes overlay-in {
+  from {
+    opacity: 0;
+  }
+}
+
+@keyframes dialog-in {
+  from {
+    opacity: 0;
+    transform: translateY(8px) scale(0.985);
+  }
+}
+
+@keyframes drawer-in {
+  from {
+    transform: translateX(24px);
+    opacity: 0;
+  }
 }
 
 [data-app-overlay] {
@@ -123,6 +173,7 @@ a {
   place-items: center;
   padding: 32px;
   background: rgb(13 21 18 / 38%);
+  animation: overlay-in 180ms cubic-bezier(0.32, 0.72, 0, 1) both;
 }
 
 [data-dialog-panel] {
@@ -132,6 +183,11 @@ a {
   border-radius: var(--radius-card);
   background: var(--surface);
   box-shadow: 0 24px 64px rgb(13 21 18 / 24%);
+  animation: dialog-in 260ms cubic-bezier(0.32, 0.72, 0, 1) both;
+}
+
+[data-revenue-drawer] {
+  animation: drawer-in 240ms cubic-bezier(0.32, 0.72, 0, 1) both;
 }
 
 button:focus-visible,

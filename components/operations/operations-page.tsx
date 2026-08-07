@@ -7,8 +7,7 @@ import { PageToolbar } from "../page-toolbar";
 import type { JsonObject, JsonValue, LedgerEntry, SalonRecord } from "../../lib/salon-domain";
 import { navChip, SalesControls } from "../sales/sales-controls";
 import { revenueRange, type RevenueQuery } from "../sales/revenue-query";
-
-const card = "rounded-[var(--radius-card)] border border-[var(--border)] bg-[var(--surface)] p-5 shadow-[0_1px_2px_rgba(13,21,18,0.04),0_14px_30px_-20px_rgba(13,21,18,0.25)]";
+import { card } from "../surface";
 const input = "mt-1 h-10 w-full rounded-[var(--radius-control)] border border-[var(--border)] bg-[var(--surface)] px-3 text-sm";
 const won = (amount: number) => `₩${amount.toLocaleString("ko-KR")}`;
 const value = (record: SalonRecord<JsonValue>) => record.value && typeof record.value === "object" && !Array.isArray(record.value) ? record.value as JsonObject : {};

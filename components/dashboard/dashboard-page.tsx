@@ -4,8 +4,7 @@ import { button } from "../button";
 import { bookingSettings } from "../../lib/booking";
 import { displayStatus, minutesOfDay, railHeight, railHourMarks, railOffset, railTotalHeight, statusStyles } from "../../lib/day-rail";
 import type { AuditEvent, JsonObject, JsonValue, LedgerEntry, SalonRecord } from "../../lib/salon-domain";
-
-const card = "rounded-[var(--radius-card)] border border-[var(--border)] bg-[var(--surface)] shadow-[0_1px_2px_rgba(13,21,18,0.04),0_14px_30px_-20px_rgba(13,21,18,0.25)]";
+import { surface as card } from "../surface";
 const dayNames = ["오늘", "내일", "모레", "글피"] as const;
 const dateFormatter = new Intl.DateTimeFormat("en-CA", { day: "2-digit", month: "2-digit", timeZone: "Asia/Seoul", year: "numeric" });
 const timeFormatter = new Intl.DateTimeFormat("ko-KR", { hour: "2-digit", hour12: false, minute: "2-digit", timeZone: "Asia/Seoul" });

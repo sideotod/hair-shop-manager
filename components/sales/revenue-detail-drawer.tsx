@@ -4,6 +4,7 @@ import { useEffect, useRef } from "react";
 
 import type { RevenueAnalyticsView } from "./revenue-analytics";
 import { button } from "../button";
+import { floatingShadow } from "../surface";
 import { serializeRevenueQuery, type RevenueQuery } from "./revenue-query";
 
 export type RevenueSelection = { kind: "date" | "payment" | "service"; key: string };
@@ -30,7 +31,7 @@ export function RevenueDetailDrawer({ analytics, onClose, query, selection }: { 
   const params = new URLSearchParams(serializeRevenueQuery(query));
   params.set("selection", selection.kind); params.set("selectionKey", selection.key);
   useEffect(() => { closeRef.current?.focus(); }, [selection]);
-  return <aside aria-labelledby="revenue-detail-title" aria-modal="true" className="fixed inset-y-0 right-0 z-50 w-[420px] border-l border-[var(--border)] bg-[var(--surface)] p-7 shadow-2xl focus:outline-none" data-revenue-drawer onKeyDown={(event) => {
+  return <aside aria-labelledby="revenue-detail-title" aria-modal="true" className={`fixed inset-y-0 right-0 z-50 w-[420px] border-l border-[var(--border)] bg-[var(--surface)] p-5 focus:outline-none ${floatingShadow}`} data-revenue-drawer onKeyDown={(event) => {
     if (event.key === "Escape") return dismissRevenueDrawer(event.key, onClose);
     const target = revenueDrawerFocusTarget(event.key, event.shiftKey, event.currentTarget.ownerDocument.activeElement, closeRef.current, linkRef.current);
     if (target) { event.preventDefault(); target.focus(); }
