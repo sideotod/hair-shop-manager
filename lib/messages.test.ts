@@ -92,14 +92,16 @@ describe("message rules", () => {
     expect(store.snapshot().auditEvents.find((event) => event.recordId === rule.id)?.actor).toBe("원장");
   });
 
-  // 문자 화면으로 넘어가는 고객 payload 에서 화면이 쓰지 않는 필드를 잘라낸다.
-  it("keeps only the four recipient fields and preserves segment eligibility", () => {
+  // 문자 화면으로 넘어가는 고객 payload 에서 화면이 쓰지 않는 값을 잘라낸다.
+  it("keeps only the id and four recipient fields and preserves segment eligibility", () => {
     const store = createSalonStore(":memory:");
     store.save("customers", "trim-me", { name: "자를 고객", phone: "010-1111-2222", memo: "비밀 메모", address: "서울시 어딘가", gender: "female", points: 900, smsOptIn: true }, "원장");
     const trimmed = forRecipientPicker(store.list("customers"));
     const target = trimmed.find(({ id }) => id === "trim-me")!;
 
     expect(Object.keys(target.value as JsonObject).sort()).toEqual(["gender", "name", "points", "smsOptIn"]);
+    // 레코드 껍데기(kind·타임스탬프)는 화면이 읽지 않는다. 858명분이면 111KB 다.
+    expect(Object.keys(target).sort()).toEqual(["id", "value"]);
     // 주소·메모·전화번호는 이 화면에서 쓰지 않으니 경계를 넘지 않는다.
     expect(JSON.stringify(trimmed)).not.toContain("비밀 메모");
     expect(JSON.stringify(trimmed)).not.toContain("010-1111-2222");

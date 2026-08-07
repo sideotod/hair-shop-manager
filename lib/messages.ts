@@ -8,14 +8,17 @@ const messageSegments = new Set<MessageSegment>(["all", "women", "men", "power"]
 export function messageBytes(text: string) { return new TextEncoder().encode(text).length; }
 export function messageType(text: string): "SMS" | "LMS" { return messageBytes(text) <= 90 ? "SMS" : "LMS"; }
 
-function value(record: SalonRecord<JsonValue>) { return typeof record.value === "object" && record.value !== null && !Array.isArray(record.value) ? record.value as JsonObject : {}; }
+function value(record: Recipient) { return typeof record.value === "object" && record.value !== null && !Array.isArray(record.value) ? record.value as JsonObject : {}; }
 function segment(value: JsonObject, name: MessageSegment, powerMinimum: number) {
   if (name === "women") return value.gender === "female";
   if (name === "men") return value.gender === "male";
   return name !== "power" || (typeof value.points === "number" && value.points >= powerMinimum);
 }
 
-export function eligibleRecipients(customers: readonly SalonRecord<JsonValue>[], name: MessageSegment, powerMinimum = 100, recipientIds: readonly string[] = []) {
+/** 대상 선별과 화면이 고객에게서 읽는 전부. 레코드 껍데기(kind·타임스탬프)는 여기 들어오지 않는다. */
+export type Recipient = Pick<SalonRecord<JsonValue>, "id" | "value">;
+
+export function eligibleRecipients(customers: readonly Recipient[], name: MessageSegment, powerMinimum = 100, recipientIds: readonly string[] = []) {
   const selected = new Set(recipientIds);
   return customers.filter((customer) => {
     const customerValue = value(customer);
@@ -24,15 +27,15 @@ export function eligibleRecipients(customers: readonly SalonRecord<JsonValue>[],
 }
 
 /**
- * 문자 화면이 고객에게서 실제로 읽는 값은 위 두 함수가 보는 네 개(name·smsOptIn·gender·points)뿐이다.
- * 고객 한 명은 24개 필드(주소·메모·생일·시술이력…)를 들고 있어서, 858명을 통째로 클라이언트 컴포넌트에
- * 넘기면 경계를 579KB가 건너간다. 쓰지 않는 필드를 서버에서 잘라 80KB로 줄인다.
+ * 문자 화면이 고객에게서 실제로 읽는 값은 `id` 와 네 개 필드(name·smsOptIn·gender·points)뿐이다.
+ * 고객 한 명은 24개 필드(주소·메모·생일·시술이력…)에 레코드 껍데기(kind·타임스탬프)까지 달고 있어서,
+ * 858명을 통째로 클라이언트 컴포넌트에 넘기면 경계를 579KB가 건너간다. 쓰지 않는 값을 서버에서 잘라낸다.
  * 발송 자격은 `queueMessage`가 저장소 원본으로 다시 검증하므로, 잘라 보내도 권한 판단은 바뀌지 않는다.
  */
-export function forRecipientPicker(customers: readonly SalonRecord<JsonValue>[]): SalonRecord<JsonValue>[] {
+export function forRecipientPicker(customers: readonly SalonRecord<JsonValue>[]): Recipient[] {
   return customers.map((customer) => {
     const { name, smsOptIn, gender, points } = value(customer);
-    return { ...customer, value: { name, smsOptIn, gender, points } };
+    return { id: customer.id, value: { name, smsOptIn, gender, points } };
   });
 }
 

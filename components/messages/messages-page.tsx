@@ -6,16 +6,16 @@ import { memo, useCallback, useMemo, useState } from "react";
 import { queueMessage, saveAutomationRule } from "../../app/message-actions";
 import { button } from "../button";
 import { PageToolbar } from "../page-toolbar";
-import { eligibleRecipients, messageBytes, messageType, type MessageSegment } from "../../lib/messages";
+import { eligibleRecipients, messageBytes, messageType, type MessageSegment, type Recipient } from "../../lib/messages";
 import type { JsonObject, JsonValue, SalonRecord } from "../../lib/salon-domain";
 
 const input = "h-10 rounded-[var(--radius-control)] border border-[var(--border)] bg-[var(--surface)] px-3 text-sm text-[var(--foreground)] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--brand)]";
 const segments: readonly [MessageSegment, string][] = [["all", "전체 고객"], ["women", "여성 고객"], ["men", "남성 고객"], ["power", "파워 고객"]];
 
-type Props = { customers: readonly SalonRecord<JsonValue>[]; messages: readonly SalonRecord<JsonValue>[]; automations: readonly SalonRecord<JsonValue>[]; settings: JsonObject; requestKey: string; error?: string; notice?: string; segment?: string };
-function value(record: SalonRecord<JsonValue>) { return typeof record.value === "object" && record.value !== null && !Array.isArray(record.value) ? record.value as JsonObject : {}; }
-function text(record: SalonRecord<JsonValue>, key: string, fallback = "-") { const item = value(record)[key]; return typeof item === "string" ? item : fallback; }
-function recipientName(record: SalonRecord<JsonValue>) { return text(record, "name", record.id); }
+type Props = { customers: readonly Recipient[]; messages: readonly SalonRecord<JsonValue>[]; automations: readonly SalonRecord<JsonValue>[]; settings: JsonObject; requestKey: string; error?: string; notice?: string; segment?: string };
+function value(record: Recipient) { return typeof record.value === "object" && record.value !== null && !Array.isArray(record.value) ? record.value as JsonObject : {}; }
+function text(record: Recipient, key: string, fallback = "-") { const item = value(record)[key]; return typeof item === "string" ? item : fallback; }
+function recipientName(record: Recipient) { return text(record, "name", record.id); }
 
 /** `{고객명}` 같은 템플릿 변수를 골드로 띄운다. Figma 문자 본문 규칙. */
 function TemplateText({ value: body }: { value: string }) {
@@ -28,7 +28,7 @@ const maxRecipients = 3;
 /** 검색 결과로 한 번에 보여줄 최대 인원. 이름 몇 글자면 대개 한 자릿수로 좁혀진다. */
 const maxMatches = 20;
 
-function RecipientRow({ customer, checked, disabled, onToggle }: { customer: SalonRecord<JsonValue>; checked: boolean; disabled: boolean; onToggle: (id: string, checked: boolean) => void }) {
+function RecipientRow({ customer, checked, disabled, onToggle }: { customer: Recipient; checked: boolean; disabled: boolean; onToggle: (id: string, checked: boolean) => void }) {
   const optedOut = value(customer).smsOptIn === false;
   return <label className={`flex items-center gap-2 rounded-[var(--radius-control)] border px-3 py-2 text-sm ${checked ? "border-[var(--brand)] bg-[var(--brand-soft)]" : "border-[var(--border)]"} ${disabled ? "opacity-45" : ""}`}>
     <input checked={checked} disabled={disabled} name="recipientIds" onChange={(event) => onToggle(customer.id, event.target.checked)} type="checkbox" value={customer.id} />
@@ -46,9 +46,9 @@ function RecipientRow({ customer, checked, disabled, onToggle }: { customer: Sal
  * `memo` 는 성능 장식이 아니라 위 2)의 수정 그 자체다. 부모의 `draft`(본문) 상태가 바뀌어도
  * 이 트리는 props 가 그대로면 다시 그리지 않는다 — 그래서 `onToggle` 이 `useCallback` 이어야 한다.
  */
-const RecipientPicker = memo(function RecipientPicker({ customers, selectedIds, onToggle }: { customers: readonly SalonRecord<JsonValue>[]; selectedIds: readonly string[]; onToggle: (id: string, checked: boolean) => void }) {
+const RecipientPicker = memo(function RecipientPicker({ customers, selectedIds, onToggle }: { customers: readonly Recipient[]; selectedIds: readonly string[]; onToggle: (id: string, checked: boolean) => void }) {
   const [search, setSearch] = useState("");
-  const selected = useMemo(() => selectedIds.map((id) => customers.find((customer) => customer.id === id)).filter((customer): customer is SalonRecord<JsonValue> => customer !== undefined), [customers, selectedIds]);
+  const selected = useMemo(() => selectedIds.map((id) => customers.find((customer) => customer.id === id)).filter((customer): customer is Recipient => customer !== undefined), [customers, selectedIds]);
   const term = search.trim();
   // 검색어가 없을 때도 앞쪽 몇 명은 그대로 보인다. 빈 상자로 시작하면 "무엇을 입력해야 하는지" 알 수 없고,
   // 서버 렌더에 체크박스가 하나도 없어 JS 없이는 수신자를 아예 고를 수 없다.
