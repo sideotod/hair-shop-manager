@@ -76,4 +76,12 @@ describe("BookingsPage", () => {
     expect(html).toContain('/bookings?date=2026-07-31&amp;view=period&amp;period=14');
     expect(html).not.toContain('value="/bookings?date=2026-07-31&amp;view=period&amp;period=14&amp;new=1"');
   });
+
+  it("closes registration back onto the booking being edited", () => {
+    const html = page({ searchParams: { date: "2026-07-31", view: "day", edit: "booking-seed-1", new: "1" }, edit: "booking-seed-1", showNew: true });
+    const close = html.match(/<a\b[^>]*data-dialog-close="true"[^>]*>/)?.[0].match(/href="([^"]+)"/)?.[1] ?? "";
+
+    expect(close).toContain("edit=booking-seed-1");
+    expect(close).not.toContain("new=1");
+  });
 });

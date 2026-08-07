@@ -138,7 +138,7 @@ describe("CustomersPage", () => {
 
   it("closes registration back onto the selected customer", () => {
     const html = page(undefined, { mode: "phone", query: "010", selectedCustomerId: "customer-seed-1", showNew: true });
-    const close = html.match(/data-dialog-close="true" href="([^"]+)"/)?.[1] ?? html.match(/href="([^"]+)"[^>]*data-dialog-close="true"/)?.[1] ?? "";
+    const close = html.match(/<a\b[^>]*data-dialog-close="true"[^>]*>/)?.[0].match(/href="([^"]+)"/)?.[1] ?? "";
 
     expect(close).toContain("customer=customer-seed-1");
     expect(close).not.toContain("new=1");

@@ -21,6 +21,7 @@ export default async function Page({ searchParams }: { searchParams: Promise<Rec
       error={value(params.error)}
       notice={value(params.notice)}
       period={value(params.period)}
+      searchParams={params}
       settings={snapshot.settings}
       showNew={value(params.new) === "1"}
       syncHistory={snapshot.records["naver-syncs"] ?? []}

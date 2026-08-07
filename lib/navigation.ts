@@ -47,8 +47,23 @@ export function activeNavigationItem(pathname: string): NavigationItem {
 
 /** 모달 키만 지운 현재 URL. 손 조립하면 파라미터가 조용히 사라진다. */
 export function closeHref(pathname: string, params: URLSearchParams, ...remove: string[]): string {
+  const query = withoutParams(params, ...remove).toString();
+  return query ? `${pathname}?${query}` : pathname;
+}
+
+/** `remove` 키만 지운 사본. 원본은 건드리지 않는다. */
+export function withoutParams(params: URLSearchParams, ...remove: string[]): URLSearchParams {
   const next = new URLSearchParams(params);
   for (const key of remove) next.delete(key);
-  const query = next.toString();
-  return query ? `${pathname}?${query}` : pathname;
+  return next;
+}
+
+/** Next.js 의 `searchParams` 레코드를 `URLSearchParams` 로. 배열 값(중복 키)도 전부 보존한다. */
+export function toSearchParams(record: Record<string, string | string[] | undefined> = {}): URLSearchParams {
+  const params = new URLSearchParams();
+  for (const [key, value] of Object.entries(record)) {
+    if (typeof value === "string") params.append(key, value);
+    else if (Array.isArray(value)) for (const item of value) params.append(key, item);
+  }
+  return params;
 }

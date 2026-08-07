@@ -25,6 +25,7 @@ export default async function Page({ searchParams }: { searchParams: Promise<Rec
       segmentValue={value(params.segmentValue)}
       selectedCustomerId={value(params.customer)}
       salesThreshold={value(params.salesThreshold)}
+      searchParams={params}
       settings={snapshot.settings}
       showNew={value(params.new) === "1"}
       showWaiting={value(params.waiting) === "1"}
