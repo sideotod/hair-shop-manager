@@ -9,13 +9,18 @@ type Customer = { id: string; value: JsonValue };
 const field = "h-10 rounded-[var(--radius-control)] border border-[var(--border)] bg-[var(--surface)] px-3 text-[13px] text-[var(--foreground)]";
 const customerName = (customer: Customer) => { const value = customer.value; return value && typeof value === "object" && !Array.isArray(value) && typeof (value as Record<string, JsonValue>).name === "string" ? (value as Record<string, JsonValue>).name as string : customer.id; };
 
-export function PaymentForm({ backTo = "/sales", customers, customerId, correctionTargetId, error, returnTo = "/sales?tab=payment", settings = {}, today }: { backTo?: string; customers: readonly Customer[]; customerId?: string; correctionTargetId?: string; error?: string; returnTo?: string; settings?: JsonObject; today: string }) {
+/**
+ * `requestKey` 는 **서버 컴포넌트에서 요청당 1회** 만들어 내려보낸다.
+ * 렌더 중 `crypto.randomUUID()` 를 부르면 같은 요청의 재렌더마다 값이 달라져
+ * 마크업이 매번 새 바이트가 되고(캐시 무효) 멱등성 키의 의미도 사라진다.
+ */
+export function PaymentForm({ backTo = "/sales", customers, customerId, correctionTargetId, error, requestKey, returnTo = "/sales?tab=payment", settings = {}, today }: { backTo?: string; customers: readonly Customer[]; customerId?: string; correctionTargetId?: string; error?: string; requestKey: string; returnTo?: string; settings?: JsonObject; today: string }) {
   const vatMode = settings.vatMode === "separate" ? "separate" : "included";
   const cardFeeRate = typeof settings.cardFeeRate === "number" ? settings.cardFeeRate : 0;
   return <div>
     <PageToolbar description="원장 계정으로 불변 거래 기록을 추가합니다." title="결제 등록"><Link className="rounded-[var(--radius-card)] border border-[var(--border)] bg-[var(--surface)] px-4 py-3 text-sm font-medium text-[var(--brand)]" href={backTo}>매출 분석</Link></PageToolbar>
     {error && <p aria-live="assertive" className="mt-5 rounded-[var(--radius-card)] border border-[var(--danger)] bg-[var(--danger-soft)] px-4 py-3 text-sm text-[var(--danger)]" role="alert">{error}</p>}
-    <form action={correctionTargetId ? correctPayment : savePayment} aria-label="결제 등록 양식" className="mt-8 grid w-full max-w-none grid-cols-2 gap-5"><input name="requestKey" type="hidden" value={crypto.randomUUID()} /><input name="returnTo" type="hidden" value={returnTo} />{correctionTargetId && <><input name="targetId" type="hidden" value={correctionTargetId} /><input name="reason" type="hidden" value="결제 정정" /></>}
+    <form action={correctionTargetId ? correctPayment : savePayment} aria-label="결제 등록 양식" className="mt-8 grid w-full max-w-none grid-cols-2 gap-5"><input name="requestKey" type="hidden" value={requestKey} /><input name="returnTo" type="hidden" value={returnTo} />{correctionTargetId && <><input name="targetId" type="hidden" value={correctionTargetId} /><input name="reason" type="hidden" value="결제 정정" /></>}
       <section className="rounded-[var(--radius-card)] border border-[var(--border)] bg-[var(--surface)] p-5"><h2 className="text-lg font-bold">고객 · 시술</h2><div className="mt-4 grid grid-cols-2 gap-4">
         <label className="grid gap-1 text-xs font-medium text-[var(--muted)]">구분<select className={field} defaultValue="member" name="memberType"><option value="member">회원</option><option value="non-member">비회원</option></select></label>
         <label className="grid gap-1 text-xs font-medium text-[var(--muted)]">회원 고객<select className={field} defaultValue={customerId ?? ""} name="customerId"><option value="">선택</option>{customers.map((customer) => <option key={customer.id} value={customer.id}>{customerName(customer)}</option>)}</select></label>

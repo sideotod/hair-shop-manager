@@ -4,7 +4,7 @@ import { describe, expect, it } from "vitest";
 import { OperationsPage } from "./operations-page";
 
 const record = (id: string, value: Record<string, string | number>) => ({ id, kind: "test", value, createdAt: "2026-07-31T09:30:00.000Z", updatedAt: "2026-07-31T09:30:00.000Z", archivedAt: null });
-const props = { catalog: [record("major", { type: "service-major", name: "커트", category: "", priceWon: 0 }), record("detail", { type: "service-detail", name: "여성 커트", category: "커트", priceWon: 25000 })], expenses: [record("preset", { name: "임대료", defaultWon: 500000 })], ledger: [{ id: "expense-1", requestKey: "expense-1", kind: "expense", occurredAt: "2026-07-31T09:30:00.000Z", correctionOf: null, customerId: null, grossWon: -500000, amountWon: -500000, discountWon: 0, vatWon: 0, feeWon: 0, expenseWon: 500000, incentiveWon: 0, pointsWon: 0, couponWon: 0, profitWon: -500000, details: { expenseName: "임대료" } }], settings: {}, period: { start: "2026-07-01", end: "2026-07-31" } };
+const props = { catalog: [record("major", { type: "service-major", name: "커트", category: "", priceWon: 0 }), record("detail", { type: "service-detail", name: "여성 커트", category: "커트", priceWon: 25000 })], expenses: [record("preset", { name: "임대료", defaultWon: 500000 })], ledger: [{ id: "expense-1", requestKey: "expense-1", kind: "expense", occurredAt: "2026-07-31T09:30:00.000Z", correctionOf: null, customerId: null, grossWon: -500000, amountWon: -500000, discountWon: 0, vatWon: 0, feeWon: 0, expenseWon: 500000, incentiveWon: 0, pointsWon: 0, couponWon: 0, profitWon: -500000, details: { expenseName: "임대료" } }], settings: {}, period: { start: "2026-07-01", end: "2026-07-31" }, requestKey: "ops-test-key" };
 
 describe("OperationsPage", () => {
   it("renders the service catalog, supported memo values, and printable price list without excluded workflows", () => {
@@ -60,5 +60,15 @@ describe("OperationsPage", () => {
 
     expect(page).toContain('role="alert"');
     expect(page).toContain("선택 기간의 지출이 없습니다.");
+  });
+
+  it("takes hidden form ids from the server so identical renders stay identical", () => {
+    const first = renderToStaticMarkup(<OperationsPage {...props} activeTab="expenses" requestKey="ops-fixed-key" />);
+    const second = renderToStaticMarkup(<OperationsPage {...props} activeTab="expenses" requestKey="ops-fixed-key" />);
+
+    expect(first).toBe(second);
+    expect(first).toContain('name="requestKey" value="expense-ops-fixed-key"');
+    expect(renderToStaticMarkup(<OperationsPage {...props} activeTab="services" requestKey="ops-fixed-key" />))
+      .toContain('name="catalogId" value="catalog-ops-fixed-key"');
   });
 });

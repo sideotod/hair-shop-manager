@@ -1,3 +1,5 @@
+import { randomUUID } from "node:crypto";
+
 import { OperationsPage } from "../../../components/operations/operations-page";
 import { PaymentForm } from "../../../components/sales/payment-form";
 import { RevenueDashboard } from "../../../components/sales/revenue-dashboard";
@@ -77,7 +79,7 @@ export default async function SalesPage({ searchParams }: { searchParams: Promis
     // 지출·결제 탭만 전체 원장이 필요하다. 분석 화면은 기간 조회로 끝난다 (A4-2).
     if (value(params.tab) === "expenses") {
       const snapshot = store.snapshot();
-      return <OperationsPage activeTab="expenses" catalog={snapshot.records["catalog-items"] ?? []} correctionId={value(params.correction)} customers={snapshot.records.customers ?? []} error={value(params.error) || undefined} expenses={snapshot.records["expense-presets"] ?? []} ledger={snapshot.ledger} salesContext salesQuery={query} settings={snapshot.settings} />;
+      return <OperationsPage activeTab="expenses" catalog={snapshot.records["catalog-items"] ?? []} correctionId={value(params.correction)} customers={snapshot.records.customers ?? []} error={value(params.error) || undefined} expenses={snapshot.records["expense-presets"] ?? []} ledger={snapshot.ledger} requestKey={randomUUID()} salesContext salesQuery={query} settings={snapshot.settings} />;
     }
     const settings = store.getSettings();
     const customers = store.list("customers");
@@ -85,7 +87,7 @@ export default async function SalesPage({ searchParams }: { searchParams: Promis
       const correctionTarget = value(params.correction) ? store.listLedger().find(({ id, kind }) => id === value(params.correction) && kind === "payment") : undefined;
       const customerId = value(params.customer) || correctionTarget?.customerId || undefined;
       const returnTo = `/sales?tab=payment&${serializeRevenueQuery(query)}${customerId ? `&customer=${encodeURIComponent(customerId)}` : ""}${correctionTarget ? `&correction=${encodeURIComponent(correctionTarget.id)}` : ""}`;
-      return <main className="min-w-0 px-7 pb-6 pt-5"><SalesControls label={revenueRange(query).label} query={query} tab="payment" /><section className="mt-5"><PaymentForm backTo={analysisHref} correctionTargetId={correctionTarget?.id} customerId={customerId} customers={customers} error={value(params.error) || undefined} returnTo={returnTo} settings={settings} today={seoulDate()} /></section></main>;
+      return <main className="min-w-0 px-7 pb-6 pt-5"><SalesControls label={revenueRange(query).label} query={query} tab="payment" /><section className="mt-5"><PaymentForm backTo={analysisHref} correctionTargetId={correctionTarget?.id} customerId={customerId} customers={customers} error={value(params.error) || undefined} requestKey={randomUUID()} returnTo={returnTo} settings={settings} today={seoulDate()} /></section></main>;
     }
     const bounds = store.ledgerBounds();
     const period = revenueRangeExclusive(query, bounds);
