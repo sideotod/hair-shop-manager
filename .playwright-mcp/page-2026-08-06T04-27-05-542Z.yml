@@ -1,0 +1,332 @@
+- generic [active] [ref=f4e1]:
+  - generic [ref=f4e3]:
+    - complementary [ref=f4e4]:
+      - generic [ref=f4e5]:
+        - strong [ref=f4e6]: HAIRHAEYO
+        - generic [ref=f4e7]: SALON LEDGER
+      - navigation "주요 메뉴" [ref=f4e8]:
+        - generic [ref=f4e9]:
+          - paragraph [ref=f4e10]: 운영
+          - link "운영 현황" [ref=f4e11] [cursor=pointer]:
+            - /url: /
+          - link "고객" [ref=f4e13] [cursor=pointer]:
+            - /url: /customers
+          - link "예약" [ref=f4e15] [cursor=pointer]:
+            - /url: /bookings
+        - generic [ref=f4e17]:
+          - paragraph [ref=f4e18]: 정산
+          - link "매출·결제" [ref=f4e19] [cursor=pointer]:
+            - /url: /sales
+          - link "문자" [ref=f4e21] [cursor=pointer]:
+            - /url: /messages
+        - generic [ref=f4e23]:
+          - paragraph [ref=f4e24]: 관리
+          - link "운영 설정" [ref=f4e25] [cursor=pointer]:
+            - /url: /operations
+          - group [ref=f4e27]:
+            - generic "설정" [ref=f4e28] [cursor=pointer]
+      - generic [ref=f4e31]:
+        - strong [ref=f4e32]: 헤어해요
+        - generic [ref=f4e33]: ● 영업중 09:00–20:00
+        - button "로그아웃" [ref=f4e35]
+    - generic [ref=f4e36]:
+      - banner [ref=f4e37]:
+        - generic [ref=f4e38]:
+          - strong [ref=f4e39]: 매출·결제
+          - generic [ref=f4e40]: 2019-03-01 ~ 2019-03-31
+        - search [ref=f4e42]:
+          - combobox "고객 검색 기준" [ref=f4e43]:
+            - option "핸드폰 뒷번호/고객명" [selected]
+            - option "닉네임"
+            - option "전화번호 뒷번호"
+            - option "그룹명"
+            - option "메모"
+            - option "주소"
+            - option "방문동기"
+            - option "이메일"
+            - option "포인트 카드"
+            - option "패밀리번호"
+          - textbox "고객 검색어" [ref=f4e44]:
+            - /placeholder: 고객 검색
+          - button "검색" [ref=f4e45]
+        - link "도움말" [ref=f4e46] [cursor=pointer]:
+          - /url: /settings?section=help
+        - generic [ref=f4e47]: SMS 1,026
+        - link "원장님" [ref=f4e48] [cursor=pointer]:
+          - /url: /settings?section=owner
+          - generic [ref=f4e49]: 서
+      - main [ref=f4e51]:
+        - generic [ref=f4e52]:
+          - paragraph [ref=f4e53]: 결제 기록과 정산을 같은 기준으로 확인합니다.
+          - generic [ref=f4e54]:
+            - button "인쇄" [ref=f4e55]
+            - link "CSV 내보내기" [ref=f4e56] [cursor=pointer]:
+              - /url: data:text/csv;charset=utf-8,…
+        - navigation "매출 기능" [ref=f4e57]:
+          - link "매출 분석" [ref=f4e58] [cursor=pointer]:
+            - /url: "?view=month&cursor=2019-03-15"
+          - link "결제 등록" [ref=f4e59] [cursor=pointer]:
+            - /url: "?view=month&cursor=2019-03-15&tab=payment"
+          - link "지출·정산" [ref=f4e60] [cursor=pointer]:
+            - /url: "?view=month&cursor=2019-03-15&tab=expenses"
+        - region "매출 조회" [ref=f4e61]:
+          - generic [ref=f4e62]:
+            - link "일별" [ref=f4e63] [cursor=pointer]:
+              - /url: "?view=day&cursor=2019-03-15"
+            - link "주별" [ref=f4e64] [cursor=pointer]:
+              - /url: "?view=week&cursor=2019-03-15"
+            - link "월별" [ref=f4e65] [cursor=pointer]:
+              - /url: "?view=month&cursor=2019-03-15"
+            - link "누적" [ref=f4e66] [cursor=pointer]:
+              - /url: "?view=total&cursor=2019-03-15"
+          - generic [ref=f4e67]:
+            - button "이전 기간" [ref=f4e68]: ←
+            - strong [ref=f4e69]: 2019년 3월
+            - button "다음 기간" [ref=f4e70]: →
+        - region "매출 핵심 지표" [ref=f4e71]:
+          - article [ref=f4e72]:
+            - heading "총 매출" [level=2] [ref=f4e73]
+            - paragraph [ref=f4e74]: ₩0
+          - article [ref=f4e75]:
+            - heading "실결제" [level=2] [ref=f4e76]
+            - paragraph [ref=f4e77]: ₩0
+          - article [ref=f4e78]:
+            - heading "VAT" [level=2] [ref=f4e79]
+            - paragraph [ref=f4e80]: ₩0
+          - article [ref=f4e81]:
+            - heading "지출" [level=2] [ref=f4e82]
+            - paragraph [ref=f4e83]: ₩0
+          - article [ref=f4e84]:
+            - heading "샵 수익" [level=2] [ref=f4e85]
+            - paragraph [ref=f4e86]: ₩0
+        - generic [ref=f4e88]:
+          - generic [ref=f4e89]:
+            - generic [ref=f4e90]:
+              - heading "일별 매출" [level=2] [ref=f4e91]
+              - paragraph [ref=f4e92]:
+                - strong [ref=f4e93]: ₩0
+                - generic [ref=f4e94]: 2019년 3월 · 0건
+            - paragraph [ref=f4e95]: 전월 대비 비교 불가
+          - generic [ref=f4e96]:
+            - generic [ref=f4e97]:
+              - generic [ref=f4e98]: "0"
+              - generic [ref=f4e99]: "0"
+              - generic [ref=f4e100]: "0"
+            - generic [ref=f4e101]:
+              - link "1일 ₩0, 매출 없음. 거래 목록 보기" [ref=f4e103] [cursor=pointer]:
+                - /url: /sales/transactions?view=day&cursor=2019-03-01
+                - generic [ref=f4e105]: "1"
+              - link "2일 ₩0, 매출 없음. 거래 목록 보기" [ref=f4e106] [cursor=pointer]:
+                - /url: /sales/transactions?view=day&cursor=2019-03-02
+              - link "3일 ₩0, 매출 없음. 거래 목록 보기" [ref=f4e108] [cursor=pointer]:
+                - /url: /sales/transactions?view=day&cursor=2019-03-03
+              - link "4일 ₩0, 매출 없음. 거래 목록 보기" [ref=f4e110] [cursor=pointer]:
+                - /url: /sales/transactions?view=day&cursor=2019-03-04
+              - link "5일 ₩0, 매출 없음. 거래 목록 보기" [ref=f4e112] [cursor=pointer]:
+                - /url: /sales/transactions?view=day&cursor=2019-03-05
+                - generic [ref=f4e114]: "5"
+              - link "6일 ₩0, 매출 없음. 거래 목록 보기" [ref=f4e115] [cursor=pointer]:
+                - /url: /sales/transactions?view=day&cursor=2019-03-06
+              - link "7일 ₩0, 매출 없음. 거래 목록 보기" [ref=f4e117] [cursor=pointer]:
+                - /url: /sales/transactions?view=day&cursor=2019-03-07
+              - link "8일 ₩0, 매출 없음. 거래 목록 보기" [ref=f4e119] [cursor=pointer]:
+                - /url: /sales/transactions?view=day&cursor=2019-03-08
+              - link "9일 ₩0, 매출 없음. 거래 목록 보기" [ref=f4e121] [cursor=pointer]:
+                - /url: /sales/transactions?view=day&cursor=2019-03-09
+              - link "10일 ₩0, 매출 없음. 거래 목록 보기" [ref=f4e123] [cursor=pointer]:
+                - /url: /sales/transactions?view=day&cursor=2019-03-10
+                - generic [ref=f4e125]: "10"
+              - link "11일 ₩0, 매출 없음. 거래 목록 보기" [ref=f4e126] [cursor=pointer]:
+                - /url: /sales/transactions?view=day&cursor=2019-03-11
+              - link "12일 ₩0, 매출 없음. 거래 목록 보기" [ref=f4e128] [cursor=pointer]:
+                - /url: /sales/transactions?view=day&cursor=2019-03-12
+              - link "13일 ₩0, 매출 없음. 거래 목록 보기" [ref=f4e130] [cursor=pointer]:
+                - /url: /sales/transactions?view=day&cursor=2019-03-13
+              - link "14일 ₩0, 매출 없음. 거래 목록 보기" [ref=f4e132] [cursor=pointer]:
+                - /url: /sales/transactions?view=day&cursor=2019-03-14
+              - link "15일 ₩0, 매출 없음. 거래 목록 보기" [ref=f4e134] [cursor=pointer]:
+                - /url: /sales/transactions?view=day&cursor=2019-03-15
+                - generic [ref=f4e136]: "15"
+              - link "16일 ₩0, 매출 없음. 거래 목록 보기" [ref=f4e137] [cursor=pointer]:
+                - /url: /sales/transactions?view=day&cursor=2019-03-16
+              - link "17일 ₩0, 매출 없음. 거래 목록 보기" [ref=f4e139] [cursor=pointer]:
+                - /url: /sales/transactions?view=day&cursor=2019-03-17
+              - link "18일 ₩0, 매출 없음. 거래 목록 보기" [ref=f4e141] [cursor=pointer]:
+                - /url: /sales/transactions?view=day&cursor=2019-03-18
+              - link "19일 ₩0, 매출 없음. 거래 목록 보기" [ref=f4e143] [cursor=pointer]:
+                - /url: /sales/transactions?view=day&cursor=2019-03-19
+              - link "20일 ₩0, 매출 없음. 거래 목록 보기" [ref=f4e145] [cursor=pointer]:
+                - /url: /sales/transactions?view=day&cursor=2019-03-20
+                - generic [ref=f4e147]: "20"
+              - link "21일 ₩0, 매출 없음. 거래 목록 보기" [ref=f4e148] [cursor=pointer]:
+                - /url: /sales/transactions?view=day&cursor=2019-03-21
+              - link "22일 ₩0, 매출 없음. 거래 목록 보기" [ref=f4e150] [cursor=pointer]:
+                - /url: /sales/transactions?view=day&cursor=2019-03-22
+              - link "23일 ₩0, 매출 없음. 거래 목록 보기" [ref=f4e152] [cursor=pointer]:
+                - /url: /sales/transactions?view=day&cursor=2019-03-23
+              - link "24일 ₩0, 매출 없음. 거래 목록 보기" [ref=f4e154] [cursor=pointer]:
+                - /url: /sales/transactions?view=day&cursor=2019-03-24
+              - link "25일 ₩0, 매출 없음. 거래 목록 보기" [ref=f4e156] [cursor=pointer]:
+                - /url: /sales/transactions?view=day&cursor=2019-03-25
+                - generic [ref=f4e158]: "25"
+              - link "26일 ₩0, 매출 없음. 거래 목록 보기" [ref=f4e159] [cursor=pointer]:
+                - /url: /sales/transactions?view=day&cursor=2019-03-26
+              - link "27일 ₩0, 매출 없음. 거래 목록 보기" [ref=f4e161] [cursor=pointer]:
+                - /url: /sales/transactions?view=day&cursor=2019-03-27
+              - link "28일 ₩0, 매출 없음. 거래 목록 보기" [ref=f4e163] [cursor=pointer]:
+                - /url: /sales/transactions?view=day&cursor=2019-03-28
+              - link "29일 ₩0, 매출 없음. 거래 목록 보기" [ref=f4e165] [cursor=pointer]:
+                - /url: /sales/transactions?view=day&cursor=2019-03-29
+              - link "30일 ₩0, 매출 없음. 거래 목록 보기" [ref=f4e167] [cursor=pointer]:
+                - /url: /sales/transactions?view=day&cursor=2019-03-30
+                - generic [ref=f4e169]: "30"
+              - link "31일 ₩0, 매출 없음. 거래 목록 보기" [ref=f4e170] [cursor=pointer]:
+                - /url: /sales/transactions?view=day&cursor=2019-03-31
+          - table [ref=f4e172]:
+            - caption [ref=f4e173]: 2019년 3월 일별 매출 표
+            - rowgroup [ref=f4e174]:
+              - row [ref=f4e175]:
+                - rowheader "2019-03-01" [ref=f4e176]
+                - cell "₩0 (매출 없음)" [ref=f4e177]
+              - row [ref=f4e178]:
+                - rowheader "2019-03-02" [ref=f4e179]
+                - cell "₩0 (매출 없음)" [ref=f4e180]
+              - row [ref=f4e181]:
+                - rowheader "2019-03-03" [ref=f4e182]
+                - cell "₩0 (매출 없음)" [ref=f4e183]
+              - row [ref=f4e184]:
+                - rowheader "2019-03-04" [ref=f4e185]
+                - cell "₩0 (매출 없음)" [ref=f4e186]
+              - row [ref=f4e187]:
+                - rowheader "2019-03-05" [ref=f4e188]
+                - cell "₩0 (매출 없음)" [ref=f4e189]
+              - row [ref=f4e190]:
+                - rowheader "2019-03-06" [ref=f4e191]
+                - cell "₩0 (매출 없음)" [ref=f4e192]
+              - row [ref=f4e193]:
+                - rowheader "2019-03-07" [ref=f4e194]
+                - cell "₩0 (매출 없음)" [ref=f4e195]
+              - row [ref=f4e196]:
+                - rowheader "2019-03-08" [ref=f4e197]
+                - cell "₩0 (매출 없음)" [ref=f4e198]
+              - row [ref=f4e199]:
+                - rowheader "2019-03-09" [ref=f4e200]
+                - cell "₩0 (매출 없음)" [ref=f4e201]
+              - row [ref=f4e202]:
+                - rowheader "2019-03-10" [ref=f4e203]
+                - cell "₩0 (매출 없음)" [ref=f4e204]
+              - row [ref=f4e205]:
+                - rowheader "2019-03-11" [ref=f4e206]
+                - cell "₩0 (매출 없음)" [ref=f4e207]
+              - row [ref=f4e208]:
+                - rowheader "2019-03-12" [ref=f4e209]
+                - cell "₩0 (매출 없음)" [ref=f4e210]
+              - row [ref=f4e211]:
+                - rowheader "2019-03-13" [ref=f4e212]
+                - cell "₩0 (매출 없음)" [ref=f4e213]
+              - row [ref=f4e214]:
+                - rowheader "2019-03-14" [ref=f4e215]
+                - cell "₩0 (매출 없음)" [ref=f4e216]
+              - row [ref=f4e217]:
+                - rowheader "2019-03-15" [ref=f4e218]
+                - cell "₩0 (매출 없음)" [ref=f4e219]
+              - row [ref=f4e220]:
+                - rowheader "2019-03-16" [ref=f4e221]
+                - cell "₩0 (매출 없음)" [ref=f4e222]
+              - row [ref=f4e223]:
+                - rowheader "2019-03-17" [ref=f4e224]
+                - cell "₩0 (매출 없음)" [ref=f4e225]
+              - row [ref=f4e226]:
+                - rowheader "2019-03-18" [ref=f4e227]
+                - cell "₩0 (매출 없음)" [ref=f4e228]
+              - row [ref=f4e229]:
+                - rowheader "2019-03-19" [ref=f4e230]
+                - cell "₩0 (매출 없음)" [ref=f4e231]
+              - row [ref=f4e232]:
+                - rowheader "2019-03-20" [ref=f4e233]
+                - cell "₩0 (매출 없음)" [ref=f4e234]
+              - row [ref=f4e235]:
+                - rowheader "2019-03-21" [ref=f4e236]
+                - cell "₩0 (매출 없음)" [ref=f4e237]
+              - row [ref=f4e238]:
+                - rowheader "2019-03-22" [ref=f4e239]
+                - cell "₩0 (매출 없음)" [ref=f4e240]
+              - row [ref=f4e241]:
+                - rowheader "2019-03-23" [ref=f4e242]
+                - cell "₩0 (매출 없음)" [ref=f4e243]
+              - row [ref=f4e244]:
+                - rowheader "2019-03-24" [ref=f4e245]
+                - cell "₩0 (매출 없음)" [ref=f4e246]
+              - row [ref=f4e247]:
+                - rowheader "2019-03-25" [ref=f4e248]
+                - cell "₩0 (매출 없음)" [ref=f4e249]
+              - row [ref=f4e250]:
+                - rowheader "2019-03-26" [ref=f4e251]
+                - cell "₩0 (매출 없음)" [ref=f4e252]
+              - row [ref=f4e253]:
+                - rowheader "2019-03-27" [ref=f4e254]
+                - cell "₩0 (매출 없음)" [ref=f4e255]
+              - row [ref=f4e256]:
+                - rowheader "2019-03-28" [ref=f4e257]
+                - cell "₩0 (매출 없음)" [ref=f4e258]
+              - row [ref=f4e259]:
+                - rowheader "2019-03-29" [ref=f4e260]
+                - cell "₩0 (매출 없음)" [ref=f4e261]
+              - row [ref=f4e262]:
+                - rowheader "2019-03-30" [ref=f4e263]
+                - cell "₩0 (매출 없음)" [ref=f4e264]
+              - row [ref=f4e265]:
+                - rowheader "2019-03-31" [ref=f4e266]
+                - cell "₩0 (매출 없음)" [ref=f4e267]
+          - paragraph [ref=f4e268]: 빈 점은 매출이 없던 날입니다. 금색은 오늘과 정정 기록을 뜻합니다.
+        - generic [ref=f4e269]:
+          - generic [ref=f4e270]:
+            - heading "결제 수단" [level=2] [ref=f4e272]
+            - table [ref=f4e274]:
+              - caption [ref=f4e275]: 결제수단 표
+              - rowgroup [ref=f4e276]
+          - generic [ref=f4e277]:
+            - generic [ref=f4e278]:
+              - heading "시술 카테고리" [level=2] [ref=f4e279]
+              - generic [ref=f4e280]: 0개 유형
+            - generic [ref=f4e281]:
+              - generic "시술 카테고리 차트 상호작용 영역" [ref=f4e282]:
+                - paragraph [ref=f4e284]: 기간에 해당하는 매출이 없습니다.
+              - paragraph [ref=f4e285]:
+                - generic [ref=f4e286]: │
+                - text: 유형은 설정 › 시술·가격에서 관리합니다.
+              - table [ref=f4e287]:
+                - caption [ref=f4e288]: 시술 카테고리 표
+                - rowgroup [ref=f4e289]
+          - generic [ref=f4e290]:
+            - heading "정산" [level=2] [ref=f4e291]
+            - table [ref=f4e292]:
+              - rowgroup [ref=f4e293]:
+                - row [ref=f4e294]:
+                  - rowheader "총 매출" [ref=f4e295]
+                  - cell "₩0" [ref=f4e296]
+                - row [ref=f4e297]:
+                  - rowheader "할인" [ref=f4e298]
+                  - cell "₩0" [ref=f4e299]
+                - row [ref=f4e300]:
+                  - rowheader "포인트 사용" [ref=f4e301]
+                  - cell "₩0" [ref=f4e302]
+                - row [ref=f4e303]:
+                  - rowheader "실결제" [ref=f4e304]
+                  - cell "₩0" [ref=f4e305]
+                - row [ref=f4e306]:
+                  - rowheader "환불" [ref=f4e307]
+                  - cell "₩0" [ref=f4e308]
+                - row [ref=f4e309]:
+                  - rowheader "VAT" [ref=f4e310]
+                  - cell "₩0" [ref=f4e311]
+                - row [ref=f4e312]:
+                  - rowheader "결제 수수료" [ref=f4e313]
+                  - cell "₩0" [ref=f4e314]
+                - row [ref=f4e315]:
+                  - rowheader "지출" [ref=f4e316]
+                  - cell "₩0" [ref=f4e317]
+                - row [ref=f4e318]:
+                  - rowheader "샵 수익" [ref=f4e319]
+                  - cell "₩0" [ref=f4e320]
+  - button "Open Next.js Dev Tools" [ref=f4e326] [cursor=pointer]

@@ -4,9 +4,9 @@ import { dirname, join } from "node:path";
 import { DatabaseSync } from "node:sqlite";
 import { isDeepStrictEqual } from "node:util";
 
-import type { AuditEvent, JsonObject, JsonValue, LedgerEntry, LedgerInput, RecordKind, SalonRecord, SalonSnapshot, SalonStore } from "./salon-domain";
+import type { AuditEvent, JsonObject, JsonValue, LedgerAggregateRow, LedgerEntry, LedgerInput, LedgerSummaryRow, LedgerUnit, RecordKind, SalonRecord, SalonSnapshot, SalonStore } from "./salon-domain";
 
-export type { AuditEvent, JsonObject, JsonValue, LedgerEntry, LedgerInput, RecordKind, SalonRecord, SalonSnapshot, SalonStore } from "./salon-domain";
+export type { AuditEvent, JsonObject, JsonValue, LedgerAggregateRow, LedgerEntry, LedgerInput, LedgerSummaryRow, LedgerUnit, RecordKind, SalonRecord, SalonSnapshot, SalonStore } from "./salon-domain";
 
 type RecordRow = {
   kind: string;
@@ -190,6 +190,7 @@ function createSchema(db: DatabaseSync) {
     );
   `);
   db.exec("CREATE UNIQUE INDEX IF NOT EXISTS ledger_one_reversal_per_original ON ledger(correction_of) WHERE kind IN ('refund', 'correction')");
+  db.exec("CREATE INDEX IF NOT EXISTS ledger_occurred_at ON ledger(occurred_at)");
   const ledgerColumns = new Set((db.prepare("PRAGMA table_info(ledger)").all() as { name: string }[]).map(({ name }) => name));
   if (!ledgerColumns.has("customer_id")) db.exec("ALTER TABLE ledger ADD COLUMN customer_id TEXT");
   if (!ledgerColumns.has("gross_won")) db.exec("ALTER TABLE ledger ADD COLUMN gross_won INTEGER NOT NULL DEFAULT 0");
@@ -402,6 +403,45 @@ export function createSalonStore(filename = process.env.HAIRHAEYO_DB_PATH || joi
     appendLedgerBatch,
     listLedger() {
       return (db.prepare("SELECT * FROM ledger ORDER BY occurred_at, rowid").all() as LedgerRow[]).map(ledgerFromRow);
+    },
+    listLedgerRange(start: string, endExclusive: string) {
+      return (db.prepare("SELECT * FROM ledger WHERE occurred_at >= ? AND occurred_at < ? ORDER BY occurred_at, rowid").all(start, endExclusive) as LedgerRow[]).map(ledgerFromRow);
+    },
+    aggregateLedger(start: string, endExclusive: string, unit: LedgerUnit) {
+      // occurred_at is a UTC ISO string, and seoulBusinessDate() is identical to its
+      // UTC calendar date: Seoul is UTC+9 and the business day starts at Seoul 09:00,
+      // so the two offsets cancel. A prefix substring is therefore the business date.
+      const expr = `substr(occurred_at, 1, ${unit === "day" ? 10 : unit === "month" ? 7 : 4})`;
+      return db.prepare(`
+        SELECT ${expr} AS key,
+               SUM(gross_won) AS gross,
+               SUM(CASE WHEN kind != 'expense' THEN amount_won ELSE 0 END) AS netPaid,
+               SUM(profit_won) AS profit,
+               COUNT(*) AS count,
+               SUM(CASE WHEN kind IN ('refund', 'correction') THEN 1 ELSE 0 END) AS corrections
+        FROM ledger WHERE occurred_at >= ? AND occurred_at < ?
+        GROUP BY key ORDER BY key
+      `).all(start, endExclusive) as LedgerAggregateRow[];
+    },
+    summarizeLedger(start: string, endExclusive: string) {
+      return db.prepare(`
+        SELECT COALESCE(SUM(gross_won), 0) AS gross,
+               COALESCE(SUM(discount_won), 0) AS discount,
+               -- 포인트 사용은 details.pointsUsedWon이 있으면 그 값이 정본이다 (revenue-data.ts pointsUsed()와 동일 규칙).
+               COALESCE(SUM(CASE WHEN json_extract(details, '$.pointsUsedWon') IS NOT NULL THEN json_extract(details, '$.pointsUsedWon') WHEN points_won < 0 THEN -points_won ELSE 0 END), 0) AS points,
+               COALESCE(SUM(CASE WHEN kind != 'expense' THEN amount_won ELSE 0 END), 0) AS netPaid,
+               COALESCE(SUM(CASE WHEN kind = 'refund' THEN amount_won ELSE 0 END), 0) AS refunds,
+               COALESCE(SUM(vat_won), 0) AS vat,
+               COALESCE(SUM(fee_won), 0) AS fee,
+               COALESCE(SUM(expense_won), 0) AS expense,
+               COALESCE(SUM(profit_won), 0) AS profit,
+               COUNT(*) AS count
+        FROM ledger WHERE occurred_at >= ? AND occurred_at < ?
+      `).get(start, endExclusive) as LedgerSummaryRow;
+    },
+    ledgerBounds() {
+      const row = db.prepare("SELECT substr(MIN(occurred_at), 1, 10) AS first, substr(MAX(occurred_at), 1, 10) AS last FROM ledger").get() as { first: string | null; last: string | null };
+      return row.first && row.last ? { first: row.first, last: row.last } : null;
     },
     getSettings() {
       const row = db.prepare("SELECT payload FROM settings WHERE id = 1").get() as { payload: string } | undefined;

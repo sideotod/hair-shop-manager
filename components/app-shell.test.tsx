@@ -29,4 +29,24 @@ describe("AppShell", () => {
     expect(activeLabels(customers)).toEqual(["고객"]);
     expect(customers).toContain("고객 관리");
   });
+
+  /** 셸 크롬 검증은 원래 대시보드 테스트에 있었다. 셸이 레이아웃으로 올라갔으니 여기가 제자리다. */
+  it("renders the shell chrome once for every route", () => {
+    const html = renderToStaticMarkup(<AppShell ownerName="원장" pathname="/" settings={{ smsRemaining: 500 }}><main /></AppShell>);
+
+    expect(html).toContain("HAIRHAEYO");
+    expect(html).toContain("SALON LEDGER");
+    expect(html).toContain("헤어해요");
+    expect(html).toContain("원장님");
+    expect(html).not.toContain("원장 원장님");
+    for (const label of ["운영 현황", "고객", "예약", "매출·결제", "문자", "운영 설정", "설정"]) expect(html).toContain(`>${label}<`);
+    expect(html).not.toContain(">상품·쿠폰<");
+    for (const mode of ["핸드폰 뒷번호/고객명", "닉네임", "전화번호 뒷번호", "그룹명", "메모", "주소", "방문동기", "이메일", "포인트 카드", "패밀리번호"]) expect(html).toContain(`>${mode}<`);
+    expect(html.match(/<option value=/g)).toHaveLength(10);
+    expect(html).toContain("SMS 500");
+    expect(html).toContain("도움말");
+    expect(html).toContain("로그아웃");
+    expect(html).toContain("min-h-screen w-full");
+    expect(html).not.toContain("min-w-[1280px]");
+  });
 });

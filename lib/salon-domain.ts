@@ -83,6 +83,32 @@ export type SalonSnapshot = {
   auditEvents: readonly AuditEvent[];
 };
 
+/** One `GROUP BY` bucket from the ledger. Only buckets that have rows are returned. */
+export type LedgerAggregateRow = {
+  readonly key: string;
+  readonly gross: number;
+  readonly netPaid: number;
+  readonly profit: number;
+  readonly count: number;
+  readonly corrections: number;
+};
+
+/** Settlement totals for one range. Every field is 0 when the range has no rows. */
+export type LedgerSummaryRow = {
+  readonly gross: number;
+  readonly discount: number;
+  readonly points: number;
+  readonly netPaid: number;
+  readonly refunds: number;
+  readonly vat: number;
+  readonly fee: number;
+  readonly expense: number;
+  readonly profit: number;
+  readonly count: number;
+};
+
+export type LedgerUnit = "day" | "month" | "year";
+
 export type SalonStore = {
   close(): void;
   list<T extends JsonValue = JsonValue>(kind: RecordKind): readonly SalonRecord<T>[];
@@ -92,6 +118,14 @@ export type SalonStore = {
   appendLedger(input: LedgerInput, actor: string): LedgerEntry;
   appendLedgerBatch(inputs: readonly LedgerInput[], actor: string): readonly LedgerEntry[];
   listLedger(): readonly LedgerEntry[];
+  /** Ledger rows in `[start, endExclusive)` by business date. */
+  listLedgerRange(start: string, endExclusive: string): readonly LedgerEntry[];
+  /** Grouped totals over `[start, endExclusive)`. Ascending by key. */
+  aggregateLedger(start: string, endExclusive: string, unit: LedgerUnit): readonly LedgerAggregateRow[];
+  /** Settlement totals over `[start, endExclusive)`. */
+  summarizeLedger(start: string, endExclusive: string): LedgerSummaryRow;
+  /** Earliest and latest business dates present, or null when the ledger is empty. */
+  ledgerBounds(): { readonly first: string; readonly last: string } | null;
   getSettings(): JsonObject;
   saveSettings(values: JsonObject, actor: string): JsonObject;
   snapshot(): SalonSnapshot;

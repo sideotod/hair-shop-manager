@@ -1,0 +1,194 @@
+- generic [active] [ref=f10e1]:
+  - generic [ref=f10e3]:
+    - complementary [ref=f10e4]:
+      - generic [ref=f10e5]:
+        - strong [ref=f10e6]: HAIRHAEYO
+        - generic [ref=f10e7]: SALON LEDGER
+      - navigation "주요 메뉴" [ref=f10e8]:
+        - generic [ref=f10e9]:
+          - paragraph [ref=f10e10]: 운영
+          - link "운영 현황" [ref=f10e11] [cursor=pointer]:
+            - /url: /
+          - link "고객" [ref=f10e13] [cursor=pointer]:
+            - /url: /customers
+          - link "예약" [ref=f10e15] [cursor=pointer]:
+            - /url: /bookings
+        - generic [ref=f10e17]:
+          - paragraph [ref=f10e18]: 정산
+          - link "매출·결제" [ref=f10e19] [cursor=pointer]:
+            - /url: /sales
+          - link "문자" [ref=f10e21] [cursor=pointer]:
+            - /url: /messages
+        - generic [ref=f10e23]:
+          - paragraph [ref=f10e24]: 관리
+          - link "운영 설정" [ref=f10e25] [cursor=pointer]:
+            - /url: /operations
+          - group [ref=f10e27]:
+            - generic "설정" [ref=f10e28] [cursor=pointer]
+      - generic [ref=f10e31]:
+        - strong [ref=f10e32]: 헤어해요
+        - generic [ref=f10e33]: ● 영업중 09:00–20:00
+        - button "로그아웃" [ref=f10e35]
+    - generic [ref=f10e36]:
+      - banner [ref=f10e37]:
+        - generic [ref=f10e38]:
+          - strong [ref=f10e39]: 매출·결제
+          - generic [ref=f10e40]: 2026-08-01 ~ 2026-08-31
+        - search [ref=f10e42]:
+          - combobox "고객 검색 기준" [ref=f10e43]:
+            - option "핸드폰 뒷번호/고객명" [selected]
+            - option "닉네임"
+            - option "전화번호 뒷번호"
+            - option "그룹명"
+            - option "메모"
+            - option "주소"
+            - option "방문동기"
+            - option "이메일"
+            - option "포인트 카드"
+            - option "패밀리번호"
+          - textbox "고객 검색어" [ref=f10e44]:
+            - /placeholder: 고객 검색
+          - button "검색" [ref=f10e45]
+        - link "도움말" [ref=f10e46] [cursor=pointer]:
+          - /url: /settings?section=help
+        - generic [ref=f10e47]: SMS 1,026
+        - link "원장님" [ref=f10e48] [cursor=pointer]:
+          - /url: /settings?section=owner
+          - generic [ref=f10e49]: 서
+      - main [ref=f10e51]:
+        - generic [ref=f10e52]:
+          - paragraph [ref=f10e53]: 결제 기록과 정산을 같은 기준으로 확인합니다.
+          - generic [ref=f10e54]:
+            - button "인쇄" [ref=f10e55]
+            - link "CSV 내보내기" [ref=f10e56] [cursor=pointer]:
+              - /url: data:text/csv;charset=utf-8,…
+        - navigation "매출 기능" [ref=f10e57]:
+          - link "매출 분석" [ref=f10e58] [cursor=pointer]:
+            - /url: "?view=month&cursor=2026-08-06"
+          - link "결제 등록" [ref=f10e59] [cursor=pointer]:
+            - /url: "?view=month&cursor=2026-08-06&tab=payment"
+          - link "지출·정산" [ref=f10e60] [cursor=pointer]:
+            - /url: "?view=month&cursor=2026-08-06&tab=expenses"
+        - region "매출 조회" [ref=f10e61]:
+          - generic [ref=f10e62]:
+            - link "일별" [ref=f10e63] [cursor=pointer]:
+              - /url: "?view=day&cursor=2026-08-06"
+            - link "주별" [ref=f10e64] [cursor=pointer]:
+              - /url: "?view=week&cursor=2026-08-06"
+            - link "월별" [ref=f10e65] [cursor=pointer]:
+              - /url: "?view=month&cursor=2026-08-06"
+            - link "누적" [ref=f10e66] [cursor=pointer]:
+              - /url: "?view=total&cursor=2026-08-06"
+          - generic [ref=f10e67]:
+            - button "이전 기간" [ref=f10e68]: ←
+            - strong [ref=f10e69]: 2026년 8월
+            - button "다음 기간" [ref=f10e70]: →
+        - region "매출 핵심 지표" [ref=f10e71]:
+          - article [ref=f10e72]:
+            - heading "총 매출" [level=2] [ref=f10e73]
+            - paragraph [ref=f10e74]: ₩362,000
+          - article [ref=f10e75]:
+            - heading "실결제" [level=2] [ref=f10e76]
+            - paragraph [ref=f10e77]: ₩362,000
+          - article [ref=f10e78]:
+            - heading "VAT" [level=2] [ref=f10e79]
+            - paragraph [ref=f10e80]: ₩0
+          - article [ref=f10e81]:
+            - heading "지출" [level=2] [ref=f10e82]
+            - paragraph [ref=f10e83]: ₩0
+          - article [ref=f10e84]:
+            - heading "샵 수익" [level=2] [ref=f10e85]
+            - paragraph [ref=f10e86]: ₩352,640
+        - generic [ref=f10e87]:
+          - generic [ref=f10e88]:
+            - heading "일별 추이" [level=2] [ref=f10e90]
+            - generic [ref=f10e91]:
+              - generic [ref=f10e92]:
+                - button "8/1 매출 상세 보기" [ref=f10e93]:
+                  - generic [ref=f10e94]: 8/1
+                  - generic [ref=f10e95]: ₩112,000
+                - button "8/2 매출 상세 보기" [ref=f10e96]:
+                  - generic [ref=f10e97]: 8/2
+                  - generic [ref=f10e98]: ₩81,000
+                - button "8/3 매출 상세 보기" [ref=f10e99]:
+                  - generic [ref=f10e100]: 8/3
+                  - generic [ref=f10e101]: ₩169,000
+              - table [ref=f10e102]:
+                - caption [ref=f10e103]: 일별 매출 표
+                - rowgroup [ref=f10e104]:
+                  - row [ref=f10e105]:
+                    - rowheader "8/1" [ref=f10e106]
+                    - cell "₩112,000" [ref=f10e107]
+                  - row [ref=f10e108]:
+                    - rowheader "8/2" [ref=f10e109]
+                    - cell "₩81,000" [ref=f10e110]
+                  - row [ref=f10e111]:
+                    - rowheader "8/3" [ref=f10e112]
+                    - cell "₩169,000" [ref=f10e113]
+          - generic [ref=f10e114]:
+            - heading "결제 수단" [level=2] [ref=f10e116]
+            - generic [ref=f10e117]:
+              - button "기타 결제수단 상세 보기" [ref=f10e119]:
+                - generic [ref=f10e120]: 기타
+                - generic [ref=f10e121]: 100%
+                - generic [ref=f10e122]: ₩362,000
+              - table [ref=f10e123]:
+                - caption [ref=f10e124]: 결제수단 표
+                - rowgroup [ref=f10e125]:
+                  - row [ref=f10e126]:
+                    - rowheader "기타" [ref=f10e127]
+                    - cell "₩362,000" [ref=f10e128]
+          - generic [ref=f10e129]:
+            - generic [ref=f10e130]:
+              - heading "시술 카테고리" [level=2] [ref=f10e131]
+              - generic [ref=f10e132]: 1개 유형
+            - generic [ref=f10e133]:
+              - generic "시술 카테고리 차트 상호작용 영역" [ref=f10e134]:
+                - button "미분류 시술 카테고리 상세 보기" [ref=f10e136]:
+                  - generic [ref=f10e137]:
+                    - generic [ref=f10e138]: 미분류
+                    - generic [ref=f10e139]: 11건
+                  - generic [ref=f10e142]:
+                    - generic [ref=f10e143]: ₩362,000
+                    - generic [ref=f10e144]: 100%
+              - paragraph [ref=f10e145]:
+                - generic [ref=f10e146]: │
+                - text: 유형은 설정 › 시술·가격에서 관리합니다.
+              - table [ref=f10e147]:
+                - caption [ref=f10e148]: 시술 카테고리 표
+                - rowgroup [ref=f10e149]:
+                  - row [ref=f10e150]:
+                    - rowheader "미분류" [ref=f10e151]
+                    - cell "₩362,000" [ref=f10e152]
+          - generic [ref=f10e153]:
+            - heading "정산" [level=2] [ref=f10e154]
+            - table [ref=f10e155]:
+              - rowgroup [ref=f10e156]:
+                - row [ref=f10e157]:
+                  - rowheader "총 매출" [ref=f10e158]
+                  - cell "₩362,000" [ref=f10e159]
+                - row [ref=f10e160]:
+                  - rowheader "할인" [ref=f10e161]
+                  - cell "₩0" [ref=f10e162]
+                - row [ref=f10e163]:
+                  - rowheader "포인트 사용" [ref=f10e164]
+                  - cell "₩0" [ref=f10e165]
+                - row [ref=f10e166]:
+                  - rowheader "실결제" [ref=f10e167]
+                  - cell "₩362,000" [ref=f10e168]
+                - row [ref=f10e169]:
+                  - rowheader "환불" [ref=f10e170]
+                  - cell "₩0" [ref=f10e171]
+                - row [ref=f10e172]:
+                  - rowheader "VAT" [ref=f10e173]
+                  - cell "₩0" [ref=f10e174]
+                - row [ref=f10e175]:
+                  - rowheader "결제 수수료" [ref=f10e176]
+                  - cell "₩9,360" [ref=f10e177]
+                - row [ref=f10e178]:
+                  - rowheader "지출" [ref=f10e179]
+                  - cell "₩0" [ref=f10e180]
+                - row [ref=f10e181]:
+                  - rowheader "샵 수익" [ref=f10e182]
+                  - cell "₩352,640" [ref=f10e183]
+  - alert [ref=f10e184]

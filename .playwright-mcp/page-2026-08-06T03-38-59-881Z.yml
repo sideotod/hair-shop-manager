@@ -1,0 +1,15 @@
+- generic [active] [ref=e1]:
+  - main [ref=e2]:
+    - region [ref=e3]:
+      - paragraph [ref=e4]: HAIRHAEYO
+      - heading "원장 로그인" [level=1] [ref=e5]
+      - paragraph [ref=e6]: 헤어해요 운영 화면은 원장 계정만 사용할 수 있습니다.
+      - generic [ref=e7]:
+        - generic [ref=e8]:
+          - generic [ref=e9]: 비밀번호
+          - textbox "비밀번호" [ref=e10]
+        - button "로그인" [ref=e11]
+      - paragraph [ref=e12]:
+        - text: "로컬 데모 원장 비밀번호:"
+        - strong [ref=e13]: "952200"
+  - alert [ref=e14]

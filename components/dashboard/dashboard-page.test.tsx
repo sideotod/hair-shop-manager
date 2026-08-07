@@ -12,28 +12,10 @@ describe("DashboardPage", () => {
     const snapshot = createSalonStore(":memory:").snapshot();
     const html = renderToStaticMarkup(<DashboardPage snapshot={snapshot} today={today} />);
 
-    expect(html).toContain("HAIRHAEYO");
-    expect(html).toContain("헤어해요 · SALON MANAGEMENT");
-    expect(html).toContain("헤어해요");
-    expect(html).toContain("원장님");
-    expect(html).not.toContain("원장 원장님");
     expect(html).not.toContain("직원");
     expect(html).not.toContain("디자이너");
 
-    for (const label of ["운영 현황", "고객", "예약", "매출·결제", "문자", "운영 설정", "설정"]) {
-      expect(html).toContain(`>${label}<`);
-    }
-    expect(html).not.toContain(">상품·쿠폰<");
-    for (const mode of ["핸드폰 뒷번호/고객명", "닉네임", "전화번호 뒷번호", "그룹명", "메모", "주소", "방문동기", "이메일", "포인트 카드", "패밀리번호"]) {
-      expect(html).toContain(`>${mode}<`);
-    }
-    expect(html.match(/<option value=/g)).toHaveLength(10);
-    expect(html).toContain('href="/customers?customer=customer-seed-1"');
     expect(html).toContain("SMS 잔여 500건");
-    expect(html).toContain("도움말");
-    expect(html).toContain("로그아웃");
-    expect(html).toContain("min-h-screen w-full");
-    expect(html).not.toContain("min-w-[1280px]");
 
     expect(html).toContain("오늘 매출");
     expect(html).toContain("오늘 예약");
@@ -65,7 +47,6 @@ describe("DashboardPage", () => {
     };
     const html = renderToStaticMarkup(<DashboardPage snapshot={snapshot} today={today} />);
 
-    expect(html).toContain("이수진 원장님");
     expect(html).toContain("SMS 잔여 0건");
     expect(html).toContain("오늘 예약이 없습니다.");
     expect(html).toContain("대기 고객이 없습니다.");
@@ -137,13 +118,12 @@ describe("DashboardPage", () => {
     expect(html).toContain("audit · 날짜 확인 필요");
   });
 
-  it("preserves inert background behavior while an overlay is open", () => {
+  it("keeps the token scope wrapping the shell background", () => {
     const html = renderToStaticMarkup(
       <AppShell
-        activeHref="/"
         customers={[]}
-        overlay={<div role="dialog">고객 상세</div>}
         ownerName="원장"
+        pathname="/"
         settings={{ brandColor: "#123456" }}
         shopName="헤어해요"
         smsRemaining={500}
@@ -153,14 +133,11 @@ describe("DashboardPage", () => {
     );
 
     expect(html).toContain("data-app-shell-background");
-    expect(html).toContain("inert");
-    expect(html).toContain('aria-hidden="true"');
-    expect(html).toContain('role="dialog"');
-    expect(html).toMatch(/data-app-shell-token-scope[^>]*style="[^"]*--brand:#123456[^"]*"[\s\S]*data-app-shell-background[\s\S]*role="dialog"/);
+    expect(html).toMatch(/data-app-shell-token-scope[^>]*style="[^"]*--brand:#123456[^"]*"[\s\S]*data-app-shell-background/);
   });
 
   it("reads persisted menu visibility and visual tokens without changing route links", () => {
-    const html = renderToStaticMarkup(<AppShell settings={{ hiddenMenus: ["/messages"], backgroundColor: "#abcdef", brandColor: "#123456" }}><main>설정 적용</main></AppShell>);
+    const html = renderToStaticMarkup(<AppShell pathname="/" settings={{ hiddenMenus: ["/messages"], backgroundColor: "#abcdef", brandColor: "#123456" }}><main>설정 적용</main></AppShell>);
     expect(html).not.toContain('href="/messages"');
     expect(html).toContain('href="/settings?section=help"');
     expect(html).toContain("--background:#abcdef");

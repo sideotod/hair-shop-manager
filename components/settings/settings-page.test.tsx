@@ -126,15 +126,13 @@ describe("SettingsPage", () => {
     expect(html).toContain('name="ownerName"');
     expect(html).toContain('value="민지"');
     expect(html).toContain('name="confirmPassword"');
-    expect(html).not.toContain('href="/messages"');
-    expect(html).toContain("--background:#f7f5f6");
     expect(html).not.toContain("상품 설정");
     expect(html).not.toContain("쿠폰 설정");
   });
 
-  it("uses the same visual defaults in the settings form and app shell", () => {
+  it("never offers raw visual token fields to the owner", () => {
     const html = renderToStaticMarkup(<SettingsPage {...props} settings={{ shopName: "강남점", ownerName: "민지" }} section="customer" />);
-    for (const token of ["#f2f1ed", "#191b19", "#0d3a33", "#0d1512"]) expect(html.match(new RegExp(token, "g"))?.length).toBeGreaterThanOrEqual(2);
+    for (const name of ["backgroundColor", "foregroundColor", "brandColor", "sidebarColor"]) expect(html).not.toContain(`name="${name}"`);
   });
 
   it("renders customer, payment, booking, and dry-run messaging policies", () => {

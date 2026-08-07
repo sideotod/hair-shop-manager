@@ -3,19 +3,13 @@
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useEffect, useRef, useState, useSyncExternalStore } from "react";
-import {
-  Bar,
-  BarChart,
-  LabelList,
-  ResponsiveContainer,
-  XAxis,
-  YAxis,
-} from "recharts";
 
-import { AppShell } from "../app-shell";
+import { ModalHost } from "../modal-host";
 import type { JsonObject } from "../../lib/salon-domain";
-import type { RevenueAnalytics } from "./revenue-analytics";
-import { createRevenueCsv } from "./revenue-csv";
+import type { RevenueAnalyticsView } from "./revenue-analytics";
+import { RevenueBarChart } from "./revenue-bar-chart";
+import { RevenueDayChart } from "./revenue-day-chart";
+import type { RevenueAggregatePoint, RevenueSummary } from "../../lib/revenue-aggregate";
 import {
   RevenueDetailDrawer,
   type RevenueSelection,
@@ -27,7 +21,17 @@ import {
   type RevenueQuery,
 } from "./revenue-query";
 
-const card = "rounded-[8px] border border-[var(--border)] bg-[var(--surface)] shadow-[0_1px_2px_rgba(13,21,18,0.03)]";
+const card = "rounded-[var(--radius-card)] border border-[var(--border)] bg-[var(--surface)] shadow-[0_1px_2px_rgba(13,21,18,0.03)]";
+const chartCard = card;
+
+/** 서버가 계산해 넘기는 차트 입력. 프런트는 이 값을 다시 합산하지 않는다 (§14). */
+export type RevenueSeries = {
+  readonly label: string;
+  readonly points: readonly RevenueAggregatePoint[];
+  readonly total: number;
+  readonly count: number;
+};
+export type RevenueDayChartData = RevenueSeries & { readonly deltaPrevious: number | null };
 const won = (value: number) => `₩${value.toLocaleString("ko-KR")}`;
 export function revenueChartMotion(
   reduced: boolean,
@@ -43,11 +47,7 @@ export function revenueChartMotion(
 }
 export function revenueChartMotions(reduced: boolean) {
   return {
-    trend: revenueChartMotion(reduced, 0, 480),
-    payment: revenueChartMotion(reduced, 40, 480),
     service: revenueChartMotion(reduced, 0, 460),
-    gender: revenueChartMotion(reduced, 20, 440),
-    visitType: revenueChartMotion(reduced, 40, 440),
   };
 }
 const reducedMotionQuery = "(prefers-reduced-motion: reduce)";
@@ -84,7 +84,7 @@ export function restoreRevenueDrawerFocus(
 export function resolveRevenueSelection(
   kind: RevenueSelection["kind"],
   value: unknown,
-  analytics: RevenueAnalytics,
+  analytics: RevenueAnalyticsView,
 ): RevenueSelection | null {
   if (!value || typeof value !== "object") return null;
   const chart = value as {
@@ -103,31 +103,40 @@ export function resolveRevenueSelection(
       ? { kind, key: analytics.trend[index].date }
       : null;
   const items =
-    kind === "payment"
-      ? analytics.payments
-      : kind === "service"
-        ? analytics.services
-        : kind === "gender"
-          ? analytics.genders
-          : analytics.visitTypes;
+    kind === "payment" ? analytics.payments : analytics.services;
   return items[index] ? { kind, key: items[index].name } : null;
+}
+
+/** Figma 6:2 단일 색상 램프. 순위가 곧 농도. 값은 토큰에서만 나온다 (A2-7). */
+const barFills = ["var(--brand)", ...[80, 68, 56, 44].map((pct) => `color-mix(in srgb, var(--success) ${pct}%, transparent)`)];
+export function barFill(index: number) {
+  return barFills[Math.min(index, barFills.length - 1)];
+}
+/** 0~1 배율. scaleX로 그려 레이아웃 없이 합성만 시킨다. 최소 2%는 남겨 작은 값도 보이게. */
+export function barScale(sales: number, max: number) {
+  return max > 0 ? Math.max(sales / max, 0.02) : 0;
 }
 
 function ChartCard({
   title,
   kind,
   children,
+  meta,
 }: {
   title: string;
   kind: RevenueSelection["kind"];
   children: React.ReactNode;
+  meta?: string;
 }) {
   return (
-    <section className={`${card} min-h-[320px] p-5`}>
-      <h2 className="text-[17px] font-bold" id={`revenue-chart-${kind}-title`}>
-        {title}
-      </h2>
-      <div className="mt-5">{children}</div>
+    <section className={`${chartCard} flex flex-col overflow-hidden`}>
+      <div className="flex items-center justify-between px-[18px] pb-[13px] pt-[15px]">
+        <h2 className="text-[14px] font-semibold" id={`revenue-chart-${kind}-title`}>
+          {title}
+        </h2>
+        {meta && <span className="text-[11.5px] text-[var(--muted)]">{meta}</span>}
+      </div>
+      <div className="border-t border-[var(--border)] px-[18px] pb-[10px] pt-[8px]">{children}</div>
     </section>
   );
 }
@@ -146,41 +155,13 @@ function ChartSurface({
     <div
       aria-describedby={`revenue-chart-${kind}-title`}
       aria-label={`${label} 차트 상호작용 영역`}
-      className="h-[230px] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--brand)]"
+      className="max-h-[280px] overflow-y-auto focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--brand)]"
       data-revenue-chart={kind}
       onPointerDown={(event) => focusChartSurface(event.currentTarget)}
       ref={onReady}
       tabIndex={0}
     >
       {children}
-    </div>
-  );
-}
-function ValueButtons({
-  kind,
-  label,
-  items,
-  onSelect,
-}: {
-  kind: RevenueSelection["kind"];
-  label: string;
-  items: readonly { key: string; text: string }[];
-  onSelect: (key: string, trigger: HTMLButtonElement) => void;
-}) {
-  return (
-    <div aria-label={`${label} 값`} className="mt-3 flex flex-wrap gap-2">
-      {items.map((item) => (
-        <button
-          aria-label={`${item.key} ${label} 상세 보기`}
-          className="rounded-full border border-[var(--border)] bg-white px-3 py-1 text-[11px] font-medium focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--brand)]"
-          data-revenue-selection={`${kind}:${item.key}`}
-          key={item.key}
-          onClick={(event) => onSelect(item.key, event.currentTarget)}
-          type="button"
-        >
-          {item.text}
-        </button>
-      ))}
     </div>
   );
 }
@@ -208,12 +189,21 @@ function DataTable({
 
 export function RevenueDashboard({
   analytics,
+  daily,
+  monthly,
+  yearly,
   query,
   settings = {},
+  summary,
 }: {
-  analytics: RevenueAnalytics;
+  analytics: RevenueAnalyticsView;
+  daily: RevenueDayChartData;
+  monthly: RevenueSeries;
+  yearly: RevenueSeries;
   query: RevenueQuery;
   settings?: JsonObject;
+  /** 서버 집계 정본 (§14). 없으면 정산 표에서 읽어 같은 값을 쓴다. */
+  summary?: RevenueSummary;
 }) {
   const router = useRouter();
   const motion = revenueChartMotions(usePrefersReducedMotion());
@@ -235,10 +225,6 @@ export function RevenueDashboard({
     setTrigger(source);
     setSelection({ kind, key });
   };
-  const selectChart = (kind: RevenueSelection["kind"]) => (value: unknown) => {
-    const next = resolveRevenueSelection(kind, value, analytics);
-    if (next) open(next.kind, next.key, surfaces.current[kind] ?? null);
-  };
   const ref =
     (kind: RevenueSelection["kind"]) => (element: HTMLDivElement | null) => {
       surfaces.current[kind] = element ?? undefined;
@@ -248,82 +234,100 @@ export function RevenueDashboard({
       router,
       direction < 0 ? previousRevenueQuery(query) : nextRevenueQuery(query),
     );
-  const csvHref = `data:text/csv;charset=utf-8,${encodeURIComponent(`\uFEFF${createRevenueCsv(analytics.transactions)}`)}`;
+  // CSV\uB294 \uC11C\uBC84 \uB77C\uC6B0\uD2B8\uAC00 \uB9CC\uB4E0\uB2E4. data: URL\uB85C \uB9CC\uB4E4\uBA74 \uB204\uC801 \uAE30\uAC04\uC5D0\uC11C \uBB38\uC11C\uAC00 1MB \uAC00\uAE4C\uC774 \uCEE4\uC9C4\uB2E4 (A4-5).
+  const csvHref = `/sales/revenue-csv?${serializeRevenueQuery(query)}`;
+  // KPI\uB294 \uC11C\uBC84 \uC9D1\uACC4\uC5D0\uC11C \uD544\uB4DC\uB85C \uC9C1\uC811 \uC77D\uB294\uB2E4. \uC774\uB984 \uBB38\uC790\uC5F4\uB85C \uCC3E\uC9C0 \uC54A\uB294\uB2E4 (A3-8).
+  const settled = (name: string) => analytics.settlement.find((row) => row.name === name)?.value ?? 0;
+  const kpis: readonly { label: string; value: number; delta?: number | null }[] = [
+    { label: "\uCD1D \uB9E4\uCD9C", value: summary ? summary.gross : settled("\uCD1D \uB9E4\uCD9C"), delta: summary?.deltaPrevious ?? null },
+    { label: "\uC2E4\uACB0\uC81C", value: summary ? summary.netPaid : settled("\uC2E4\uACB0\uC81C") },
+    { label: "VAT", value: summary ? summary.vat : settled("VAT") },
+    { label: "\uC9C0\uCD9C", value: summary ? summary.expense : settled("\uC9C0\uCD9C") },
+    { label: "\uC0F5 \uC218\uC775", value: summary ? summary.profit : settled("\uC0F5 \uC218\uC775") },
+  ];
+  const serviceTotal = analytics.services.reduce((total, row) => total + row.sales, 0);
+  const serviceMax = Math.max(0, ...analytics.services.map((row) => row.sales));
   const bars = (
-    kind: "service" | "gender" | "visitType",
-    rows: readonly { name: string; sales: number }[],
+    kind: "service",
+    rows: readonly { name: string; sales: number; count: number }[],
     title: string,
     chartMotion: ReturnType<typeof revenueChartMotion>,
   ) => (
-    <ChartCard kind={kind} title={title}>
+    <ChartCard kind={kind} meta={`${rows.length}개 유형`} title={title}>
       <ChartSurface kind={kind} label={title} onReady={ref(kind)}>
-        <ResponsiveContainer height="100%" width="100%">
-          <BarChart
-            data={rows}
-            layout="vertical"
-            margin={{ left: 18, right: 88 }}
-            onClick={selectChart(kind)}
-          >
-            <XAxis hide type="number" />
-            <YAxis dataKey="name" tickLine={false} type="category" width={96} />
-            <Bar
-              {...chartMotion}
-              dataKey="sales"
-              fill="#0d3a33"
-              radius={[0, 5, 5, 0]}
+        <div className="divide-y divide-[var(--border)]">
+          {rows.map((row, index) => (
+            <button
+              aria-label={`${row.name} ${title} 상세 보기`}
+              className="flex w-full items-center gap-3 py-[10px] text-left hover:bg-[var(--background)] focus-visible:outline-2 focus-visible:outline-[var(--brand)]"
+              data-revenue-selection={`${kind}:${row.name}`}
+              key={row.name}
+              onClick={(event) => open(kind, row.name, event.currentTarget)}
+              type="button"
             >
-              <LabelList dataKey="sales" formatter={(value) => won(Number(value ?? 0))} position="right" />
-            </Bar>
-          </BarChart>
-        </ResponsiveContainer>
+              <span className="flex w-[80px] shrink-0 items-center gap-2">
+                <span className="text-[12.5px] font-semibold">{row.name}</span>
+                <span className="text-[11.5px] text-[var(--muted)]">{row.count}건</span>
+              </span>
+              {/* 항목이 하나면 막대는 항상 100%라 비교 정보가 없다. 막대 대신 사실을 쓴다 (A2-2). */}
+              {rows.length > 1 ? (
+                <span className="relative h-[22px] min-w-0 flex-1 overflow-clip">
+                  <span
+                    className="absolute left-0 top-[2px] h-[18px] w-full origin-left rounded-[var(--radius-chip)]"
+                    style={{
+                      background: barFill(index),
+                      transform: `scaleX(${barScale(row.sales, serviceMax)})`,
+                      transition: chartMotion.isAnimationActive ? `transform ${chartMotion.animationDuration}ms ease-out ${chartMotion.animationBegin}ms` : undefined,
+                    }}
+                  />
+                </span>
+              ) : (
+                <span className="min-w-0 flex-1 text-[11.5px] text-[var(--muted)]">이 기간의 유일한 유형입니다.</span>
+              )}
+              <span className="flex w-[145px] shrink-0 items-center justify-end gap-2.5">
+                <span className="font-mono text-[12px] font-medium tabular-nums">{won(row.sales)}</span>
+                <span className="w-[38px] text-right text-[11.5px] text-[var(--muted)]">{rows.length > 1 ? `${serviceTotal ? Math.round((row.sales / serviceTotal) * 100) : 0}%` : "전액"}</span>
+              </span>
+            </button>
+          ))}
+          {rows.length === 0 && <p className="py-6 text-center text-[12px] text-[var(--muted)]">기간에 해당하는 매출이 없습니다.</p>}
+        </div>
       </ChartSurface>
-      <ValueButtons
-        items={rows.map((row) => ({
-          key: row.name,
-          text: `${row.name} ${won(row.sales)}`,
-        }))}
-        kind={kind}
-        label={title}
-        onSelect={(key, source) => open(kind, key, source)}
-      />
+      <p className="mt-3 text-[11.5px] text-[var(--muted)]">유형은 설정 › 시술·가격에서 관리합니다.</p>
       <DataTable caption={`${title} 표`} rows={rows} />
     </ChartCard>
   );
   return (
-    <AppShell
-      activeHref="/sales"
-      settings={settings}
-      overlay={
-        selection ? (
-          <RevenueDetailDrawer
-            analytics={analytics}
-            onClose={() => setSelection(null)}
-            query={query}
-            selection={selection}
-          />
-        ) : undefined
-      }
-    >
-      <main className="px-10 pb-16 pt-9">
-        <div className="flex items-start justify-between gap-6">
-          <div>
-            <h1 className="text-[28px] font-bold tracking-[-0.03em]">
-              매출·결제
-            </h1>
-            <p className="mt-1 text-[13px] text-[var(--muted)]">
-              결제 기록과 정산을 같은 기준으로 확인합니다.
-            </p>
-          </div>
+      <main className="px-7 pb-6 pt-5" data-revenue-print>
+        {selection && (
+          <ModalHost label="매출 상세">
+            <RevenueDetailDrawer
+              analytics={analytics}
+              onClose={() => setSelection(null)}
+              query={query}
+              selection={selection}
+            />
+          </ModalHost>
+        )}
+        {/* 인쇄본에는 앱 헤더가 없다. 무엇을 언제 뽑은 종이인지 남긴다 (G7). */}
+        <div className="print-only mb-4 border-b border-[var(--border)] pb-3">
+          <strong className="text-[17px] font-semibold">매출·결제</strong>
+          <span className="ml-3 font-mono text-[12px]">{analytics.selectedPeriod.start} ~ {analytics.selectedPeriod.end}</span>
+        </div>
+        <div className="no-print flex items-start justify-between gap-6">
+          <p className="text-[13px] text-[var(--muted)]">
+            결제 기록과 정산을 같은 기준으로 확인합니다. {analytics.selectedPeriod.start} ~ {analytics.selectedPeriod.end}
+          </p>
           <div className="flex gap-2">
             <button
-              className="h-10 rounded-[10px] border border-[var(--border)] bg-white px-4 text-[13px] font-medium text-[var(--brand)]"
+              className="h-10 rounded-[var(--radius-card)] border border-[var(--border)] bg-[var(--surface)] px-4 text-[13px] font-medium text-[var(--brand)]"
               onClick={() => window.print()}
               type="button"
             >
               인쇄
             </button>
             <a
-              className="flex h-10 items-center rounded-[10px] bg-[var(--brand)] px-5 text-[13px] font-medium text-white"
+              className="flex h-10 items-center rounded-[var(--radius-card)] bg-[var(--brand)] px-5 text-[13px] font-medium text-white"
               download={`hairhaeyo-revenue-${analytics.selectedPeriod.start}_${analytics.selectedPeriod.end}.csv`}
               href={csvHref}
             >
@@ -331,21 +335,21 @@ export function RevenueDashboard({
             </a>
           </div>
         </div>
-        <nav aria-label="매출 기능" className="mt-6 flex gap-2">
+        <nav aria-label="매출 기능" className="no-print mt-6 flex gap-2">
           <Link
-            className="rounded-[10px] bg-[var(--brand)] px-4 py-2 text-sm font-medium text-white"
+            className="rounded-[var(--radius-control)] bg-[var(--brand)] px-4 py-2 text-sm font-medium text-white"
             href={`?${serializeRevenueQuery(query)}`}
           >
             매출 분석
           </Link>
           <Link
-            className="rounded-[10px] border border-[var(--border)] bg-white px-4 py-2 text-sm font-medium"
+            className="rounded-[var(--radius-control)] border border-[var(--border)] bg-[var(--surface)] px-4 py-2 text-sm font-medium"
             href={`?${serializeRevenueQuery(query)}&tab=payment`}
           >
             결제 등록
           </Link>
           <Link
-            className="rounded-[10px] border border-[var(--border)] bg-white px-4 py-2 text-sm font-medium"
+            className="rounded-[var(--radius-control)] border border-[var(--border)] bg-[var(--surface)] px-4 py-2 text-sm font-medium"
             href={`?${serializeRevenueQuery(query)}&tab=expenses`}
           >
             지출·정산
@@ -355,32 +359,32 @@ export function RevenueDashboard({
           aria-label="매출 조회"
           className={`${card} mt-4 flex items-center justify-between p-4`}
         >
-          <div className="flex gap-2">
-            {(["day", "month", "total"] as const).map((view) => (
+          <div className="no-print flex gap-2">
+            {(["day", "week", "month", "year", "total"] as const).map((view) => (
               <Link
                 aria-current={query.view === view ? "page" : undefined}
-                className={`rounded-[9px] px-4 py-2 text-sm font-medium ${query.view === view ? "bg-[var(--brand)] text-white" : "border border-[var(--border)]"}`}
+                className={`rounded-[8px] px-[11px] py-[7px] text-[12px] font-medium ${query.view === view ? "bg-[var(--brand)] text-white" : "border border-[var(--border)] bg-[var(--surface)]"}`}
                 href={`?${serializeRevenueQuery({ ...query, view })}`}
                 key={view}
               >
-                {view === "day" ? "일별" : view === "month" ? "월별" : "누적"}
+                {view === "day" ? "일별" : view === "week" ? "주별" : view === "month" ? "월별" : view === "year" ? "연도" : "누적"}
               </Link>
             ))}
           </div>
           <div className="flex items-center gap-3">
             <button
               aria-label="이전 기간"
-              className="rounded border border-[var(--border)] px-3 py-2 disabled:opacity-40"
+              className="no-print rounded border border-[var(--border)] px-3 py-2 disabled:opacity-40"
               disabled={query.view === "total"}
               onClick={() => navigate(-1)}
               type="button"
             >
               ←
             </button>
-            <strong>{analytics.selectedPeriod.label}</strong>
+            <strong className="font-mono text-[12px] font-medium tabular-nums text-[var(--muted)]">{analytics.selectedPeriod.label}</strong>
             <button
               aria-label="다음 기간"
-              className="rounded border border-[var(--border)] px-3 py-2 disabled:opacity-40"
+              className="no-print rounded border border-[var(--border)] px-3 py-2 disabled:opacity-40"
               disabled={query.view === "total"}
               onClick={() => navigate(1)}
               type="button"
@@ -393,39 +397,67 @@ export function RevenueDashboard({
           aria-label="매출 핵심 지표"
           className="mt-4 grid grid-cols-5 gap-3"
         >
-          {[
-            ["총 매출", analytics.settlement.find((row) => row.name === "총 매출")?.value ?? 0],
-            ["실결제", analytics.settlement.find((row) => row.name === "실결제")?.value ?? 0],
-            ["VAT", analytics.settlement.find((row) => row.name === "VAT")?.value ?? 0],
-            ["지출", analytics.settlement.find((row) => row.name === "지출")?.value ?? 0],
-            ["샵 수익", analytics.settlement.find((row) => row.name === "샵 수익")?.value ?? 0],
-          ].map(([label, value]) => (
-            <article className={`${card} px-4 py-4`} key={String(label)}>
-              <h2 className="text-[13px] font-medium text-[var(--muted)]">
+          {kpis.map(({ label, value, delta }) => (
+            <article className={`${card} px-[16px] py-[13px]`} key={label}>
+              <h2 className="text-[11.5px] text-[var(--muted)]">
                 {label}
               </h2>
-              <p className="mt-3 text-[20px] font-bold leading-none tabular-nums">
-                {won(Number(value))}
+              <p className="mt-[6px] font-mono text-[17px] font-semibold leading-none tabular-nums">
+                {won(value)}
               </p>
+              {delta !== undefined && (
+                <p className="mt-[7px] text-[11px] text-[var(--muted)]">
+                  직전 기간{" "}
+                  {delta === null ? (
+                    <span>–</span>
+                  ) : (
+                    <strong className={`font-mono tabular-nums ${delta < 0 ? "text-[var(--danger)]" : "text-[var(--success)]"}`}>
+                      {delta > 0 ? "+" : ""}
+                      {delta}%
+                    </strong>
+                  )}
+                </p>
+              )}
             </article>
           ))}
         </section>
+        <div className="mt-5">
+          <RevenueDayChart
+            count={daily.count}
+            deltaPrevious={daily.deltaPrevious}
+            label={daily.label}
+            points={daily.points}
+            total={daily.total}
+            transactionsHref={(date) => `/sales/transactions?${serializeRevenueQuery({ view: "day", cursor: date })}`}
+          />
+        </div>
+        <div className="mt-5 grid grid-cols-[minmax(0,2fr)_minmax(0,1fr)] gap-5">
+          <RevenueBarChart
+            count={monthly.count}
+            drilldownHref={(key) => `?${serializeRevenueQuery({ view: "month", cursor: `${key}-01` })}`}
+            emptyText="이 해에 기록된 매출이 없습니다."
+            label={monthly.label}
+            points={monthly.points}
+            previousLabel="전월"
+            title="월별 매출"
+            total={monthly.total}
+            yearOverYearLabel="전년"
+          />
+          <RevenueBarChart
+            count={yearly.count}
+            drilldownHref={(key) => `?${serializeRevenueQuery({ view: "year", cursor: `${key}-01-01` })}`}
+            emptyText="아직 기록된 매출이 없습니다."
+            label={yearly.label}
+            points={yearly.points}
+            previousLabel="전년"
+            title="연도별 매출"
+            total={yearly.total}
+          />
+        </div>
         <div className="mt-5 grid grid-cols-[minmax(0,2fr)_392px] gap-5">
-          <ChartCard kind="date" title="일별 추이">
-            <div className="max-h-[280px] divide-y divide-[var(--border)] overflow-y-auto" data-revenue-chart="date" ref={ref("date")}>
-              {analytics.trend.map((row) => <button aria-label={`${row.date} 매출 상세 보기`} className="grid w-full grid-cols-[1fr_auto] items-center gap-4 py-3 text-left text-sm hover:bg-[var(--background)] focus-visible:outline-2 focus-visible:outline-[var(--brand)]" data-revenue-selection={`date:${row.date}`} key={row.date} onClick={(event) => open("date", row.date, event.currentTarget)} type="button"><span className="font-medium">{row.date}</span><span className="font-mono font-semibold tabular-nums">{won(row.gross)}</span></button>)}
-            </div>
-            <DataTable
-              caption="일별 매출 표"
-              rows={analytics.trend.map((row) => ({
-                name: row.date,
-                sales: row.gross,
-              }))}
-            />
-          </ChartCard>
           <ChartCard kind="payment" title="결제 수단">
             <div className="max-h-[280px] divide-y divide-[var(--border)] overflow-y-auto" data-revenue-chart="payment" ref={ref("payment")}>
-              {analytics.payments.map((row) => <button aria-label={`${row.name} 결제수단 상세 보기`} className="grid w-full grid-cols-[1fr_auto_auto] items-center gap-4 py-3 text-left text-sm hover:bg-[var(--background)] focus-visible:outline-2 focus-visible:outline-[var(--brand)]" data-revenue-selection={`payment:${row.name}`} key={row.name} onClick={(event) => open("payment", row.name, event.currentTarget)} type="button"><span className="font-medium">{row.name}</span><span className="text-[var(--muted)]">{row.value}%</span><span className="font-mono font-semibold tabular-nums">{won(row.amount)}</span></button>)}
+              {analytics.payments.map((row) => <button aria-label={`${row.name} 결제수단 상세 보기`} className="grid w-full grid-cols-[1fr_auto_auto] items-center gap-4 py-3 text-left text-sm hover:bg-[var(--background)] focus-visible:outline-2 focus-visible:outline-[var(--brand)]" data-revenue-selection={`payment:${row.name}`} key={row.name} onClick={(event) => open("payment", row.name, event.currentTarget)} type="button"><span className="font-medium">{row.name}</span><span className="text-[var(--muted)]">{analytics.payments.length > 1 ? `${row.value}%` : "전액"}</span><span className="font-mono font-semibold tabular-nums">{won(row.amount)}</span></button>)}
             </div>
             <DataTable
               caption="결제수단 표"
@@ -436,13 +468,6 @@ export function RevenueDashboard({
             />
           </ChartCard>
           {bars("service", analytics.services, "시술 카테고리", motion.service)}
-          {bars("gender", analytics.genders, "성별 매출", motion.gender)}
-          {bars(
-            "visitType",
-            analytics.visitTypes,
-            "신규 · 재방문",
-            motion.visitType,
-          )}
           <section className={`${card} p-5`}>
             <h2 className="text-[17px] font-bold">정산</h2>
             <table className="mt-4 w-full text-sm">
@@ -463,6 +488,5 @@ export function RevenueDashboard({
           </section>
         </div>
       </main>
-    </AppShell>
   );
 }

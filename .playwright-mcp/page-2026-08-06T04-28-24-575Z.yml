@@ -1,0 +1,302 @@
+- generic [active] [ref=f5e1]:
+  - generic [ref=f5e3]:
+    - complementary [ref=f5e4]:
+      - generic [ref=f5e5]:
+        - strong [ref=f5e6]: HAIRHAEYO
+        - generic [ref=f5e7]: SALON LEDGER
+      - navigation "주요 메뉴" [ref=f5e8]:
+        - generic [ref=f5e9]:
+          - paragraph [ref=f5e10]: 운영
+          - link "운영 현황" [ref=f5e11] [cursor=pointer]:
+            - /url: /
+          - link "고객" [ref=f5e13] [cursor=pointer]:
+            - /url: /customers
+          - link "예약" [ref=f5e15] [cursor=pointer]:
+            - /url: /bookings
+        - generic [ref=f5e17]:
+          - paragraph [ref=f5e18]: 정산
+          - link "매출·결제" [ref=f5e19] [cursor=pointer]:
+            - /url: /sales
+          - link "문자" [ref=f5e21] [cursor=pointer]:
+            - /url: /messages
+        - generic [ref=f5e23]:
+          - paragraph [ref=f5e24]: 관리
+          - link "운영 설정" [ref=f5e25] [cursor=pointer]:
+            - /url: /operations
+          - group [ref=f5e27]:
+            - generic "설정" [ref=f5e28] [cursor=pointer]
+      - generic [ref=f5e31]:
+        - strong [ref=f5e32]: 헤어해요
+        - generic [ref=f5e33]: ● 영업중 09:00–20:00
+        - button "로그아웃" [ref=f5e35]
+    - generic [ref=f5e36]:
+      - banner [ref=f5e37]:
+        - generic [ref=f5e38]:
+          - strong [ref=f5e39]: 매출·결제
+          - generic [ref=f5e40]: 2026-08-01 ~ 2026-08-31
+        - search [ref=f5e42]:
+          - combobox "고객 검색 기준" [ref=f5e43]:
+            - option "핸드폰 뒷번호/고객명" [selected]
+            - option "닉네임"
+            - option "전화번호 뒷번호"
+            - option "그룹명"
+            - option "메모"
+            - option "주소"
+            - option "방문동기"
+            - option "이메일"
+            - option "포인트 카드"
+            - option "패밀리번호"
+          - textbox "고객 검색어" [ref=f5e44]:
+            - /placeholder: 고객 검색
+          - button "검색" [ref=f5e45]
+        - link "도움말" [ref=f5e46] [cursor=pointer]:
+          - /url: /settings?section=help
+        - generic [ref=f5e47]: SMS 1,026
+        - link "원장님" [ref=f5e48] [cursor=pointer]:
+          - /url: /settings?section=owner
+          - generic [ref=f5e49]: 서
+      - main [ref=f5e51]:
+        - generic [ref=f5e52]:
+          - paragraph [ref=f5e53]: 결제 기록과 정산을 같은 기준으로 확인합니다.
+          - generic [ref=f5e54]:
+            - button "인쇄" [ref=f5e55]
+            - link "CSV 내보내기" [ref=f5e56] [cursor=pointer]:
+              - /url: data:text/csv;charset=utf-8,…
+        - navigation "매출 기능" [ref=f5e57]:
+          - link "매출 분석" [ref=f5e58] [cursor=pointer]:
+            - /url: "?view=month&cursor=2026-08-06"
+          - link "결제 등록" [ref=f5e59] [cursor=pointer]:
+            - /url: "?view=month&cursor=2026-08-06&tab=payment"
+          - link "지출·정산" [ref=f5e60] [cursor=pointer]:
+            - /url: "?view=month&cursor=2026-08-06&tab=expenses"
+        - region "매출 조회" [ref=f5e61]:
+          - generic [ref=f5e62]:
+            - link "일별" [ref=f5e63] [cursor=pointer]:
+              - /url: "?view=day&cursor=2026-08-06"
+            - link "주별" [ref=f5e64] [cursor=pointer]:
+              - /url: "?view=week&cursor=2026-08-06"
+            - link "월별" [ref=f5e65] [cursor=pointer]:
+              - /url: "?view=month&cursor=2026-08-06"
+            - link "누적" [ref=f5e66] [cursor=pointer]:
+              - /url: "?view=total&cursor=2026-08-06"
+          - generic [ref=f5e67]:
+            - button "이전 기간" [ref=f5e68]: ←
+            - strong [ref=f5e69]: 2026년 8월
+            - button "다음 기간" [ref=f5e70]: →
+        - region "매출 핵심 지표" [ref=f5e71]:
+          - article [ref=f5e72]:
+            - heading "총 매출" [level=2] [ref=f5e73]
+            - paragraph [ref=f5e74]: ₩362,000
+          - article [ref=f5e75]:
+            - heading "실결제" [level=2] [ref=f5e76]
+            - paragraph [ref=f5e77]: ₩362,000
+          - article [ref=f5e78]:
+            - heading "VAT" [level=2] [ref=f5e79]
+            - paragraph [ref=f5e80]: ₩0
+          - article [ref=f5e81]:
+            - heading "지출" [level=2] [ref=f5e82]
+            - paragraph [ref=f5e83]: ₩0
+          - article [ref=f5e84]:
+            - heading "샵 수익" [level=2] [ref=f5e85]
+            - paragraph [ref=f5e86]: ₩352,640
+        - generic [ref=f5e88]:
+          - generic [ref=f5e89]:
+            - generic [ref=f5e90]:
+              - heading "일별 매출" [level=2] [ref=f5e91]
+              - paragraph [ref=f5e92]:
+                - strong [ref=f5e93]: ₩362,000
+                - generic [ref=f5e94]: 2026년 8월 · 11건
+            - paragraph [ref=f5e95]:
+              - text: 전월 대비
+              - strong [ref=f5e96]: "-88.9%"
+              - generic [ref=f5e97]: 진행 중인 달이라 지난달 전체와 비교됩니다
+          - generic [ref=f5e98]:
+            - generic [ref=f5e99]:
+              - generic [ref=f5e100]: 17만
+              - generic [ref=f5e101]: 8만
+              - generic [ref=f5e102]: "0"
+            - generic [ref=f5e103]:
+              - link "1일 ₩112,000. 거래 목록 보기" [ref=f5e106] [cursor=pointer]:
+                - /url: /sales/transactions?view=day&cursor=2026-08-01
+                - generic [ref=f5e108]: "1"
+              - link "2일 ₩81,000. 거래 목록 보기" [ref=f5e109] [cursor=pointer]:
+                - /url: /sales/transactions?view=day&cursor=2026-08-02
+              - link "3일 ₩169,000. 거래 목록 보기" [ref=f5e111] [cursor=pointer]:
+                - /url: /sales/transactions?view=day&cursor=2026-08-03
+              - link "4일 ₩0, 매출 없음. 거래 목록 보기" [ref=f5e113] [cursor=pointer]:
+                - /url: /sales/transactions?view=day&cursor=2026-08-04
+              - link "5일 ₩0, 매출 없음. 거래 목록 보기" [ref=f5e115] [cursor=pointer]:
+                - /url: /sales/transactions?view=day&cursor=2026-08-05
+                - generic [ref=f5e117]: "5"
+              - link "6일 ₩0, 진행 중. 거래 목록 보기" [ref=f5e118] [cursor=pointer]:
+                - /url: /sales/transactions?view=day&cursor=2026-08-06
+              - generic [ref=f5e124]: "10"
+              - generic [ref=f5e130]: "15"
+              - generic [ref=f5e136]: "20"
+              - generic [ref=f5e142]: "25"
+              - generic [ref=f5e148]: "30"
+          - table [ref=f5e151]:
+            - caption [ref=f5e152]: 2026년 8월 일별 매출 표
+            - rowgroup [ref=f5e153]:
+              - row [ref=f5e154]:
+                - rowheader "2026-08-01" [ref=f5e155]
+                - cell "₩112,000" [ref=f5e156]
+              - row [ref=f5e157]:
+                - rowheader "2026-08-02" [ref=f5e158]
+                - cell "₩81,000" [ref=f5e159]
+              - row [ref=f5e160]:
+                - rowheader "2026-08-03" [ref=f5e161]
+                - cell "₩169,000" [ref=f5e162]
+              - row [ref=f5e163]:
+                - rowheader "2026-08-04" [ref=f5e164]
+                - cell "₩0 (매출 없음)" [ref=f5e165]
+              - row [ref=f5e166]:
+                - rowheader "2026-08-05" [ref=f5e167]
+                - cell "₩0 (매출 없음)" [ref=f5e168]
+              - row [ref=f5e169]:
+                - rowheader "2026-08-06" [ref=f5e170]
+                - cell "₩0 (진행 중)" [ref=f5e171]
+              - row [ref=f5e172]:
+                - rowheader "2026-08-07" [ref=f5e173]
+                - cell "아직 오지 않은 날" [ref=f5e174]
+              - row [ref=f5e175]:
+                - rowheader "2026-08-08" [ref=f5e176]
+                - cell "아직 오지 않은 날" [ref=f5e177]
+              - row [ref=f5e178]:
+                - rowheader "2026-08-09" [ref=f5e179]
+                - cell "아직 오지 않은 날" [ref=f5e180]
+              - row [ref=f5e181]:
+                - rowheader "2026-08-10" [ref=f5e182]
+                - cell "아직 오지 않은 날" [ref=f5e183]
+              - row [ref=f5e184]:
+                - rowheader "2026-08-11" [ref=f5e185]
+                - cell "아직 오지 않은 날" [ref=f5e186]
+              - row [ref=f5e187]:
+                - rowheader "2026-08-12" [ref=f5e188]
+                - cell "아직 오지 않은 날" [ref=f5e189]
+              - row [ref=f5e190]:
+                - rowheader "2026-08-13" [ref=f5e191]
+                - cell "아직 오지 않은 날" [ref=f5e192]
+              - row [ref=f5e193]:
+                - rowheader "2026-08-14" [ref=f5e194]
+                - cell "아직 오지 않은 날" [ref=f5e195]
+              - row [ref=f5e196]:
+                - rowheader "2026-08-15" [ref=f5e197]
+                - cell "아직 오지 않은 날" [ref=f5e198]
+              - row [ref=f5e199]:
+                - rowheader "2026-08-16" [ref=f5e200]
+                - cell "아직 오지 않은 날" [ref=f5e201]
+              - row [ref=f5e202]:
+                - rowheader "2026-08-17" [ref=f5e203]
+                - cell "아직 오지 않은 날" [ref=f5e204]
+              - row [ref=f5e205]:
+                - rowheader "2026-08-18" [ref=f5e206]
+                - cell "아직 오지 않은 날" [ref=f5e207]
+              - row [ref=f5e208]:
+                - rowheader "2026-08-19" [ref=f5e209]
+                - cell "아직 오지 않은 날" [ref=f5e210]
+              - row [ref=f5e211]:
+                - rowheader "2026-08-20" [ref=f5e212]
+                - cell "아직 오지 않은 날" [ref=f5e213]
+              - row [ref=f5e214]:
+                - rowheader "2026-08-21" [ref=f5e215]
+                - cell "아직 오지 않은 날" [ref=f5e216]
+              - row [ref=f5e217]:
+                - rowheader "2026-08-22" [ref=f5e218]
+                - cell "아직 오지 않은 날" [ref=f5e219]
+              - row [ref=f5e220]:
+                - rowheader "2026-08-23" [ref=f5e221]
+                - cell "아직 오지 않은 날" [ref=f5e222]
+              - row [ref=f5e223]:
+                - rowheader "2026-08-24" [ref=f5e224]
+                - cell "아직 오지 않은 날" [ref=f5e225]
+              - row [ref=f5e226]:
+                - rowheader "2026-08-25" [ref=f5e227]
+                - cell "아직 오지 않은 날" [ref=f5e228]
+              - row [ref=f5e229]:
+                - rowheader "2026-08-26" [ref=f5e230]
+                - cell "아직 오지 않은 날" [ref=f5e231]
+              - row [ref=f5e232]:
+                - rowheader "2026-08-27" [ref=f5e233]
+                - cell "아직 오지 않은 날" [ref=f5e234]
+              - row [ref=f5e235]:
+                - rowheader "2026-08-28" [ref=f5e236]
+                - cell "아직 오지 않은 날" [ref=f5e237]
+              - row [ref=f5e238]:
+                - rowheader "2026-08-29" [ref=f5e239]
+                - cell "아직 오지 않은 날" [ref=f5e240]
+              - row [ref=f5e241]:
+                - rowheader "2026-08-30" [ref=f5e242]
+                - cell "아직 오지 않은 날" [ref=f5e243]
+              - row [ref=f5e244]:
+                - rowheader "2026-08-31" [ref=f5e245]
+                - cell "아직 오지 않은 날" [ref=f5e246]
+          - paragraph [ref=f5e247]: 빈 점은 매출이 없던 날, 표시 없는 칸은 아직 오지 않은 날입니다. 금색은 오늘과 정정 기록을 뜻합니다.
+        - generic [ref=f5e248]:
+          - generic [ref=f5e249]:
+            - heading "결제 수단" [level=2] [ref=f5e251]
+            - generic [ref=f5e252]:
+              - button "기타 결제수단 상세 보기" [ref=f5e254]:
+                - generic [ref=f5e255]: 기타
+                - generic [ref=f5e256]: 100%
+                - generic [ref=f5e257]: ₩362,000
+              - table [ref=f5e258]:
+                - caption [ref=f5e259]: 결제수단 표
+                - rowgroup [ref=f5e260]:
+                  - row [ref=f5e261]:
+                    - rowheader "기타" [ref=f5e262]
+                    - cell "₩362,000" [ref=f5e263]
+          - generic [ref=f5e264]:
+            - generic [ref=f5e265]:
+              - heading "시술 카테고리" [level=2] [ref=f5e266]
+              - generic [ref=f5e267]: 1개 유형
+            - generic [ref=f5e268]:
+              - generic "시술 카테고리 차트 상호작용 영역" [ref=f5e269]:
+                - button "미분류 시술 카테고리 상세 보기" [ref=f5e271]:
+                  - generic [ref=f5e272]:
+                    - generic [ref=f5e273]: 미분류
+                    - generic [ref=f5e274]: 11건
+                  - generic [ref=f5e277]:
+                    - generic [ref=f5e278]: ₩362,000
+                    - generic [ref=f5e279]: 100%
+              - paragraph [ref=f5e280]:
+                - generic [ref=f5e281]: │
+                - text: 유형은 설정 › 시술·가격에서 관리합니다.
+              - table [ref=f5e282]:
+                - caption [ref=f5e283]: 시술 카테고리 표
+                - rowgroup [ref=f5e284]:
+                  - row [ref=f5e285]:
+                    - rowheader "미분류" [ref=f5e286]
+                    - cell "₩362,000" [ref=f5e287]
+          - generic [ref=f5e288]:
+            - heading "정산" [level=2] [ref=f5e289]
+            - table [ref=f5e290]:
+              - rowgroup [ref=f5e291]:
+                - row [ref=f5e292]:
+                  - rowheader "총 매출" [ref=f5e293]
+                  - cell "₩362,000" [ref=f5e294]
+                - row [ref=f5e295]:
+                  - rowheader "할인" [ref=f5e296]
+                  - cell "₩0" [ref=f5e297]
+                - row [ref=f5e298]:
+                  - rowheader "포인트 사용" [ref=f5e299]
+                  - cell "₩0" [ref=f5e300]
+                - row [ref=f5e301]:
+                  - rowheader "실결제" [ref=f5e302]
+                  - cell "₩362,000" [ref=f5e303]
+                - row [ref=f5e304]:
+                  - rowheader "환불" [ref=f5e305]
+                  - cell "₩0" [ref=f5e306]
+                - row [ref=f5e307]:
+                  - rowheader "VAT" [ref=f5e308]
+                  - cell "₩0" [ref=f5e309]
+                - row [ref=f5e310]:
+                  - rowheader "결제 수수료" [ref=f5e311]
+                  - cell "₩9,360" [ref=f5e312]
+                - row [ref=f5e313]:
+                  - rowheader "지출" [ref=f5e314]
+                  - cell "₩0" [ref=f5e315]
+                - row [ref=f5e316]:
+                  - rowheader "샵 수익" [ref=f5e317]
+                  - cell "₩352,640" [ref=f5e318]
+  - button "Open Next.js Dev Tools" [ref=f5e324] [cursor=pointer]

@@ -31,15 +31,13 @@ describe("server revenue aggregate", () => {
 
       expect(analytics.totals).toEqual({ today: 0, month: 29960000, total: 29960000 });
       expect(analytics.trend[0]).toEqual({ date: "7/24", gross: 10480000, profit: 6080000 });
-      expect(analytics.services[0]).toEqual({ name: "컬러", sales: 10480000 });
+      expect(analytics.services[0]).toEqual({ name: "컬러", sales: 10480000, count: 1 });
       expect(analytics.payments.map(({ name, amount, value }) => ({ name, amount, value }))).toEqual([
         { name: "카드", amount: 10480000, value: 35 },
         { name: "현금", amount: 8640000, value: 29 },
         { name: "선불권", amount: 6120000, value: 20 },
         { name: "기타", amount: 4720000, value: 16 },
       ]);
-      expect(analytics.genders).toEqual([{ name: "여성", sales: 16600000 }, { name: "남성", sales: 13360000 }]);
-      expect(analytics.visitTypes).toEqual([{ name: "재방문", sales: 21320000 }, { name: "신규", sales: 8640000 }]);
       expect(analytics.settlement).toEqual([
         { name: "총 매출", value: 29960000 },
         { name: "할인", value: 0 },
@@ -71,8 +69,6 @@ describe("server revenue aggregate", () => {
       expect(analytics.trend).toEqual([]);
       expect(analytics.services).toEqual([]);
       expect(analytics.payments).toEqual([]);
-      expect(analytics.genders).toEqual([]);
-      expect(analytics.visitTypes).toEqual([]);
       expect(analytics.settlement.every(({ value }) => value === 0)).toBe(true);
     } finally {
       store.close();
@@ -89,8 +85,8 @@ describe("server revenue aggregate", () => {
       expect(filterRevenueTransactions(transactions, { view: "month", cursor: "2026-07-31" })).toHaveLength(4);
       expect(filterRevenueTransactions(transactions, { view: "total", cursor: "2026-07-31" })).toHaveLength(4);
       expect(filterRevenueSelection(transactions, { kind: "payment", key: "현금" })).toHaveLength(1);
-      expect(filterRevenueSelection(transactions, { kind: "gender", key: "여성" })).toHaveLength(2);
-      expect(filterRevenueSelection(transactions, { kind: "visitType", key: "신규" })).toHaveLength(1);
+      expect(filterRevenueSelection(transactions, { kind: "service", key: "컬러" })).toHaveLength(1);
+      expect(filterRevenueSelection(transactions, { kind: "date", key: "7/24" })).toHaveLength(1);
     } finally {
       store.close();
     }

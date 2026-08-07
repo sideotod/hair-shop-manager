@@ -32,8 +32,6 @@ describe("MessagesPage", () => {
   it("renders desktop dry-run composition, recipient preview, and automation controls", () => {
     const html = page();
 
-    expect(html).toContain('data-app-shell-background');
-    expect(html).toContain('href="/messages"');
     expect(html).toContain('aria-label="문자 dry-run 저장"');
     expect(html).toContain("보내는 사람: 서원");
     expect(html).toContain('name="recipientIds"');
