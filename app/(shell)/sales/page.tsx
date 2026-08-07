@@ -77,7 +77,7 @@ export default async function SalesPage({ searchParams }: { searchParams: Promis
     // 지출·결제 탭만 전체 원장이 필요하다. 분석 화면은 기간 조회로 끝난다 (A4-2).
     if (value(params.tab) === "expenses") {
       const snapshot = store.snapshot();
-      return <OperationsPage activeTab="expenses" catalog={snapshot.records["catalog-items"] ?? []} correctionId={value(params.correction)} customers={snapshot.records.customers ?? []} error={value(params.error) || undefined} expenses={snapshot.records["expense-presets"] ?? []} ledger={snapshot.ledger} salesContext salesQuery={query} settings={{ ...snapshot.settings, salesWorkspace: { query, tab: "expenses" } }} />;
+      return <OperationsPage activeTab="expenses" catalog={snapshot.records["catalog-items"] ?? []} correctionId={value(params.correction)} customers={snapshot.records.customers ?? []} error={value(params.error) || undefined} expenses={snapshot.records["expense-presets"] ?? []} ledger={snapshot.ledger} salesContext salesQuery={query} settings={snapshot.settings} />;
     }
     const settings = store.getSettings();
     const customers = store.list("customers");

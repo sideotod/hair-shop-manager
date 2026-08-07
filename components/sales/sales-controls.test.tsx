@@ -8,7 +8,9 @@ const query = defaultRevenueQuery("2026-08-06");
 
 function viewButtons(html: string) {
   const nav = html.match(/<nav[^>]*aria-label="매출 조회"[\s\S]*?<\/nav>/)?.[0] ?? "";
-  return [...nav.matchAll(/<a\b[^>]*class="([^"]*)"[^>]*>([^<]*)<\/a>/g)].map(([, className, label]) => ({ className, label }));
+  // 기간 칩만 본다. 같은 nav 안의 ←/→ 는 기간 이동이라 크기 규칙이 다르다.
+  return [...nav.matchAll(/<a\b[^>]*data-sales-period="[^"]*"[^>]*>([^<]*)<\/a>/g)]
+    .map(([tag, label]) => ({ className: tag.match(/class="([^"]*)"/)?.[1] ?? "", label }));
 }
 
 describe("SalesControls", () => {
@@ -23,7 +25,7 @@ describe("SalesControls", () => {
     const buttons = viewButtons(html);
 
     expect(buttons.every((button) => /(?:^|\s)border(?:\s|$)/.test(button.className))).toBe(true);
-    const sizing = buttons.map((button) => button.className.split(/\s+/).filter((token) => /^(?:px|py|text)-/.test(token)).sort().join(" "));
+    const sizing = buttons.map((button) => button.className.split(/\s+/).filter((token) => /^(?:px|py)-|^text-(?:xs|sm|base|lg|xl)$/.test(token)).sort().join(" "));
     expect(new Set(sizing).size).toBe(1);
   });
 

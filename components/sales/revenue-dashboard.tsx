@@ -1,7 +1,5 @@
 "use client";
 
-import Link from "next/link";
-import { useRouter } from "next/navigation";
 import { useEffect, useRef, useState, useSyncExternalStore } from "react";
 
 import { ModalHost } from "../modal-host";
@@ -14,9 +12,8 @@ import {
   RevenueDetailDrawer,
   type RevenueSelection,
 } from "./revenue-detail-drawer";
+import { SalesControls } from "./sales-controls";
 import {
-  nextRevenueQuery,
-  previousRevenueQuery,
   serializeRevenueQuery,
   type RevenueQuery,
 } from "./revenue-query";
@@ -67,12 +64,6 @@ export function focusChartSurface<T extends Pick<HTMLElement, "focus"> | null>(
 ) {
   target?.focus();
   return target;
-}
-export function pushRevenueQuery(
-  router: { push: (href: string) => void },
-  query: RevenueQuery,
-) {
-  router.push(`?${serializeRevenueQuery(query)}`);
 }
 export function restoreRevenueDrawerFocus(
   open: boolean,
@@ -205,7 +196,6 @@ export function RevenueDashboard({
   /** 서버 집계 정본 (§14). 없으면 정산 표에서 읽어 같은 값을 쓴다. */
   summary?: RevenueSummary;
 }) {
-  const router = useRouter();
   const motion = revenueChartMotions(usePrefersReducedMotion());
   const [selection, setSelection] = useState<RevenueSelection | null>(null);
   const [trigger, setTrigger] = useState<Pick<HTMLElement, "focus"> | null>(
@@ -229,11 +219,6 @@ export function RevenueDashboard({
     (kind: RevenueSelection["kind"]) => (element: HTMLDivElement | null) => {
       surfaces.current[kind] = element ?? undefined;
     };
-  const navigate = (direction: -1 | 1) =>
-    pushRevenueQuery(
-      router,
-      direction < 0 ? previousRevenueQuery(query) : nextRevenueQuery(query),
-    );
   // CSV\uB294 \uC11C\uBC84 \uB77C\uC6B0\uD2B8\uAC00 \uB9CC\uB4E0\uB2E4. data: URL\uB85C \uB9CC\uB4E4\uBA74 \uB204\uC801 \uAE30\uAC04\uC5D0\uC11C \uBB38\uC11C\uAC00 1MB \uAC00\uAE4C\uC774 \uCEE4\uC9C4\uB2E4 (A4-5).
   const csvHref = `/sales/revenue-csv?${serializeRevenueQuery(query)}`;
   // KPI\uB294 \uC11C\uBC84 \uC9D1\uACC4\uC5D0\uC11C \uD544\uB4DC\uB85C \uC9C1\uC811 \uC77D\uB294\uB2E4. \uC774\uB984 \uBB38\uC790\uC5F4\uB85C \uCC3E\uC9C0 \uC54A\uB294\uB2E4 (A3-8).
@@ -335,64 +320,7 @@ export function RevenueDashboard({
             </a>
           </div>
         </div>
-        <nav aria-label="매출 기능" className="no-print mt-6 flex gap-2">
-          <Link
-            className="rounded-[var(--radius-control)] bg-[var(--brand)] px-4 py-2 text-sm font-medium text-white"
-            href={`?${serializeRevenueQuery(query)}`}
-          >
-            매출 분석
-          </Link>
-          <Link
-            className="rounded-[var(--radius-control)] border border-[var(--border)] bg-[var(--surface)] px-4 py-2 text-sm font-medium"
-            href={`?${serializeRevenueQuery(query)}&tab=payment`}
-          >
-            결제 등록
-          </Link>
-          <Link
-            className="rounded-[var(--radius-control)] border border-[var(--border)] bg-[var(--surface)] px-4 py-2 text-sm font-medium"
-            href={`?${serializeRevenueQuery(query)}&tab=expenses`}
-          >
-            지출·정산
-          </Link>
-        </nav>
-        <section
-          aria-label="매출 조회"
-          className={`${card} mt-4 flex items-center justify-between p-4`}
-        >
-          <div className="no-print flex gap-2">
-            {(["day", "week", "month", "year", "total"] as const).map((view) => (
-              <Link
-                aria-current={query.view === view ? "page" : undefined}
-                className={`rounded-[8px] px-[11px] py-[7px] text-[12px] font-medium ${query.view === view ? "bg-[var(--brand)] text-white" : "border border-[var(--border)] bg-[var(--surface)]"}`}
-                href={`?${serializeRevenueQuery({ ...query, view })}`}
-                key={view}
-              >
-                {view === "day" ? "일별" : view === "week" ? "주별" : view === "month" ? "월별" : view === "year" ? "연도" : "누적"}
-              </Link>
-            ))}
-          </div>
-          <div className="flex items-center gap-3">
-            <button
-              aria-label="이전 기간"
-              className="no-print rounded border border-[var(--border)] px-3 py-2 disabled:opacity-40"
-              disabled={query.view === "total"}
-              onClick={() => navigate(-1)}
-              type="button"
-            >
-              ←
-            </button>
-            <strong className="font-mono text-[12px] font-medium tabular-nums text-[var(--muted)]">{analytics.selectedPeriod.label}</strong>
-            <button
-              aria-label="다음 기간"
-              className="no-print rounded border border-[var(--border)] px-3 py-2 disabled:opacity-40"
-              disabled={query.view === "total"}
-              onClick={() => navigate(1)}
-              type="button"
-            >
-              →
-            </button>
-          </div>
-        </section>
+        <SalesControls label={analytics.selectedPeriod.label} query={query} />
         <section
           aria-label="매출 핵심 지표"
           className="mt-4 grid grid-cols-5 gap-3"

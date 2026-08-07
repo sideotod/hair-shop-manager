@@ -1,14 +1,11 @@
 import { renderToStaticMarkup } from "react-dom/server";
 import { describe, expect, it, vi } from "vitest";
 
-const routerPush = vi.hoisted(() => vi.fn());
-vi.mock("next/navigation", () => ({ useRouter: () => ({ push: routerPush }) }));
-
 import { buildPoints, dailyAxis, monthlyAxis, yearlyAxis } from "../../lib/revenue-aggregate";
 import { buildRevenueAnalytics, buildRevenueTransactions } from "../../lib/revenue-data";
 import { createSalonStore } from "../../lib/salon-store";
 import { dismissRevenueDrawer, revenueDrawerFocusTarget, RevenueDetailDrawer } from "./revenue-detail-drawer";
-import { barFill, barScale, focusChartSurface, pushRevenueQuery, resolveRevenueSelection, restoreRevenueDrawerFocus, revenueChartMotion, revenueChartMotions, RevenueDashboard } from "./revenue-dashboard";
+import { barFill, barScale, focusChartSurface, resolveRevenueSelection, restoreRevenueDrawerFocus, revenueChartMotion, revenueChartMotions, RevenueDashboard } from "./revenue-dashboard";
 
 function analytics() { const store = createSalonStore(":memory:"); try { const snapshot = store.snapshot(); return buildRevenueAnalytics(buildRevenueTransactions(snapshot.ledger, snapshot.records.customers ?? []), { view: "month", cursor: "2026-07-31" }, "2026-07-31"); } finally { store.close(); } }
 
@@ -69,9 +66,7 @@ describe("RevenueDashboard", () => {
     expect(resolveRevenueSelection("service", { activeTooltipIndex: 0 }, data)).toEqual({ kind: "service", key: "컬러" });
   });
 
-  it("navigates with the simple server query and restores drawer focus", () => {
-    pushRevenueQuery({ push: routerPush }, { view: "day", cursor: "2026-07-31" });
-    expect(routerPush).toHaveBeenCalledWith("?view=day&cursor=2026-07-31");
+  it("restores drawer focus", () => {
     const trigger = { focus: vi.fn() }; expect(focusChartSurface(trigger)).toBe(trigger); restoreRevenueDrawerFocus(false, trigger); expect(trigger.focus).toHaveBeenCalledTimes(2);
   });
 });
