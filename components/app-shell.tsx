@@ -67,8 +67,11 @@ export function AppShell({
 
   return (
     <div data-app-shell-token-scope style={visualTokens}>
-      <div data-app-shell-background className="grid h-screen min-h-screen w-full min-w-[1264px] grid-cols-[232px_minmax(0,1fr)] overflow-hidden bg-[var(--background)] text-[var(--foreground)]">
-        <aside className="flex h-screen min-h-0 flex-col bg-[var(--sidebar)] px-5 pb-[22px] pt-[26px] text-white">
+      {/* 최소 폭은 1440px 의 125% 확대(= CSS 1152px)에 맞춘다. PRODUCT.md 가 확대 지원을 요구하는데
+          1264 로 잡아두면 확대하는 순간 창 전체가 가로로 스크롤됐다(실측).
+          좁아지면 사이드바를 200px 로 줄이고, 그래도 모자란 표는 본문 스크롤러 안에서 가로로 흐른다. */}
+      <div data-app-shell-background className="grid h-screen min-h-screen w-full min-w-[1152px] grid-cols-[200px_minmax(0,1fr)] overflow-hidden bg-[var(--background)] text-[var(--foreground)] min-[1264px]:grid-cols-[232px_minmax(0,1fr)]">
+        <aside data-app-sidebar className="flex h-screen min-h-0 flex-col bg-[var(--sidebar)] px-5 pb-[22px] pt-[26px] text-white">
           <div>
             <strong className="wordmark block text-[21px] leading-none tracking-[3.4px]">HAIRHAEYO</strong>
             <span className="mt-1.5 block text-[9.5px] font-medium tracking-[2.6px] text-[var(--accent)]">SALON LEDGER</span>
@@ -92,14 +95,14 @@ export function AppShell({
 
         <div className="flex min-h-0 min-w-0 flex-col overflow-hidden">
           <header className="flex h-[72px] shrink-0 items-center gap-5 border-b border-[var(--border)] bg-[var(--surface)] px-7 text-[13px]">
-            <div className="flex shrink-0 flex-col gap-0.5"><strong className="text-[19px] font-semibold tracking-[-0.01em]">{title}</strong><span className="font-mono text-[10.5px] text-[var(--muted)]">{dateLabel}</span></div>
+            <div className="flex shrink-0 flex-col gap-0.5"><h1 className="text-[19px] font-semibold tracking-[-0.01em]">{title}</h1><span className="font-mono text-[10.5px] text-[var(--muted)]">{dateLabel}</span></div>
             <div className="h-px min-w-0 flex-1" />
             <form action="/customers" className="flex h-10 w-[340px] shrink-0 items-center gap-2 rounded-[var(--radius-chip)] bg-[var(--background)] px-3" method="get" role="search">
               <select aria-label="고객 검색 기준" className="h-7 w-[76px] rounded-[var(--radius-control)] border border-[var(--border)] bg-[var(--surface)] px-2 text-[10.5px] text-[var(--brand)]" name="mode">
                 {searchModes.map(([value, label]) => <option key={value} value={value}>{label}</option>)}
               </select>
               <input aria-label="고객 검색어" className="h-7 min-w-0 flex-1 bg-transparent px-1 text-[12px] outline-none" name="query" placeholder="고객 검색" />
-              <button className="sr-only" type="submit">검색</button>
+              <button className="sr-only rounded-[var(--radius-control)] bg-[var(--brand)] px-2.5 py-1 text-[11px] text-white focus:not-sr-only" type="submit">검색</button>
             </form>
             {customers.length > 0 && (
               <details className="relative shrink-0">

@@ -2,6 +2,12 @@
 
 import { useEffect, useRef } from "react";
 
+/** 배경을 `inert` 로 만든 뒤 첫 초점을 받을 요소. 닫기 버튼이 있으면 그쪽이 먼저다. */
+function firstFocusable(node: HTMLElement) {
+  return node.querySelector<HTMLElement>("[data-dialog-close]")
+    ?? node.querySelector<HTMLElement>('a[href], button:not([disabled]), input:not([disabled]), select, textarea, summary, [tabindex]:not([tabindex="-1"])');
+}
+
 /**
  * 페이지 본문 안에서 모달을 렌더하면서도 배경을 `inert` 로 만든다.
  *
@@ -29,7 +35,26 @@ export function ModalHost({ children, label }: { children: React.ReactNode; labe
       }
       if (parent.hasAttribute("data-app-shell-token-scope")) break;
     }
-    return () => { for (const element of disabled) element.inert = false; };
+
+    // 배경이 죽어도 초점은 열기 전 위치에 남는다. 옮겨 주지 않으면 키보드 사용자는
+    // 아무것도 없는 곳에 서 있게 된다. 이미 모달 안에 들어와 있으면(자체 포커스를
+    // 가진 드로어) 그대로 둔다.
+    const restore = node.ownerDocument.activeElement;
+    if (!node.contains(restore)) firstFocusable(node)?.focus();
+
+    // Escape 는 닫기 링크를 누른 것과 같다. 닫기 경로는 링크가 이미 알고 있다.
+    const escape = (event: KeyboardEvent) => {
+      if (event.key !== "Escape") return;
+      const close = node.querySelector<HTMLElement>("[data-dialog-close]");
+      if (close) { event.preventDefault(); close.click(); }
+    };
+    node.ownerDocument.addEventListener("keydown", escape);
+
+    return () => {
+      node.ownerDocument.removeEventListener("keydown", escape);
+      for (const element of disabled) element.inert = false;
+      if (restore instanceof HTMLElement && restore.isConnected) restore.focus();
+    };
   }, []);
 
   return <div aria-label={label} data-app-overlay ref={ref} role="presentation">{children}</div>;
