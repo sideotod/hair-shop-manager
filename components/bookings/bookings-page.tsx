@@ -6,6 +6,7 @@ import { displayStatus, minutesOfDay, railHeight, railHourMarks, railOffset, rai
 import type { JsonObject, JsonValue, SalonRecord } from "../../lib/salon-domain";
 import { closeHref, toSearchParams, withoutParams } from "../../lib/navigation";
 import { ModalHost } from "../modal-host";
+import { PageToolbar } from "../page-toolbar";
 import { NaverMailConnection } from "./naver-mail-connection";
 
 const input = "h-10 rounded-[var(--radius-control)] border border-[var(--border)] bg-[var(--surface)] px-3 text-sm";
@@ -50,6 +51,7 @@ export function BookingsPage({ bookings, customers, settings, syncHistory, date,
   const current = toSearchParams(searchParams ?? { date: selectedDate, view: activeView, ...(period ? { period } : {}) });
   const returnTo = closeHref("/bookings", current, "new", "error", "notice");
   const editReturnTo = (bookingId: string) => { const params = withoutParams(current, "new", "error", "notice"); params.set("edit", bookingId); return `/bookings?${params}`; };
+  const openHref = (() => { const params = withoutParams(current, "error", "notice"); params.set("new", "1"); return `/bookings?${params}`; })();
 
   const openMinutes = minutesOfDay(policy.bookingOpen) ?? 540;
   const closeMinutes = minutesOfDay(policy.bookingClose) ?? 1200;
@@ -76,7 +78,7 @@ export function BookingsPage({ bookings, customers, settings, syncHistory, date,
     {overlay && <ModalHost label="새 예약 등록">{overlay}</ModalHost>}
     {error && <p className="mb-5 rounded-[var(--radius-card)] border border-[var(--warning)] bg-[var(--warning-soft)] px-4 py-3 text-sm text-[var(--warning)]" role="alert">입력 내용을 수정하세요: {error}</p>}
     {notice && <p className="mb-5 rounded-[var(--radius-card)] border border-[var(--success)] bg-[var(--success-soft)] px-4 py-3 text-sm text-[var(--success)]" role="status">{notice}</p>}
-    <div className="flex items-start justify-between gap-6"><p className="text-sm text-[var(--muted)]">단일 원장 일정입니다. 디자이너·직원 배정은 사용하지 않습니다. {selectedDate} · {visible.length}건 · {policy.bookingOpen}–{policy.bookingClose}</p><Link className="rounded-[var(--radius-control)] bg-[var(--brand)] px-4 py-3 text-sm font-bold text-white" href={link(selectedDate, activeView, period, "&new=1")}>예약 등록</Link></div>
+    <PageToolbar description={<>단일 원장 일정입니다. 디자이너·직원 배정은 사용하지 않습니다. {selectedDate} · {visible.length}건 · {policy.bookingOpen}–{policy.bookingClose}</>}><Link className="rounded-[var(--radius-control)] bg-[var(--brand)] px-4 py-3 text-sm font-bold text-white" href={openHref}>예약 등록</Link></PageToolbar>
     <section aria-label="예약 보기와 날짜 이동" className={`${card} mt-6 flex items-center justify-between gap-4 p-4`}><nav aria-label="예약 보기" className="flex gap-2">{[["day", "일"], ["month", "월"], ["period", "기간"]].map(([key, label]) => <Link className={`rounded-[var(--radius-control)] px-4 py-2 text-sm ${activeView === key ? "bg-[var(--brand)] font-bold text-white" : "bg-[var(--background)]"}`} href={link(selectedDate, key, period)} key={key}>{label} 보기</Link>)}</nav><div className="flex items-center gap-2"><Link className="rounded-[var(--radius-control)] border border-[var(--border)] px-3 py-2 text-sm" href={link(previousDate, activeView, period)}>이전</Link><Link className="rounded-[var(--radius-control)] border border-[var(--border)] px-3 py-2 text-sm" href={link(todayInSeoul(), activeView, period)}>오늘</Link><Link className="rounded-[var(--radius-control)] border border-[var(--border)] px-3 py-2 text-sm" href={link(nextDate, activeView, period)}>다음</Link>{activeView === "period" && <form method="get"><input name="date" type="hidden" value={selectedDate} /><input name="view" type="hidden" value="period" /><select aria-label="기간 일수" className={input} defaultValue={String(days)} name="period"><option value="7">7일</option><option value="14">14일</option><option value="31">31일</option></select><button className="ml-2 rounded-[var(--radius-control)] border border-[var(--border)] px-3 py-2 text-sm" type="submit">적용</button></form>}</div></section>
     <div className="mt-5 grid grid-cols-[minmax(0,1.4fr)_360px] gap-5"><section className={`${card} p-5`}><div className="flex items-baseline justify-between"><h2 className="text-lg font-bold">{activeView === "month" ? `${selectedDate.slice(0, 7)} 월간` : activeView === "period" ? `${selectedDate}부터 ${days}일` : selectedDate}</h2><span className="text-sm text-[var(--muted)]">{visible.length}건</span></div>
       {activeView === "day" && railBookings.length > 0 && <div className="relative mt-4 overflow-hidden border-b border-[var(--border)] pb-4" data-booking-rail style={{ height: `${railHeightPx + 16}px` }}>

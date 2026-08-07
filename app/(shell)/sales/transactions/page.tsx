@@ -1,6 +1,7 @@
 import Link from "next/link";
 
 import { refundPayment } from "../../../payment-actions";
+import { PageToolbar } from "../../../../components/page-toolbar";
 import { parseRevenueSearchParams, revenueRange, revenueRangeExclusive, serializeRevenueQuery } from "../../../../components/sales/revenue-query";
 import { buildRevenueTransactions, filterRevenueSelection, type RevenueSelection } from "../../../../lib/revenue-data";
 import { createSalonStore } from "../../../../lib/salon-store";
@@ -32,10 +33,7 @@ export default async function TransactionsPage({ searchParams }: { searchParams:
     const rows = matched.length > ROW_LIMIT ? matched.slice(-ROW_LIMIT).reverse() : [...matched].reverse();
     const customer = customerId ? store.get<{ name?: string }>("customers", customerId) : null;
     return <main className="px-7 pb-6 pt-5">
-      <div className="flex items-start justify-between gap-6">
-        <p className="text-sm text-[var(--muted)]">선택 기간의 개별 거래를 환불·정정합니다. {selection ? `${labels[selection]} · ${selectionKey}` : `${revenueRange(query).label} · ${matched.length.toLocaleString("ko-KR")}건`}{matched.length > rows.length && ` 최근 ${ROW_LIMIT.toLocaleString("ko-KR")}건만 표시합니다 — 전체는 CSV로 내려받으세요.`}</p>
-          <div className="flex gap-2"><Link className="rounded-[var(--radius-card)] border border-[var(--border)] bg-[var(--surface)] px-4 py-3 text-sm font-medium text-[var(--brand)]" href={analysisHref}>매출 분석으로</Link><Link className="rounded-[var(--radius-card)] border border-[var(--border)] bg-[var(--surface)] px-4 py-3 text-sm font-medium text-[var(--brand)]" href={`/sales/revenue-csv?${serializeRevenueQuery(query)}`}>CSV 전체</Link><Link className="rounded-[var(--radius-card)] bg-[var(--brand)] px-4 py-3 text-sm font-medium text-white" href={paymentHref}>결제 등록</Link></div>
-        </div>
+      <PageToolbar description={<>선택 기간의 개별 거래를 환불·정정합니다. {selection ? `${labels[selection]} · ${selectionKey}` : `${revenueRange(query).label} · ${matched.length.toLocaleString("ko-KR")}건`}{matched.length > rows.length && ` 최근 ${ROW_LIMIT.toLocaleString("ko-KR")}건만 표시합니다 — 전체는 CSV로 내려받으세요.`}</>}><Link className="rounded-[var(--radius-card)] border border-[var(--border)] bg-[var(--surface)] px-4 py-3 text-sm font-medium text-[var(--brand)]" href={analysisHref}>매출 분석으로</Link><Link className="rounded-[var(--radius-card)] border border-[var(--border)] bg-[var(--surface)] px-4 py-3 text-sm font-medium text-[var(--brand)]" href={`/sales/revenue-csv?${serializeRevenueQuery(query)}`}>CSV 전체</Link><Link className="rounded-[var(--radius-card)] bg-[var(--brand)] px-4 py-3 text-sm font-medium text-white" href={paymentHref}>결제 등록</Link></PageToolbar>
         {value(params.error) && <p aria-live="assertive" className="mt-5 rounded-[var(--radius-card)] border border-[var(--danger)] bg-[var(--danger-soft)] px-4 py-3 text-sm text-[var(--danger)]" role="alert">{value(params.error)}</p>}
         {customer && <section aria-label="결제 등록 고객" className="mt-5 rounded-[var(--radius-card)] border border-[var(--border)] bg-[var(--surface)] px-5 py-4"><p className="text-sm">결제 등록 고객: <strong>{customer.value.name ?? customer.id}</strong></p></section>}
         <section aria-label="필터된 개별 거래 기록" className="mt-8 overflow-x-auto rounded-[var(--radius-card)] border border-[var(--border)] bg-[var(--surface)]" data-revenue-transactions>

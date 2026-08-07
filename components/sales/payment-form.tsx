@@ -1,6 +1,7 @@
 import Link from "next/link";
 
 import { correctPayment, savePayment } from "../../app/payment-actions";
+import { PageToolbar } from "../page-toolbar";
 import { PAYMENT_METHODS } from "../../lib/finance";
 import type { JsonObject, JsonValue } from "../../lib/salon-domain";
 
@@ -12,7 +13,7 @@ export function PaymentForm({ backTo = "/sales", customers, customerId, correcti
   const vatMode = settings.vatMode === "separate" ? "separate" : "included";
   const cardFeeRate = typeof settings.cardFeeRate === "number" ? settings.cardFeeRate : 0;
   return <div>
-    <div className="flex items-start justify-between gap-6"><div><h2 className="text-[19px] font-semibold tracking-[-0.01em]">결제 등록</h2><p className="mt-1 text-sm text-[var(--muted)]">원장 계정으로 불변 거래 기록을 추가합니다.</p></div><Link className="rounded-[var(--radius-card)] border border-[var(--border)] bg-[var(--surface)] px-4 py-3 text-sm font-medium text-[var(--brand)]" href={backTo}>매출 분석</Link></div>
+    <PageToolbar description="원장 계정으로 불변 거래 기록을 추가합니다." title="결제 등록"><Link className="rounded-[var(--radius-card)] border border-[var(--border)] bg-[var(--surface)] px-4 py-3 text-sm font-medium text-[var(--brand)]" href={backTo}>매출 분석</Link></PageToolbar>
     {error && <p aria-live="assertive" className="mt-5 rounded-[var(--radius-card)] border border-[var(--danger)] bg-[var(--danger-soft)] px-4 py-3 text-sm text-[var(--danger)]" role="alert">{error}</p>}
     <form action={correctionTargetId ? correctPayment : savePayment} aria-label="결제 등록 양식" className="mt-8 grid w-full max-w-none grid-cols-2 gap-5"><input name="requestKey" type="hidden" value={crypto.randomUUID()} /><input name="returnTo" type="hidden" value={returnTo} />{correctionTargetId && <><input name="targetId" type="hidden" value={correctionTargetId} /><input name="reason" type="hidden" value="결제 정정" /></>}
       <section className="rounded-[var(--radius-card)] border border-[var(--border)] bg-[var(--surface)] p-5"><h2 className="text-lg font-bold">고객 · 시술</h2><div className="mt-4 grid grid-cols-2 gap-4">

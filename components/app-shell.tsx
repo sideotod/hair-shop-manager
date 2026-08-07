@@ -1,6 +1,7 @@
 import Link from "next/link";
 
 import { logoutOwner } from "../app/auth-actions";
+import { searchModes } from "../lib/customer-search";
 import { activeNavigationItem, matchNavigationItem, navigationItems } from "../lib/navigation";
 import type { JsonObject, JsonValue, SalonRecord } from "../lib/salon-domain";
 import { resolveVisualTokens } from "../lib/visual-tokens";
@@ -12,18 +13,6 @@ const settingsSections = [
   ["booking", "예약"], ["messages", "문자 자동화"], ["integrations", "외부 연동"], ["help", "도움말 · 공지"],
 ] as const;
 
-const searchModes = [
-  ["phone-or-name", "핸드폰 뒷번호/고객명"],
-  ["nickname", "닉네임"],
-  ["phone", "전화번호 뒷번호"],
-  ["group", "그룹명"],
-  ["memo", "메모"],
-  ["address", "주소"],
-  ["motive", "방문동기"],
-  ["email", "이메일"],
-  ["point-card", "포인트 카드"],
-  ["family", "패밀리번호"],
-] as const;
 
 type AppShellProps = {
   children: React.ReactNode;

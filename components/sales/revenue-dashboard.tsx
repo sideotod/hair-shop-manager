@@ -3,6 +3,7 @@
 import { useEffect, useRef, useState, useSyncExternalStore } from "react";
 
 import { ModalHost } from "../modal-host";
+import { PageToolbar } from "../page-toolbar";
 import type { JsonObject } from "../../lib/salon-domain";
 import type { RevenueAnalyticsView } from "./revenue-analytics";
 import { RevenueBarChart } from "./revenue-bar-chart";
@@ -299,27 +300,22 @@ export function RevenueDashboard({
           <strong className="text-[17px] font-semibold">매출·결제</strong>
           <span className="ml-3 font-mono text-[12px]">{analytics.selectedPeriod.start} ~ {analytics.selectedPeriod.end}</span>
         </div>
-        <div className="no-print flex items-start justify-between gap-6">
-          <p className="text-[13px] text-[var(--muted)]">
-            결제 기록과 정산을 같은 기준으로 확인합니다. {analytics.selectedPeriod.start} ~ {analytics.selectedPeriod.end}
-          </p>
-          <div className="flex gap-2">
-            <button
-              className="h-10 rounded-[var(--radius-card)] border border-[var(--border)] bg-[var(--surface)] px-4 text-[13px] font-medium text-[var(--brand)]"
-              onClick={() => window.print()}
-              type="button"
-            >
-              인쇄
-            </button>
-            <a
-              className="flex h-10 items-center rounded-[var(--radius-card)] bg-[var(--brand)] px-5 text-[13px] font-medium text-white"
-              download={`hairhaeyo-revenue-${analytics.selectedPeriod.start}_${analytics.selectedPeriod.end}.csv`}
-              href={csvHref}
-            >
-              CSV 내보내기
-            </a>
-          </div>
-        </div>
+        <PageToolbar description={<>결제 기록과 정산을 같은 기준으로 확인합니다. {analytics.selectedPeriod.start} ~ {analytics.selectedPeriod.end}</>} noPrint>
+          <button
+            className="h-10 rounded-[var(--radius-card)] border border-[var(--border)] bg-[var(--surface)] px-4 text-[13px] font-medium text-[var(--brand)]"
+            onClick={() => window.print()}
+            type="button"
+          >
+            인쇄
+          </button>
+          <a
+            className="flex h-10 items-center rounded-[var(--radius-card)] bg-[var(--brand)] px-5 text-[13px] font-medium text-white"
+            download={`hairhaeyo-revenue-${analytics.selectedPeriod.start}_${analytics.selectedPeriod.end}.csv`}
+            href={csvHref}
+          >
+            CSV 내보내기
+          </a>
+        </PageToolbar>
         <SalesControls label={analytics.selectedPeriod.label} query={query} />
         <section
           aria-label="매출 핵심 지표"
