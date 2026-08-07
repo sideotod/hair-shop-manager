@@ -5,13 +5,15 @@
  * `noPrint` 는 기본값을 두지 않는다. 인쇄 레이아웃은 화면마다 다르고
  * (`app/globals.css` 의 `@media print` 규칙), 기본값을 잘못 고르면 조용히 회귀한다.
  */
-export function PageToolbar({ children, description, noPrint = false, title }: {
+export function PageToolbar({ children, className = "", description, noPrint = false, title }: {
   children?: React.ReactNode;
+  /** 툴바가 본문 첫 줄이 아닐 때의 위 여백. 매출 워크스페이스는 탭 줄이 먼저 온다. */
+  className?: string;
   description: React.ReactNode;
   noPrint?: boolean;
   title?: string;
 }) {
-  return <div className={`${noPrint ? "no-print " : ""}flex items-start justify-between gap-6`}>
+  return <div className={`${noPrint ? "no-print " : ""}${className ? `${className} ` : ""}flex items-start justify-between gap-6`}>
     <div>
       {title && <h2 className="text-[19px] font-semibold tracking-[-0.01em]">{title}</h2>}
       <p className={`${title ? "mt-1 " : ""}text-sm text-[var(--muted)]`}>{description}</p>

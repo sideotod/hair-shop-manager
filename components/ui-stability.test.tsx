@@ -22,3 +22,21 @@ describe("UI stability", () => {
     expect(html).toContain('role="dialog"');
   });
 });
+
+describe("Sales workspace tab row", () => {
+  /**
+   * 문제 2 의 마지막 잔재. 탭 줄은 세 탭에서 **같은 세로 위치**에 있어야 한다.
+   * 설명문 툴바가 탭 줄 앞뒤로 왔다갔다 하면 탭을 누를 때마다 줄이 위아래로 튄다.
+   * 브라우저 실측: /sales y=156, ?tab=payment y=116, ?tab=expenses y=162.
+   */
+  it("puts the tab row first in the main content on every sales tab", async () => {
+    const before = (html: string) => html.slice(0, html.indexOf('aria-label="매출 기능"'));
+
+    const { OperationsPage } = await import("./operations/operations-page");
+    const expenses = renderToStaticMarkup(
+      <OperationsPage activeTab="expenses" catalog={[]} expenses={[]} ledger={[]} requestKey="k" salesContext salesQuery={{ view: "month", cursor: "2026-07-31" }} settings={{}} />,
+    );
+
+    expect(before(expenses)).not.toContain("justify-between gap-6");
+  });
+});

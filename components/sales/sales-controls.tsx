@@ -29,7 +29,8 @@ function href(query: RevenueQuery, tab?: "payment" | "expenses") {
 
 export function SalesControls({ query, label, tab }: { query: RevenueQuery; label: string; tab?: "payment" | "expenses" }) {
   return <>
-    <nav aria-label="매출 기능" className="no-print mt-6 flex gap-2">
+    {/* 탭 줄은 언제나 본문 첫 줄이다. 설명문 툴바가 앞뒤로 오가면 탭마다 줄이 위아래로 튄다. */}
+    <nav aria-label="매출 기능" className="no-print flex gap-2">
       <Link aria-current={!tab ? "page" : undefined} className={navChip(!tab)} href={href(query)}>매출 분석</Link>
       <Link aria-current={tab === "payment" ? "page" : undefined} className={navChip(tab === "payment")} href={href(query, "payment")}>결제 등록</Link>
       <Link aria-current={tab === "expenses" ? "page" : undefined} className={navChip(tab === "expenses")} href={href(query, "expenses")}>지출/정산</Link>

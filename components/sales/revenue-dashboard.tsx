@@ -300,7 +300,8 @@ export function RevenueDashboard({
           <strong className="text-[17px] font-semibold">매출·결제</strong>
           <span className="ml-3 font-mono text-[12px]">{analytics.selectedPeriod.start} ~ {analytics.selectedPeriod.end}</span>
         </div>
-        <PageToolbar description={<>결제 기록과 정산을 같은 기준으로 확인합니다. {analytics.selectedPeriod.start} ~ {analytics.selectedPeriod.end}</>} noPrint>
+        <SalesControls label={analytics.selectedPeriod.label} query={query} />
+        <PageToolbar className="mt-6" description={<>결제 기록과 정산을 같은 기준으로 확인합니다. {analytics.selectedPeriod.start} ~ {analytics.selectedPeriod.end}</>} noPrint>
           <button
             className="h-10 rounded-[var(--radius-card)] border border-[var(--border)] bg-[var(--surface)] px-4 text-[13px] font-medium text-[var(--brand)]"
             onClick={() => window.print()}
@@ -316,7 +317,6 @@ export function RevenueDashboard({
             CSV 내보내기
           </a>
         </PageToolbar>
-        <SalesControls label={analytics.selectedPeriod.label} query={query} />
         <section
           aria-label="매출 핵심 지표"
           className="mt-4 grid grid-cols-5 gap-3"

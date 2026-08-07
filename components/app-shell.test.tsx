@@ -30,6 +30,19 @@ describe("AppShell", () => {
     expect(customers).toContain("고객 관리");
   });
 
+  /**
+   * `/settings` 는 하위 섹션이 있어 `<details>/<summary>` 로 그린다.
+   * 그래도 활성 표시는 다른 메뉴와 같아야 한다 — `<a>` 가 아니라는 이유로
+   * `aria-current` 가 빠지면 스크린리더는 현재 위치를 알 수 없다.
+   */
+  it("marks the settings group as the current page too", () => {
+    const html = renderToStaticMarkup(<AppShell pathname="/settings"><main /></AppShell>);
+
+    expect(html).toMatch(/<summary[^>]*aria-current="page"/);
+    expect(renderToStaticMarkup(<AppShell pathname="/customers"><main /></AppShell>))
+      .not.toMatch(/<summary[^>]*aria-current="page"/);
+  });
+
   /** 셸 크롬 검증은 원래 대시보드 테스트에 있었다. 셸이 레이아웃으로 올라갔으니 여기가 제자리다. */
   it("renders the shell chrome once for every route", () => {
     const html = renderToStaticMarkup(<AppShell ownerName="원장" pathname="/" settings={{ smsRemaining: 500 }}><main /></AppShell>);

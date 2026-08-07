@@ -14,3 +14,6 @@ src-tauri/binaries/
 !.env.example
 !.env.development
 npm-debug.log*
+.playwright-mcp/
+.impeccable/
+.tmp-figma/
