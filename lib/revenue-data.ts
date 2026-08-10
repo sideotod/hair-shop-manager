@@ -16,7 +16,9 @@ const pointsUsed = (entry: LedgerEntry) => typeof entry.details.pointsUsedWon ==
 
 export function buildRevenueTransactions(ledger: readonly LedgerEntry[], customers: readonly { id: string; value: JsonValue }[] = []) {
   const customerNames = new Map(customers.map((customer) => [customer.id, customerName(customer)]));
-  return Object.freeze(ledger.map((entry) => Object.freeze({
+  // 포인트 조정은 돈이 오간 거래가 아니다(금액칸 전부 0). 여기 남기면 `:35` 의 기본값을 타고
+  // ₩0 짜리 "결제" 행으로 거래 기록과 CSV 에 유령처럼 찍힌다. 포인트 이력은 고객 상세가 보여준다.
+  return Object.freeze(ledger.filter((entry) => entry.kind !== "point-adjust").map((entry) => Object.freeze({
     id: entry.id,
     date: seoulBusinessDate(entry.occurredAt),
     dateLabel: dateLabel(seoulBusinessDate(entry.occurredAt)),

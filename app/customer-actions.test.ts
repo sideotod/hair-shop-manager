@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import { completeWaitingCustomerRecord, saveCustomerPolicyRecord, saveCustomerRecord, saveWaitingCustomerRecord } from "../lib/customer-operations";
+import { adjustCustomerPointsRecord, completeWaitingCustomerRecord, saveCustomerPolicyRecord, saveCustomerRecord, saveWaitingCustomerRecord } from "../lib/customer-operations";
 import { createSalonStore } from "../lib/salon-store";
 
 const store = createSalonStore(":memory:");
@@ -16,11 +16,22 @@ describe("customer actions", () => {
     expect(() => saveCustomerRecord(store, form({ name: "", phone: "01012345678" }))).toThrow("고객명");
     expect(() => saveCustomerRecord(store, form({ name: "신규 고객", phone: "010-1234-5678", memo: "가".repeat(151) }))).toThrow("150");
     expect(() => saveCustomerRecord(store, form({ name: "김하늘", phone: "01012345678" }))).toThrow("중복");
-    expect(() => saveCustomerRecord(store, form({ name: "김하늘", phone: "01012345678", allowDuplicate: "on", points: "12.5" }))).toThrow("포인트");
 
-    saveCustomerRecord(store, form({ name: "김하늘", phone: "01012345678", allowDuplicate: "on", points: "12", smsOptIn: "off" }));
-    const saved = store.list<{ name: string; points: number; smsOptIn: boolean }>("customers").find(({ value }) => value.name === "김하늘" && value.points === 12);
-    expect(saved?.value).toMatchObject({ smsOptIn: false, points: 12 });
+    // 폼이 실어 보낸 `points` 는 무시된다. 잔액을 만드는 곳은 원장뿐이다.
+    const saved = saveCustomerRecord(store, form({ name: "김하늘", phone: "01012345678", allowDuplicate: "on", points: "12", smsOptIn: "off" }));
+    expect(saved.value).toMatchObject({ smsOptIn: false, points: 0 });
+  });
+
+  it("keeps ledger points out of the customer form and demands a reason to adjust", async () => {
+    const created = saveCustomerRecord(store, form({ name: "포인트 고객", phone: "01055556666" }));
+    expect(() => adjustCustomerPointsRecord(store, form({ customerId: created.id, pointsWon: "500" }))).toThrow("사유");
+    expect(() => adjustCustomerPointsRecord(store, form({ customerId: created.id, pointsWon: "0", reason: "무효" }))).toThrow("0이 아닌");
+    adjustCustomerPointsRecord(store, form({ customerId: created.id, pointsWon: "500", reason: "이벤트 보상" }));
+    expect(store.get<{ points: number }>("customers", created.id)?.value.points).toBe(500);
+
+    // 이름 한 글자만 고쳐 저장해도 적립분이 폼 값으로 되돌아가지 않아야 한다.
+    saveCustomerRecord(store, form({ customerId: created.id, name: "포인트 고객", phone: "01055556666", points: "0" }));
+    expect(store.get<{ points: number }>("customers", created.id)?.value.points).toBe(500);
   });
 
   it("creates requested booking, SMS, and waiting records with the saved customer", async () => {

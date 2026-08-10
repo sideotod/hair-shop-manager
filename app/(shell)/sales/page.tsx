@@ -124,7 +124,7 @@ export default async function SalesPage({ searchParams }: { searchParams: Promis
       const correctionTarget = value(params.correction) ? store.listLedger().find(({ id, kind }) => id === value(params.correction) && kind === "payment") : undefined;
       const customerId = value(params.customer) || correctionTarget?.customerId || undefined;
       const returnTo = `/sales?tab=payment&${serializeRevenueQuery(query)}${customerId ? `&customer=${encodeURIComponent(customerId)}` : ""}${correctionTarget ? `&correction=${encodeURIComponent(correctionTarget.id)}` : ""}`;
-      return <main className="min-w-0 px-7 pb-6 pt-5"><SalesControls label={revenueRange(query).label} query={query} tab="payment" /><section className="mt-5"><PaymentForm backTo={analysisHref} correctionTargetId={correctionTarget?.id} customerId={customerId} customers={customers} error={value(params.error) || undefined} requestKey={randomUUID()} returnTo={returnTo} settings={settings} today={seoulDate()} /></section></main>;
+      return <main className="min-w-0 px-7 pb-6 pt-5"><SalesControls label={revenueRange(query).label} query={query} tab="payment" /><section className="mt-5"><PaymentForm backTo={analysisHref} correctionTargetId={correctionTarget?.id} customerId={customerId} customers={customers} error={value(params.error) || undefined} notice={value(params.notice) || undefined} requestKey={randomUUID()} returnTo={returnTo} settings={settings} today={seoulDate()} /></section></main>;
     }
     const bounds = store.ledgerBounds();
     const period = revenueRangeExclusive(query, bounds);

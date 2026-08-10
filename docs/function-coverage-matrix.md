@@ -91,9 +91,9 @@
 | 시술 대분류 선택: 컷, 펌, 매직, 드라이, 클리닉, 염색, 업스타일, 매니큐어, 세트메뉴, 기타 | 구현 | app/(shell)/sales/page.tsx; app/payment-actions.ts; components/sales/revenue-dashboard.tsx | lib/finance.test.ts; components/sales/revenue-dashboard.test.tsx |
 | 시술 상세 분류 선택 | 구현 | app/(shell)/sales/page.tsx; app/payment-actions.ts; components/sales/revenue-dashboard.tsx | lib/finance.test.ts; components/sales/revenue-dashboard.test.tsx |
 | 상세 스타일명 직접 입력 | 구현 | app/(shell)/sales/page.tsx; app/payment-actions.ts; components/sales/revenue-dashboard.tsx | lib/finance.test.ts; components/sales/revenue-dashboard.test.tsx |
-| 고객 검색 연동 | 구현 | app/(shell)/sales/page.tsx; app/payment-actions.ts; components/sales/revenue-dashboard.tsx | lib/finance.test.ts; components/sales/revenue-dashboard.test.tsx |
+| 고객 검색 연동 | 구현 | app/(shell)/sales/page.tsx; app/payment-actions.ts; components/sales/revenue-dashboard.tsx; lib/customer-options.ts | lib/finance.test.ts; components/sales/revenue-dashboard.test.tsx; lib/customer-options.test.ts |
 | 최종 결제금액 직접 수정 | 구현 | app/(shell)/sales/page.tsx; app/payment-actions.ts; components/sales/revenue-dashboard.tsx | lib/finance.test.ts; components/sales/revenue-dashboard.test.tsx |
-| 결제 수단별 금액 | 구현 | app/(shell)/sales/page.tsx; app/payment-actions.ts; components/sales/revenue-dashboard.tsx | lib/finance.test.ts; components/sales/revenue-dashboard.test.tsx |
+| 결제 수단별 금액 | 구현 | app/(shell)/sales/page.tsx; app/payment-actions.ts; components/sales/revenue-dashboard.tsx; components/sales/payment-amounts.tsx; lib/settlement.ts | lib/finance.test.ts; components/sales/revenue-dashboard.test.tsx; lib/settlement.test.ts |
 | 현금 | 구현 | app/(shell)/sales/page.tsx; app/payment-actions.ts; components/sales/revenue-dashboard.tsx | lib/finance.test.ts; components/sales/revenue-dashboard.test.tsx |
 | 현금영수증 | 구현 | app/(shell)/sales/page.tsx; app/payment-actions.ts; components/sales/revenue-dashboard.tsx | lib/finance.test.ts; components/sales/revenue-dashboard.test.tsx |
 | 카드 | 구현 | app/(shell)/sales/page.tsx; app/payment-actions.ts; components/sales/revenue-dashboard.tsx | lib/finance.test.ts; components/sales/revenue-dashboard.test.tsx |

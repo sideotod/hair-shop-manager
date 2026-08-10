@@ -31,7 +31,18 @@ function validDateTime(date: string, time: string) {
   return validDate(date) && /^(?:[01]\d|2[0-3]):[0-5]\d$/.test(time);
 }
 
-function customerFrom(formData: FormData): CustomerValue {
+/**
+ * 폼은 포인트를 만들지 않는다.
+ *
+ * 포인트 잔액은 원장(`salon-store.ts:319-343`)이 적립·사용 행마다 계산하는 파생값이다.
+ * 고객 정보 폼이 `points` 를 같이 실어 보내면 이름 한 글자만 고쳐 저장해도 그 사이 쌓인
+ * 적립이 폼이 렌더될 때의 숫자로 되돌아간다. 그래서 여기서 아예 빼고,
+ * 저장 직전 `saveCustomerRecord()` 가 기존 레코드의 값을 그대로 이어붙인다.
+ * 잔액을 바꾸는 유일한 경로는 `adjustCustomerPointsRecord()` — **사유 필수**다.
+ */
+// 반환 타입은 추론에 맡긴다. `CustomerValue` 는 `JsonObject &` 교차형이라
+// `Omit<>` 을 씌우면 index signature 만 남고 이름 붙은 필드가 전부 날아간다.
+function customerFrom(formData: FormData) {
   const name = text(formData, "name");
   if (!name) throw new Error("고객명은 필수입니다.");
   const phoneAbsent = checked(formData, "phoneAbsent");
@@ -39,9 +50,6 @@ function customerFrom(formData: FormData): CustomerValue {
   if (!phoneAbsent && !/^01\d{8,9}$/.test(phone)) throw new Error("휴대전화 번호를 확인하세요.");
   const memo = text(formData, "memo");
   if (memo.length > 150) throw new Error("메모는 150자 이하로 입력하세요.");
-  const pointText = text(formData, "points");
-  const points = pointText ? Number(pointText) : 0;
-  if (!Number.isSafeInteger(points)) throw new Error("포인트는 정수로 입력하세요.");
 
   return {
     name,
@@ -55,7 +63,6 @@ function customerFrom(formData: FormData): CustomerValue {
     grade: text(formData, "grade") || "일반",
     group: text(formData, "group"),
     motive: text(formData, "motive"),
-    points,
     pointCard: text(formData, "pointCard"),
     familyNumber: text(formData, "familyNumber"),
     nickname: text(formData, "nickname"),
@@ -70,11 +77,19 @@ function customerFrom(formData: FormData): CustomerValue {
 }
 
 export function saveCustomerRecord(store: SalonStore, formData: FormData) {
-  const customer = customerFrom(formData);
-  for (const [field, value] of [["생년월일", customer.birthday], ["첫 만남 날짜", customer.firstMetAt], ["가입일", customer.joinedAt]] as const) {
+  const draft = customerFrom(formData);
+  for (const [field, value] of [["생년월일", draft.birthday], ["첫 만남 날짜", draft.firstMetAt], ["가입일", draft.joinedAt]] as const) {
     if (typeof value !== "string" || (value && !validDate(value))) throw new Error(`${field}을 확인하세요.`);
   }
   const id = recordId(formData, "customerId", "customer");
+  // 포인트 잔액과 포인트 빚은 원장이 계산한 값이다. 폼에서 오지 않으므로 기존 레코드에서 이어받는다.
+  const existing = store.get("customers", id);
+  const previous = existing ? objectValue(existing) : {};
+  const customer: CustomerValue = {
+    ...draft,
+    points: typeof previous.points === "number" && Number.isSafeInteger(previous.points) ? previous.points : 0,
+    ...(typeof previous.pointDebtWon === "number" ? { pointDebtWon: previous.pointDebtWon } : {}),
+  };
   const duplicate = store.list("customers").some((record) => {
     if (record.id === id) return false;
     const value = objectValue(record);
@@ -104,6 +119,33 @@ export function saveCustomerRecord(store: SalonStore, formData: FormData) {
 
 export function archiveCustomerRecord(store: SalonStore, formData: FormData) {
   return store.archive("customers", text(formData, "customerId"), actor);
+}
+
+/**
+ * 포인트 잔액을 바꾸는 유일한 경로. **사유가 곧 확인 절차다** — 별도 confirm 다이얼로그를 두지 않는다.
+ *
+ * 산수는 여기서 하지 않는다. `details.pointsUsedWon`/`pointsEarnedWon` 만 실어 보내면
+ * `salon-store.ts:299-343` 이 잔액·포인트 빚(상환·회수 포함)을 계산한다. 잔액보다 큰 차감은
+ * 거기서 "Customer spendable points are insufficient" 로 막힌다.
+ * 금액칸은 전부 0이라 매출 합계에 끼어들지 않는다.
+ */
+export function adjustCustomerPointsRecord(store: SalonStore, formData: FormData) {
+  const customerId = text(formData, "customerId");
+  if (!customerId || !store.get("customers", customerId)) throw new Error("포인트를 조정할 고객을 확인하세요.");
+  const reason = text(formData, "reason");
+  if (!reason) throw new Error("포인트 조정 사유는 필수입니다.");
+  if (reason.length > 150) throw new Error("포인트 조정 사유는 150자 이하로 입력하세요.");
+  const amount = Number(text(formData, "pointsWon"));
+  if (!Number.isSafeInteger(amount) || amount === 0) throw new Error("포인트 조정 금액은 0이 아닌 정수로 입력하세요.");
+
+  return store.appendLedger({
+    requestKey: text(formData, "requestKey") || `point-adjust-${randomUUID()}`,
+    kind: "point-adjust",
+    customerId,
+    amountWon: 0,
+    pointsWon: amount,
+    details: { operator: actor, reason, pointsUsedWon: amount < 0 ? -amount : 0, pointsEarnedWon: amount > 0 ? amount : 0 },
+  }, actor);
 }
 
 export function saveWaitingCustomerRecord(store: SalonStore, formData: FormData) {

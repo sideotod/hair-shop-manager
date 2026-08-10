@@ -3,7 +3,7 @@
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 
-import { archiveCustomerRecord, completeWaitingCustomerRecord, saveCustomerPolicyRecord, saveCustomerRecord, saveWaitingCustomerRecord } from "../lib/customer-operations";
+import { adjustCustomerPointsRecord, archiveCustomerRecord, completeWaitingCustomerRecord, saveCustomerPolicyRecord, saveCustomerRecord, saveWaitingCustomerRecord } from "../lib/customer-operations";
 import type { SalonStore } from "../lib/salon-domain";
 import { createSalonStore } from "../lib/salon-store";
 
@@ -17,6 +17,17 @@ function returnTo(formData: FormData) {
   return typeof value === "string" && /^\/customers(?:\?|$)/.test(value) ? value : "/customers";
 }
 
+// 지금까지 `saveCustomerRecord` 등이 던지면 Next 에러 화면으로 튀어 입력이 통째로 사라졌다.
+// `payment-actions.ts` 와 같은 모양으로 되돌려 보내 화면에서 읽히게 한다.
+function back(formData: FormData, key: "error" | "notice", message: string): never {
+  const url = new URL(returnTo(formData), "http://localhost");
+  url.searchParams.delete(key === "notice" ? "error" : "notice");
+  url.searchParams.delete("new");
+  url.searchParams.delete("waiting");
+  url.searchParams.set(key, message);
+  redirect(`${url.pathname}${url.search}`);
+}
+
 function withStore<T>(operation: (store: SalonStore) => T) {
   const store = createSalonStore();
   try {
@@ -26,8 +37,15 @@ function withStore<T>(operation: (store: SalonStore) => T) {
   }
 }
 
-export async function saveCustomer(formData: FormData) { withStore((store) => saveCustomerRecord(store, formData)); revalidateCustomers(); redirect(returnTo(formData)); }
-export async function archiveCustomer(formData: FormData) { withStore((store) => archiveCustomerRecord(store, formData)); revalidateCustomers(); }
-export async function saveWaitingCustomer(formData: FormData) { withStore((store) => saveWaitingCustomerRecord(store, formData)); revalidateCustomers(); redirect(returnTo(formData)); }
-export async function completeWaitingCustomer(formData: FormData) { withStore((store) => completeWaitingCustomerRecord(store, formData)); revalidateCustomers(); }
-export async function saveCustomerPolicy(formData: FormData) { withStore((store) => saveCustomerPolicyRecord(store, formData)); revalidateCustomers(); }
+function mutate(formData: FormData, notice: string, operation: (store: SalonStore) => unknown): never {
+  try { withStore(operation); } catch (error) { back(formData, "error", error instanceof Error ? error.message : "고객 요청을 처리하지 못했습니다."); }
+  revalidateCustomers();
+  back(formData, "notice", notice);
+}
+
+export async function saveCustomer(formData: FormData) { mutate(formData, "고객 정보를 저장했습니다.", (store) => saveCustomerRecord(store, formData)); }
+export async function archiveCustomer(formData: FormData) { mutate(formData, "고객을 보관했습니다.", (store) => archiveCustomerRecord(store, formData)); }
+export async function saveWaitingCustomer(formData: FormData) { mutate(formData, "대기 고객을 등록했습니다.", (store) => saveWaitingCustomerRecord(store, formData)); }
+export async function completeWaitingCustomer(formData: FormData) { mutate(formData, "대기 고객을 완료 처리했습니다.", (store) => completeWaitingCustomerRecord(store, formData)); }
+export async function saveCustomerPolicy(formData: FormData) { mutate(formData, "고객 설정을 저장했습니다.", (store) => saveCustomerPolicyRecord(store, formData)); }
+export async function adjustCustomerPoints(formData: FormData) { mutate(formData, "포인트를 조정했습니다.", (store) => adjustCustomerPointsRecord(store, formData)); }

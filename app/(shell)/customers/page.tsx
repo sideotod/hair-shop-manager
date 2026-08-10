@@ -22,9 +22,11 @@ export default async function Page({ searchParams }: { searchParams: Promise<Rec
     return <CustomersPage
       bookings={store.list("bookings")}
       customers={store.list("customers")}
+      error={value(params.error) || undefined}
       ledger={ledger}
       messages={store.list("messages")}
       mode={value(params.mode)}
+      notice={value(params.notice) || undefined}
       page={value(params.page)}
       printLayout={value(params.printLayout)}
       query={value(params.query)}

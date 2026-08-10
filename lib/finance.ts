@@ -1,20 +1,14 @@
 import { randomUUID } from "node:crypto";
 
 import type { JsonObject, LedgerEntry, LedgerInput, SalonStore } from "./salon-domain";
+import { PAYMENT_METHODS, settleAmounts, type PaymentAmounts, type PaymentMethod, type VatMode } from "./settlement";
 
-export const PAYMENT_METHODS = [
-  { key: "cash", label: "현금" },
-  { key: "cashReceipt", label: "현금영수증" },
-  { key: "card", label: "카드" },
-  { key: "points", label: "포인트" },
-  { key: "transfer", label: "계좌이체" },
-  { key: "naverPay", label: "N페이" },
-  { key: "other", label: "기타" },
-  { key: "zeroPay", label: "제로페이" },
-] as const;
+// 결제수단 목록과 금액 파생은 `lib/settlement.ts` 에 산다 — 화면도 같은 것을 써야 하는데
+// 이 파일은 `node:crypto` 때문에 클라이언트 번들에 들어갈 수 없다. 여기서 다시 내보내
+// 기존 import 경로(`lib/finance`)를 그대로 유지한다.
+export { PAYMENT_METHODS, settleAmounts } from "./settlement";
+export type { PaymentAmounts, PaymentMethod, VatMode } from "./settlement";
 
-export type PaymentMethod = typeof PAYMENT_METHODS[number]["key"];
-export type PaymentAmounts = Partial<Record<PaymentMethod, number>>;
 export type PaymentTotals = {
   gross: number;
   discount: number;
@@ -30,7 +24,7 @@ export type PaymentInput = {
   gross: number;
   discount: number;
   points: number;
-  vatMode: "included" | "separate";
+  vatMode: VatMode;
   cardFeeRateBps: number;
   expense: number;
   payments: PaymentAmounts;
@@ -47,12 +41,10 @@ export function calculatePayment(input: PaymentInput): PaymentTotals {
   assertWon(input.expense, "지출");
   if (!Number.isSafeInteger(input.cardFeeRateBps) || input.cardFeeRateBps < 0 || input.cardFeeRateBps > 10000) throw new Error("카드 수수료율을 확인하세요.");
 
-  const taxable = input.gross - input.discount - input.points;
+  const { taxable, vat, netPaid } = settleAmounts(input.gross, input.discount, input.points, input.vatMode);
   if (taxable < 0) throw new Error("할인과 포인트는 총 금액을 넘을 수 없습니다.");
   for (const { key, label } of PAYMENT_METHODS) assertWon(input.payments[key] ?? 0, label);
 
-  const vat = Math.round(taxable / (input.vatMode === "included" ? 11 : 10));
-  const netPaid = taxable + (input.vatMode === "separate" ? vat : 0);
   if ((input.payments.points ?? 0) !== input.points) throw new Error("포인트 결제수단과 사용 포인트가 일치해야 합니다.");
   const paymentSum = PAYMENT_METHODS.filter(({ key }) => key !== "points").reduce((sum, { key }) => sum + (input.payments[key] ?? 0), 0);
   if (paymentSum !== netPaid) throw new Error(`결제수단 합계는 ${netPaid.toLocaleString("ko-KR")}원이어야 합니다.`);
