@@ -53,10 +53,6 @@ export function RevenueDayChart({
   const max = Math.max(0, ...points.map((point) => point.gross ?? 0));
   const drawn = points.filter((point) => point.gross !== null);
   const x = (index: number) => ((index + 0.5) / points.length) * 100;
-  const drawnIndexes = points.map((point, index) => (point.gross === null ? null : index)).filter((index): index is number => index !== null);
-  const line = drawnIndexes.map((index) => `${x(index)},${100 - ratio(points[index].gross ?? 0, max)}`).join(" ");
-  // 면적은 선과 같은 점을 쓰되 양 끝을 바닥으로 내려 닫는다. 값이 아니라 추세의 무게를 보여주는 장치다.
-  const area = line && drawnIndexes.length > 1 ? `${x(drawnIndexes[0])},100 ${line} ${x(drawnIndexes[drawnIndexes.length - 1])},100` : "";
   const summed = drawn.reduce((running, point) => running + (point.gross ?? 0), 0);
   const mismatch = summed !== total;
   // 아직 끝나지 않은 달을 지난 달 전체와 비교하면 항상 큰 폭 감소로 보인다. 비교 대상을 라벨에 밝힌다.
@@ -111,46 +107,20 @@ export function RevenueDayChart({
             )}
           </div>
           <div className="relative min-w-0 flex-1" style={{ height: "196px" }}>
-            <svg
-              aria-hidden="true"
-              className="absolute inset-0 h-full w-full"
-              preserveAspectRatio="none"
-              viewBox="0 0 100 100"
-            >
-              <defs>
-                <linearGradient id="revenue-day-area" x1="0" x2="0" y1="0" y2="1">
-                  <stop offset="0%" stopColor="var(--brand)" stopOpacity={0.22} />
-                  <stop offset="100%" stopColor="var(--brand)" stopOpacity={0.02} />
-                </linearGradient>
-              </defs>
-              {[0, 25, 50, 75, 100].map((offset) => (
-                <line
-                  key={offset}
-                  stroke="var(--border)"
-                  strokeWidth={1}
-                  vectorEffect="non-scaling-stroke"
-                  x1={0}
-                  x2={100}
-                  y1={offset}
-                  y2={offset}
-                />
-              ))}
-              {area && <polygon data-revenue-draw fill="url(#revenue-day-area)" points={area} />}
-              {line && (
-                <polyline
-                  data-revenue-draw
-                  fill="none"
-                  points={line}
-                  stroke="var(--brand)"
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  strokeWidth={2}
-                  vectorEffect="non-scaling-stroke"
-                />
-              )}
-            </svg>
+            {/* 눈금선은 막대 뒤로 물러난다. 데이터가 앞이다. */}
+            {[0, 50].map((offset) => (
+              <span
+                aria-hidden="true"
+                className="pointer-events-none absolute inset-x-0 border-t border-dashed border-[var(--border)]"
+                key={offset}
+                style={{ top: `${offset}%` }}
+              />
+            ))}
             {points.map((point, index) => {
               const interactive = point.gross !== null;
+              // 0원인 날은 높이 0으로 비워 둔다 — 막대가 없는 것 자체가 "매출 없음"이다.
+              // 값이 있으면 최소 1.5%를 남겨 아주 작은 날도 눈에 걸린다.
+              const height = max > 0 && point.gross ? Math.max(ratio(point.gross, max), 1.5) : 0;
               const dot = (
                 <>
                   {point.state === "in-progress" && (
@@ -160,31 +130,35 @@ export function RevenueDayChart({
                       style={{ left: `${x(index)}%` }}
                     />
                   )}
-                  {interactive && (
+                  {height > 0 && (
                     <span
                       aria-hidden="true"
-                      className={`absolute h-[8px] w-[8px] -translate-x-1/2 translate-y-1/2 rounded-full border transition-transform duration-200 ease-[cubic-bezier(0.32,0.72,0,1)] group-hover:scale-[1.6] group-focus-visible:scale-[1.6] ${
+                      className={`absolute bottom-0 left-1/2 w-[calc(100%-3px)] max-w-[18px] -translate-x-1/2 origin-bottom rounded-t-[var(--radius-chip)] transition-[filter,opacity] duration-200 ease-[cubic-bezier(0.32,0.72,0,1)] ${
                         point.hasCorrection
-                          ? "border-[var(--accent)] bg-[var(--accent)] shadow-[0_0_0_2px_var(--surface)]"
+                          ? "bg-[linear-gradient(180deg,var(--accent)_0%,color-mix(in_srgb,var(--accent)_72%,var(--surface))_100%)] shadow-[inset_0_1px_0_rgba(255,255,255,0.22)]"
                           : point.state === "in-progress"
-                            ? "border-[var(--accent)] bg-[var(--surface)] shadow-[0_0_0_2px_var(--surface)]"
-                            : point.state === "zero"
-                              ? "border-[var(--border)] bg-[var(--surface)]"
-                              : "border-[var(--brand)] bg-[var(--brand)] shadow-[0_0_0_2px_var(--surface)]"
+                            ? "border border-b-0 border-dashed border-[var(--accent)] bg-[var(--brand-soft)]"
+                            : "bg-[linear-gradient(180deg,var(--brand)_0%,color-mix(in_srgb,var(--brand)_74%,var(--surface))_100%)] shadow-[inset_0_1px_0_rgba(255,255,255,0.18)]"
                       }`}
-                      style={{ left: `${x(index)}%`, bottom: `${ratio(point.gross ?? 0, max)}%` }}
+                      data-revenue-draw
+                      style={{ height: `${height}%` }}
+                    />
+                  )}
+                  {/* 실제 0원인 날은 바닥에 눈금 하나를 남긴다. 아직 오지 않은 날(빈 칸)과 구분된다 (§18).
+                      `--border` 로 그리면 우물 배경 위에서 1.1:1 이라 사실상 안 보였다(실측).
+                      이 눈금은 장식이 아니라 상태 정보이므로 비텍스트 대비 3:1 을 넘겨야 한다. */}
+                  {point.state === "zero" && (
+                    <span
+                      aria-hidden="true"
+                      className="absolute bottom-0 left-1/2 h-[2px] w-[calc(100%-3px)] max-w-[18px] -translate-x-1/2 rounded-full bg-[var(--muted)]"
                     />
                   )}
                   {interactive && (
                     <span
                       aria-hidden="true"
                       className={`pointer-events-none absolute z-10 whitespace-nowrap rounded-[var(--radius-control)] border border-[var(--border)] bg-[var(--surface)] px-2.5 py-1.5 text-[11px] leading-tight opacity-0 shadow-[0_8px_24px_-10px_rgba(13,21,18,0.45)] transition-opacity duration-200 ease-[cubic-bezier(0.32,0.72,0,1)] group-hover:opacity-100 group-focus-visible:opacity-100 ${tooltipAlign(index, points.length)}`}
-                      // 높은 점 위에 띄우면 말풍선이 플롯 밖으로 나가 헤더를 덮는다. 그럴 땐 점 아래로 뒤집는다.
-                      style={
-                        ratio(point.gross ?? 0, max) > 62
-                          ? { top: `calc(${100 - ratio(point.gross ?? 0, max)}% + 16px)` }
-                          : { bottom: `calc(${ratio(point.gross ?? 0, max)}% + 16px)` }
-                      }
+                      // 높은 막대 위에 띄우면 말풍선이 플롯 밖으로 나가 헤더를 덮는다. 그럴 땐 막대 안쪽으로 내린다.
+                      style={height > 62 ? { top: `calc(${100 - height}% + 6px)` } : { bottom: `calc(${height}% + 6px)` }}
                     >
                       <span className="block text-[var(--muted)]">{point.key}</span>
                       <strong className="mt-[2px] block font-mono tabular-nums">{won(point.gross ?? 0)}</strong>
@@ -236,7 +210,7 @@ export function RevenueDayChart({
         </tbody>
       </table>
       <p className="px-5 pb-4 pt-[22px] text-[11.5px] text-[var(--muted)]">
-        빈 점은 매출이 없던 날{partial ? ", 표시 없는 칸은 아직 오지 않은 날" : ""}입니다. 금색은 오늘과 정정 기록을 뜻합니다.
+        바닥 눈금만 있는 칸은 매출이 없던 날{partial ? ", 아무 표시도 없는 칸은 아직 오지 않은 날" : ""}입니다. 금색은 오늘과 정정 기록을 뜻합니다.
       </p>
     </section>
   );

@@ -72,6 +72,19 @@ describe("RevenueDayChart", () => {
     expect(html).toContain("매출 없음");
   });
 
+  it("draws a bar only for days with money, so a real ₩0 day is an empty column (§18)", () => {
+    const html = render();
+    const column = (key: string) => html.split(`data-revenue-day="${key}"`)[1]?.split("</a>")[0] ?? html.split(`data-revenue-day="${key}"`)[1]?.split("</span></span>")[0] ?? "";
+    // 값이 있는 날만 막대가 선다.
+    expect(html.match(/data-revenue-draw/g)).toHaveLength(3);
+    expect(column("2026-08-02")).toContain("data-revenue-draw");
+    // 실제 0원인 날은 막대 없이 바닥 눈금만. 선 차트처럼 이어 붙이지 않는다.
+    expect(column("2026-08-04")).not.toContain("data-revenue-draw");
+    // 선·면적을 그리던 폴리라인은 남아 있지 않다.
+    expect(html).not.toContain("<polyline");
+    expect(html).not.toContain("<polygon");
+  });
+
   it("renders without dividing by zero when the whole month is empty", () => {
     const html = render([], 0);
     expect(html.match(/data-revenue-day="2026-08-\d\d"/g)).toHaveLength(31);
