@@ -85,6 +85,23 @@ describe("RevenueDayChart", () => {
     expect(html).not.toContain("<polygon");
   });
 
+  it("explains gold only when a gold bar is on screen", () => {
+    // 8월은 오늘(진행 중)이 있으므로 골드가 있다.
+    expect(render()).toContain("금색은");
+    // 정정도 진행 중도 없는 달에는 찾을 수 없는 색을 설명하지 않는다.
+    const past = renderToStaticMarkup(
+      <RevenueDayChart
+        count={1}
+        deltaPrevious={null}
+        label="2026년 6월"
+        points={buildPoints([row("2026-06-01", 100_000)], "daily", dailyAxis("2026-06"), "2026-08-06")}
+        total={100_000}
+        transactionsHref={(date) => `/sales/transactions?view=day&cursor=${date}`}
+      />,
+    );
+    expect(past).not.toContain("금색은");
+  });
+
   it("renders without dividing by zero when the whole month is empty", () => {
     const html = render([], 0);
     expect(html.match(/data-revenue-day="2026-08-\d\d"/g)).toHaveLength(31);

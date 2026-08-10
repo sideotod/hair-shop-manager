@@ -57,6 +57,8 @@ export function RevenueDayChart({
   const mismatch = summed !== total;
   // 아직 끝나지 않은 달을 지난 달 전체와 비교하면 항상 큰 폭 감소로 보인다. 비교 대상을 라벨에 밝힌다.
   const partial = points.some((point) => point.state === "future" || point.state === "in-progress");
+  // 범례는 화면에 있는 것만 설명한다. 골드가 하나도 없는 달에 "금색은…"을 남기면 찾을 수 없는 색을 찾게 만든다.
+  const hasGold = points.some((point) => point.hasCorrection || point.state === "in-progress");
 
   return (
     <section className={chartShell}>
@@ -210,7 +212,8 @@ export function RevenueDayChart({
         </tbody>
       </table>
       <p className="px-5 pb-4 pt-[22px] text-[11.5px] text-[var(--muted)]">
-        바닥 눈금만 있는 칸은 매출이 없던 날{partial ? ", 아무 표시도 없는 칸은 아직 오지 않은 날" : ""}입니다. 금색은 오늘과 정정 기록을 뜻합니다.
+        바닥 눈금만 있는 칸은 매출이 없던 날{partial ? ", 아무 표시도 없는 칸은 아직 오지 않은 날" : ""}입니다.
+        {hasGold ? " 금색은 오늘과 정정 기록을 뜻합니다." : ""}
       </p>
     </section>
   );
