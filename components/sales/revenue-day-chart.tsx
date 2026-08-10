@@ -38,6 +38,8 @@ export function RevenueDayChart({
   total,
   count,
   deltaPrevious,
+  span = "month",
+  contextNote,
   transactionsHref,
 }: {
   /** `2026년 8월` */
@@ -47,12 +49,18 @@ export function RevenueDayChart({
   total: number;
   count: number;
   deltaPrevious: number | null;
+  /** 주는 7칸이라 모든 날짜를 쓰고, 달은 31칸이라 5일 간격으로만 쓴다. */
+  span?: "week" | "month";
+  /** 고른 기간과 그린 기간이 다를 때만 밝힌다 (일별 버튼 → 그 날이 속한 달). */
+  contextNote?: string;
   /** 날짜를 붙이면 그 날 거래 목록이 되는 링크 접두사. */
   transactionsHref: (dateKey: string) => string;
 }) {
   const max = Math.max(0, ...points.map((point) => point.gross ?? 0));
   const drawn = points.filter((point) => point.gross !== null);
-  const x = (index: number) => ((index + 0.5) / points.length) * 100;
+  // 막대 폭 상한은 31칸 기준으로 잡혀 있었다. 주는 7칸이라 같은 상한을 쓰면
+  // 칸 폭의 1/8만 칠해져 막대가 실선처럼 보인다. 칸 수에 맞춰 상한을 넓힌다.
+  const barWidth = span === "week" ? "max-w-[56px]" : "max-w-[18px]";
   const summed = drawn.reduce((running, point) => running + (point.gross ?? 0), 0);
   const mismatch = summed !== total;
   // 아직 끝나지 않은 달을 지난 달 전체와 비교하면 항상 큰 폭 감소로 보인다. 비교 대상을 라벨에 밝힌다.
@@ -76,9 +84,11 @@ export function RevenueDayChart({
               {label} · {count.toLocaleString("ko-KR")}건
             </span>
           </p>
+          {/* 하루를 고르면 막대가 한 개라 비교가 안 된다. 그래서 그 날이 든 달을 그리는데, 왜 넓혔는지 밝힌다. */}
+          {contextNote && <p className="mt-[7px] text-[11.5px] text-[var(--muted)]">{contextNote}</p>}
         </div>
         <p className="text-right text-[12px] text-[var(--muted)]">
-          전월 대비{" "}
+          {span === "week" ? "전주" : "전월"} 대비{" "}
           {deltaPrevious === null ? (
             <span>비교 불가</span>
           ) : (
@@ -87,7 +97,7 @@ export function RevenueDayChart({
               {deltaPrevious}%
             </strong>
           )}
-          {partial && <span className="mt-[3px] block text-[11px]">진행 중인 달이라 지난달 전체와 비교됩니다</span>}
+          {partial && <span className="mt-[3px] block text-[11px]">진행 중인 {span === "week" ? "주" : "달"}이라 지난 {span === "week" ? "주" : "달"} 전체와 비교됩니다</span>}
         </p>
       </header>
       {mismatch && (
@@ -128,14 +138,13 @@ export function RevenueDayChart({
                   {point.state === "in-progress" && (
                     <span
                       aria-hidden="true"
-                      className="absolute bottom-0 top-0 w-px bg-[var(--accent)]"
-                      style={{ left: `${x(index)}%` }}
+                      className="absolute bottom-0 left-1/2 top-0 w-px bg-[var(--accent)]"
                     />
                   )}
                   {height > 0 && (
                     <span
                       aria-hidden="true"
-                      className={`absolute bottom-0 left-1/2 w-[calc(100%-3px)] max-w-[18px] -translate-x-1/2 origin-bottom rounded-t-[var(--radius-chip)] transition-[filter,opacity] duration-200 ease-[cubic-bezier(0.32,0.72,0,1)] ${
+                      className={`absolute bottom-0 left-1/2 w-[calc(100%-3px)] ${barWidth} -translate-x-1/2 origin-bottom rounded-t-[var(--radius-chip)] transition-[filter,opacity] duration-200 ease-[cubic-bezier(0.32,0.72,0,1)] ${
                         point.hasCorrection
                           ? "bg-[linear-gradient(180deg,var(--accent)_0%,color-mix(in_srgb,var(--accent)_72%,var(--surface))_100%)] shadow-[inset_0_1px_0_rgba(255,255,255,0.22)]"
                           : point.state === "in-progress"
@@ -152,7 +161,7 @@ export function RevenueDayChart({
                   {point.state === "zero" && (
                     <span
                       aria-hidden="true"
-                      className="absolute bottom-0 left-1/2 h-[2px] w-[calc(100%-3px)] max-w-[18px] -translate-x-1/2 rounded-full bg-[var(--muted)]"
+                      className={`absolute bottom-0 left-1/2 h-[2px] w-[calc(100%-3px)] ${barWidth} -translate-x-1/2 rounded-full bg-[var(--muted)]`}
                     />
                   )}
                   {interactive && (
@@ -166,14 +175,16 @@ export function RevenueDayChart({
                       <strong className="mt-[2px] block font-mono tabular-nums">{won(point.gross ?? 0)}</strong>
                     </span>
                   )}
+                  {/* 눈금·기준선은 칸 안에 있으므로 칸의 절반이 곧 막대 중심이다.
+                      플롯 기준 좌표(`x(index)`)를 쓰면 칸 안에서 다시 그만큼 밀려
+                      31칸에서는 티가 안 나던 어긋남이 7칸에서 한 칸만큼 벌어졌다. */}
                   <span
                     aria-hidden="true"
-                    className={`absolute bottom-[-18px] -translate-x-1/2 text-[10px] tabular-nums ${
+                    className={`absolute bottom-[-18px] left-1/2 -translate-x-1/2 text-[10px] tabular-nums ${
                       point.state === "in-progress" ? "font-semibold text-[var(--accent)]" : "text-[var(--muted)]"
                     }`}
-                    style={{ left: `${x(index)}%` }}
                   >
-                    {Number(point.label) % 5 === 0 || Number(point.label) === 1 ? point.label : ""}
+                    {span === "week" || Number(point.label) % 5 === 0 || Number(point.label) === 1 ? point.label : ""}
                   </span>
                 </>
               );

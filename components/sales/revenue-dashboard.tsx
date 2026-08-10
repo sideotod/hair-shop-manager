@@ -31,7 +31,25 @@ export type RevenueSeries = {
   readonly total: number;
   readonly count: number;
 };
-export type RevenueDayChartData = RevenueSeries & { readonly deltaPrevious: number | null };
+/** 하루 단위 막대 — 주(7칸) 또는 달(28~31칸). */
+export type RevenueDayChartData = RevenueSeries & {
+  readonly kind: "day";
+  readonly span: "week" | "month";
+  /** 고른 기간과 그린 기간이 다를 때만 채운다 (일별 → 그 날이 속한 달). */
+  readonly contextNote?: string;
+  readonly deltaPrevious: number | null;
+};
+/** 월 또는 연 단위 막대. */
+export type RevenueBarChartData = RevenueSeries & {
+  readonly kind: "bar";
+  readonly title: string;
+  readonly previousLabel: string;
+  readonly yearOverYearLabel?: string;
+  readonly emptyText: string;
+  readonly drilldown: "month" | "year";
+};
+/** 기간 버튼이 고른 단 하나의 차트. 세 벌을 함께 그리지 않는다. */
+export type RevenueChartData = RevenueDayChartData | RevenueBarChartData;
 const won = (value: number) => `₩${value.toLocaleString("ko-KR")}`;
 export function revenueChartMotion(
   reduced: boolean,
@@ -186,17 +204,14 @@ function DataTable({
 
 export function RevenueDashboard({
   analytics,
-  daily,
-  monthly,
-  yearly,
+  chart,
   query,
   settings = {},
   summary,
 }: {
   analytics: RevenueAnalyticsView;
-  daily: RevenueDayChartData;
-  monthly: RevenueSeries;
-  yearly: RevenueSeries;
+  /** 기간 버튼이 고른 차트 한 벌 (§11). */
+  chart: RevenueChartData;
   query: RevenueQuery;
   settings?: JsonObject;
   /** 서버 집계 정본 (§14). 없으면 정산 표에서 읽어 같은 값을 쓴다. */
@@ -352,37 +367,30 @@ export function RevenueDashboard({
           ))}
         </section>
         <div className="mt-5">
-          <RevenueDayChart
-            count={daily.count}
-            deltaPrevious={daily.deltaPrevious}
-            label={daily.label}
-            points={daily.points}
-            total={daily.total}
-            transactionsHref={(date) => `/sales/transactions?${serializeRevenueQuery({ view: "day", cursor: date })}`}
-          />
-        </div>
-        <div className="mt-5 grid grid-cols-[minmax(0,2fr)_minmax(0,1fr)] gap-5">
-          <RevenueBarChart
-            count={monthly.count}
-            drilldownHref={(key) => `?${serializeRevenueQuery({ view: "month", cursor: `${key}-01` })}`}
-            emptyText="이 해에 기록된 매출이 없습니다."
-            label={monthly.label}
-            points={monthly.points}
-            previousLabel="전월"
-            title="월별 매출"
-            total={monthly.total}
-            yearOverYearLabel="전년"
-          />
-          <RevenueBarChart
-            count={yearly.count}
-            drilldownHref={(key) => `?${serializeRevenueQuery({ view: "year", cursor: `${key}-01-01` })}`}
-            emptyText="아직 기록된 매출이 없습니다."
-            label={yearly.label}
-            points={yearly.points}
-            previousLabel="전년"
-            title="연도별 매출"
-            total={yearly.total}
-          />
+          {chart.kind === "day" ? (
+            <RevenueDayChart
+              contextNote={chart.contextNote}
+              count={chart.count}
+              deltaPrevious={chart.deltaPrevious}
+              label={chart.label}
+              points={chart.points}
+              span={chart.span}
+              total={chart.total}
+              transactionsHref={(date) => `/sales/transactions?${serializeRevenueQuery({ view: "day", cursor: date })}`}
+            />
+          ) : (
+            <RevenueBarChart
+              count={chart.count}
+              drilldownHref={(key) => `?${serializeRevenueQuery({ view: chart.drilldown, cursor: chart.drilldown === "month" ? `${key}-01` : `${key}-01-01` })}`}
+              emptyText={chart.emptyText}
+              label={chart.label}
+              points={chart.points}
+              previousLabel={chart.previousLabel}
+              title={chart.title}
+              total={chart.total}
+              yearOverYearLabel={chart.yearOverYearLabel}
+            />
+          )}
         </div>
         <div className="mt-5 grid grid-cols-[minmax(0,2fr)_392px] gap-5">
           <ChartCard kind="payment" title="결제 수단">

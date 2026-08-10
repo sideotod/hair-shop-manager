@@ -31,16 +31,20 @@ describe("AppShell", () => {
   });
 
   /**
-   * `/settings` 는 하위 섹션이 있어 `<details>/<summary>` 로 그린다.
-   * 그래도 활성 표시는 다른 메뉴와 같아야 한다 — `<a>` 가 아니라는 이유로
-   * `aria-current` 가 빠지면 스크린리더는 현재 위치를 알 수 없다.
+   * 설정은 사이드바에서 한 줄이다. 예전에는 `<details>` 로 7개 섹션을 펼쳤는데,
+   * 설정 화면 안 좌측 레일이 같은 7개를 또 그려 목록이 두 벌이었다.
+   * 섹션 선택은 본문 레일 하나로 끝내고, 사이드바는 다른 메뉴와 같은 링크가 된다.
    */
-  it("marks the settings group as the current page too", () => {
+  it("keeps settings as one plain menu row instead of duplicating the in-page section rail", () => {
     const html = renderToStaticMarkup(<AppShell pathname="/settings"><main /></AppShell>);
 
-    expect(html).toMatch(/<summary[^>]*aria-current="page"/);
-    expect(renderToStaticMarkup(<AppShell pathname="/customers"><main /></AppShell>))
-      .not.toMatch(/<summary[^>]*aria-current="page"/);
+    expect(activeLabels(html)).toEqual(["설정"]);
+    expect(html).not.toContain("<details class=\"group\"");
+    // 섹션 링크는 사이드바에 없다. 본문 레일과 헤더 바로가기만 남는다.
+    for (const label of ["매장 · 원장 계정", "고객 정책", "문자 자동화", "외부 연동"]) expect(html).not.toContain(label);
+    // 헤더 바로가기는 계속 섹션으로 깊게 들어간다.
+    expect(html).toContain('href="/settings?section=help"');
+    expect(html).toContain('href="/settings?section=owner"');
   });
 
   /** 셸 크롬 검증은 원래 대시보드 테스트에 있었다. 셸이 레이아웃으로 올라갔으니 여기가 제자리다. */

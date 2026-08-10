@@ -9,11 +9,6 @@ import { floatingShadow } from "./surface";
 
 const groupOrder = ["운영", "정산", "관리"] as const;
 const menuGroups = groupOrder.map((label) => ({ label, items: navigationItems.filter((item) => item.group === label) }));
-const settingsSections = [
-  ["owner", "매장 · 원장 계정"], ["customer", "고객 정책"], ["payment", "결제 정책"],
-  ["booking", "예약"], ["messages", "문자 자동화"], ["integrations", "외부 연동"], ["help", "도움말 · 공지"],
-] as const;
-
 
 type AppShellProps = {
   children: React.ReactNode;
@@ -78,12 +73,10 @@ export function AppShell({
           </div>
 
           <nav aria-label="주요 메뉴" className="mt-[26px] space-y-1">
-            {visibleGroups.map(({ label: groupLabel, items }) => <section className="mb-[18px] last:mb-0" key={groupLabel}><p className="px-3 pb-2 pt-0 font-mono text-[9px] font-medium tracking-[0.16em] text-white/55">{groupLabel}</p>{items.map(({ label, path }) => path === "/settings" ? (
-              <details className="group" key={path} open={activeHref === "/settings"}>
-                <summary aria-current={activeHref === "/settings" ? "page" : undefined} className={`flex cursor-pointer list-none items-center gap-2.5 rounded-[var(--radius-control)] px-3 py-[9px] text-[13px] ${activeHref === "/settings" ? "bg-[var(--surface)]/10 font-semibold text-white" : "text-white/60 hover:bg-[var(--surface)]/5 hover:text-white"}`}><span aria-hidden="true" className={`h-[13px] w-0.5 rounded-[1px] ${activeHref === "/settings" ? "bg-[var(--accent)]" : "bg-transparent"}`} /><span className="flex-1">{label}</span></summary>
-                <div className="ml-5 mt-1 space-y-0.5 border-l border-white/15 pl-2">{settingsSections.map(([section, sectionLabel]) => <Link className="block rounded-[var(--radius-chip)] px-2.5 py-1.5 text-[11px] text-white/55 hover:bg-[var(--surface)]/5 hover:text-white" href={`/settings?section=${section}`} key={section}>{sectionLabel}</Link>)}</div>
-              </details>
-            ) : <Link aria-current={path === activeHref ? "page" : undefined} className={`flex items-center gap-2.5 rounded-[var(--radius-control)] px-3 py-[9px] text-[13px] transition-colors ${path === activeHref ? "bg-[var(--surface)]/10 font-semibold text-white" : "text-white/60 hover:bg-[var(--surface)]/5 hover:text-white"}`} href={path} key={path}><span aria-hidden="true" className={`h-[13px] w-0.5 rounded-[1px] ${path === activeHref ? "bg-[var(--accent)]" : "bg-transparent"}`} />{label}</Link>)}</section>)}
+            {/* 설정도 다른 메뉴와 같은 한 줄이다. 예전에는 여기서 7개 섹션을 펼쳤는데,
+                설정 화면 안에 같은 7개가 또 있어 같은 목록을 두 번 그리고 있었다.
+                섹션 선택은 그것이 바꾸는 내용 옆(본문 좌측 레일)에서만 한다. */}
+            {visibleGroups.map(({ label: groupLabel, items }) => <section className="mb-[18px] last:mb-0" key={groupLabel}><p className="px-3 pb-2 pt-0 font-mono text-[9px] font-medium tracking-[0.16em] text-white/55">{groupLabel}</p>{items.map(({ label, path }) => <Link aria-current={path === activeHref ? "page" : undefined} className={`flex items-center gap-2.5 rounded-[var(--radius-control)] px-3 py-[9px] text-[13px] transition-colors ${path === activeHref ? "bg-[var(--surface)]/10 font-semibold text-white" : "text-white/60 hover:bg-[var(--surface)]/5 hover:text-white"}`} href={path} key={path}><span aria-hidden="true" className={`h-[13px] w-0.5 rounded-[1px] ${path === activeHref ? "bg-[var(--accent)]" : "bg-transparent"}`} />{label}</Link>)}</section>)}
           </nav>
 
           <div className="mt-auto rounded-[var(--radius-card)] bg-[var(--surface)]/[0.06] px-[13px] py-3">

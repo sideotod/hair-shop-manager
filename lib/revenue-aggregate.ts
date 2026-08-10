@@ -90,11 +90,24 @@ function labelFor(key: string, granularity: RevenueGranularity) {
   return key;
 }
 
+/**
+ * Every day in `[start, endExclusive)`. Month boundaries do not matter, so a week axis
+ * and a month axis come from the same function instead of two near-copies.
+ */
+export function dayAxis(start: string, endExclusive: string): readonly string[] {
+  const days: string[] = [];
+  const cursor = new Date(`${start}T00:00:00Z`);
+  for (let key = start; key < endExclusive; key = cursor.toISOString().slice(0, 10)) {
+    days.push(key);
+    cursor.setUTCDate(cursor.getUTCDate() + 1);
+  }
+  return days;
+}
+
 /** Every day of `monthKey` (`YYYY-MM`), 1st through last. Leap years included. */
 export function dailyAxis(monthKey: string): readonly string[] {
   const [year, month] = monthKey.split("-").map(Number);
-  const days = new Date(Date.UTC(year, month, 0)).getUTCDate();
-  return Array.from({ length: days }, (_, index) => `${monthKey}-${String(index + 1).padStart(2, "0")}`);
+  return dayAxis(`${monthKey}-01`, new Date(Date.UTC(year, month, 1)).toISOString().slice(0, 10));
 }
 
 /** All twelve months of `yearKey` (`YYYY`), January through December. Never reordered. */
