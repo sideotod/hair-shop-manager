@@ -17,4 +17,13 @@ describe("customerOptions", () => {
   it("번호가 없는 동명이인은 라벨을 늘리지 않는다", () => {
     expect(customerOptions([customer("c-1", "000"), customer("c-2", "000")]).map((option) => option.label)).toEqual(["000", "000"]);
   });
+
+  it("이름 없는 행을 목록 뒤로 보내고 뒷자리로 구분한다", () => {
+    const options = customerOptions([
+      customer("c-1", "000", "01012340234"),
+      customer("c-2", "한소희", "01011112222"),
+      customer("c-3", "0000", "01055559999"),
+    ]);
+    expect(options.map((option) => option.label)).toEqual(["한소희", "000 (0234)", "0000 (9999)"]);
+  });
 });

@@ -32,6 +32,19 @@ function dateKey(value: Date | string) {
   return `${part("year")}-${part("month")}-${part("day")}`;
 }
 
+/**
+ * 예약의 날짜·시각은 문자열을 그대로 읽는다. `Intl` 로 돌리면 안 된다.
+ *
+ * 저장 형식이 원장과 예약에서 다르다. `finance.ts:88` 의 결제는 `+09:00` 을 붙여 참 UTC 로
+ * 새기지만 `booking.ts:86` 의 예약은 벽시계 값에 `Z` 를 붙인다(`10:00` → `…T10:00:00.000Z`).
+ * 그래서 두 문자열을 같은 `dateKey`/`timeFormatter`(`timeZone: "Asia/Seoul"`)에 넣으면
+ * 예약만 +9h 를 한 번 더 먹었다 — `/bookings` 는 `10:00`, 대시보드는 `19:00` 이라 답했고
+ * 자정을 넘긴 예약은 날짜까지 밀려 오늘 건수가 `/bookings` 2건 vs 대시보드 1건으로 갈렸다.
+ * `/bookings` 도 `railBookings` 도 이미 슬라이스로 읽는다. 대시보드만 맞추면 한 답이 된다.
+ * (저장 형식 자체를 고치는 건 기존 예약 전부의 마이그레이션이라 이번 범위 밖이다.)
+ */
+function bookingDateKey(startsAt: string) { return /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}/.test(startsAt) ? startsAt.slice(0, 10) : null; }
+
 function addDays(key: string, days: number) {
   const date = new Date(`${key}T00:00:00.000Z`);
   date.setUTCDate(date.getUTCDate() + days);
@@ -80,11 +93,11 @@ export function DashboardPage({ data, today = new Date() }: { data: DashboardDat
   // 폴백도 서울 기준이어야 한다. UTC 는 09:00 이전에 어제를 오늘이라 부른다.
   const todayKey = dateKey(today) ?? seoulDate();
   const customerNames = new Map(customers.map((record) => [record.id, textValue(objectValue(record), "name", record.id)]));
-  const todayBookings = bookings.filter((record) => dateKey(textValue(objectValue(record), "startsAt")) === todayKey).sort((left, right) => textValue(objectValue(left), "startsAt").localeCompare(textValue(objectValue(right), "startsAt")));
-  const dayCounts = dayNames.map((label, offset) => ({ label, count: bookings.filter((record) => dateKey(textValue(objectValue(record), "startsAt")) === addDays(todayKey, offset)).length }));
+  const todayBookings = bookings.filter((record) => bookingDateKey(textValue(objectValue(record), "startsAt")) === todayKey).sort((left, right) => textValue(objectValue(left), "startsAt").localeCompare(textValue(objectValue(right), "startsAt")));
+  const dayCounts = dayNames.map((label, offset) => ({ label, count: bookings.filter((record) => bookingDateKey(textValue(objectValue(record), "startsAt")) === addDays(todayKey, offset)).length }));
   const todaySales = data.todayLedger.filter((entry) => dateKey(entry.occurredAt) === todayKey).reduce((total, entry) => total + entry.amountWon, 0);
   const recentAudit = data.recentAudit;
-  const malformedDateCount = bookings.filter((record) => dateKey(textValue(objectValue(record), "startsAt")) === null).length + data.malformedLedgerDates;
+  const malformedDateCount = bookings.filter((record) => bookingDateKey(textValue(objectValue(record), "startsAt")) === null).length + data.malformedLedgerDates;
 
   const policy = bookingSettings({
     bookingOpen: typeof settings.bookingOpen === "string" ? settings.bookingOpen : undefined,
@@ -119,10 +132,20 @@ export function DashboardPage({ data, today = new Date() }: { data: DashboardDat
       style: statusStyles[status],
     }];
   });
-  const railGaps = railBookings.flatMap((booking, index) => {
-    const next = railBookings[index + 1];
-    const gap = next ? next.start - booking.end : 0;
-    return gap >= policy.bookingSlotMinutes ? [{ height: railHeight(gap), minutes: gap, startMinutes: booking.end, top: railOffset(booking.end, openMinutes) }] : [];
+  /**
+   * 빈 구간은 예약 **사이**만이 아니다. 첫 예약 전과 마지막 예약 후도 비어 있다.
+   *
+   * 지금까지는 인접한 두 예약의 틈만 셌다. 오전 첫 예약이 14시면 09–14시가 통째로
+   * 비어 있는데도 축에 아무 표시가 없었고, 예약이 0~1건인 날은 빈 구간이 하나도 안 잡혀
+   * 대기 고객 "배정" 링크가 시각 없이 나갔다 — 원장은 배정 화면에서 시간을 다시 쳐야 했다.
+   *
+   * 경계를 `[영업시작, 예약1시작, 예약1종료, …, 영업종료]` 로 늘어놓으면 짝수 자리가
+   * 빈 구간의 시작이 된다. 예약이 없는 날은 `[시작, 종료]` 하나 — 하루 전체가 빈 구간이다.
+   */
+  const railEdges = [openMinutes, ...railBookings.flatMap((booking) => [booking.start, booking.end]), closeMinutes];
+  const railGaps = railEdges.flatMap((start, index) => {
+    const gap = index % 2 === 0 ? railEdges[index + 1] - start : 0;
+    return gap >= policy.bookingSlotMinutes ? [{ height: railHeight(gap), minutes: gap, startMinutes: start, top: railOffset(start, openMinutes) }] : [];
   });
   // 빈 슬롯과 대기 고객이 "배정 가능"이라고 말만 하던 자리에 실제 목적지를 준다.
   // 예약 폼은 `defaultValue` 로만 채운다 — 원장이 시간을 고칠 수 있어야 한다.
@@ -169,7 +192,7 @@ export function DashboardPage({ data, today = new Date() }: { data: DashboardDat
                       <li className={`absolute left-[56px] right-0 overflow-hidden rounded-[var(--radius-control)] border ${booking.style.card}`} data-booking-status={booking.status} key={booking.id} style={{ height: `${railHeight(booking.end - booking.start)}px`, top: `${railOffset(booking.start, openMinutes)}px` }}>
                         <span aria-hidden="true" className={`absolute inset-y-0 left-0 w-[3px] ${booking.style.stripe}`} />
                         <div className="flex h-full items-center gap-3 py-1.5 pl-[12px] pr-3">
-                          <time className="shrink-0 font-mono text-[11px] text-[var(--muted)]" dateTime={booking.startsAt}>{timeFormatter.format(new Date(booking.startsAt))}</time>
+                          <time className="shrink-0 font-mono text-[11px] text-[var(--muted)]" dateTime={booking.startsAt}>{booking.startsAt.slice(11, 16)}</time>
                           <div className="min-w-0 flex-1">
                             <strong className="block truncate text-[13px]">{booking.name}</strong>
                             <span className="mt-0.5 block truncate text-[11px] text-[var(--muted)]">{booking.service}</span>

@@ -10,7 +10,7 @@ import { button, focusRing } from "../button";
 import { ModalHost } from "../modal-host";
 import { PageToolbar } from "../page-toolbar";
 import { surface as card } from "../surface";
-import { SubmitButton } from "../submit-button";
+import { SubmitButton, ActionForm, NoticeBanner } from "../submit-button";
 import { typeScale } from "../type";
 import { NaverMailConnection } from "./naver-mail-connection";
 
@@ -39,14 +39,14 @@ function BookingForm({ booking, customerId, customers, date, returnTo, slotMinut
   const defaultStart = start.slice(11, 16) || startTime || "10:00";
   const after = (Number(defaultStart.slice(0, 2)) * 60 + Number(defaultStart.slice(3, 5)) + slotMinutes) % 1440;
   const defaultEnd = end.slice(11, 16) || `${String(Math.floor(after / 60)).padStart(2, "0")}:${String(after % 60).padStart(2, "0")}`;
-  return <form action={saveBooking} aria-label={booking ? "예약 수정" : "예약 등록"} className="grid grid-cols-4 gap-3"><input name="returnTo" type="hidden" value={returnTo} />
+  return <ActionForm action={saveBooking} aria-label={booking ? "예약 수정" : "예약 등록"} className="grid grid-cols-4 gap-3" errorClassName="col-span-4 rounded-[var(--radius-card)] border border-[var(--warning)] bg-[var(--warning-soft)] px-4 py-3 text-sm text-[var(--warning)]" errorPrefix="입력 내용을 수정하세요: "><input name="returnTo" type="hidden" value={returnTo} />
     {/* 대기 고객에서 넘어왔으면 예약 저장 성공 시 그 대기 줄이 사라져야 한다. 두 번 처리할 일이 아니다. */}
     {waitingId && <input name="waitingId" type="hidden" value={waitingId} />}
     {booking && <input name="bookingId" type="hidden" value={booking.id} />}<Field label="기존 고객"><select className={input} defaultValue={string("customerId") || customerId || ""} name="customerId"><option value="">신규 고객으로 등록</option>{customerOptions(customers).map((option) => <option key={option.id} value={option.id}>{option.label}</option>)}</select></Field><Field label="신규 고객명"><input className={input} name="newCustomerName" placeholder="기존 고객 미선택 시" /></Field><Field label="신규 휴대전화"><input className={input} name="newCustomerPhone" placeholder="010-0000-0000" type="tel" /></Field><Field label="시술 메뉴"><input className={input} defaultValue={string("service")} name="service" required /></Field>
     <Field label="예약 날짜"><input className={input} defaultValue={start.slice(0, 10) || date} name="date" required type="date" /></Field><Field label="시작 시간"><input className={input} defaultValue={defaultStart} name="startTime" required type="time" /></Field><Field label="종료 시간"><input className={input} defaultValue={defaultEnd} name="endTime" required type="time" /></Field><Field label="상태"><select className={input} defaultValue={string("status", "confirmed")} name="status"><option value="confirmed">예약</option><option value="waiting">대기</option><option value="completed">완료</option></select></Field>
     <label className="flex items-center gap-2 text-sm"><input defaultChecked={bool(booking ?? { id: "", kind: "", value: {}, createdAt: "", updatedAt: "", archivedAt: null }, "reminderDayBefore")} name="reminderDayBefore" type="checkbox" /> 전일 알림</label><label className="flex items-center gap-2 text-sm"><input defaultChecked={bool(booking ?? { id: "", kind: "", value: {}, createdAt: "", updatedAt: "", archivedAt: null }, "reminderDayOf")} name="reminderDayOf" type="checkbox" /> 당일 알림</label><Field label="방문일 추가 문구"><input className={input} defaultValue={string("reminderText")} maxLength={150} name="reminderText" /></Field><Field label="예약 메모"><input className={input} defaultValue={string("memo")} maxLength={150} name="memo" /></Field>
     <SubmitButton extra="col-span-4 w-full">{booking ? "예약 저장" : "예약 등록"}</SubmitButton>
-  </form>;
+  </ActionForm>;
 }
 
 export function BookingsPage({ bookings, customers, settings, syncHistory, date, view = "day", period = "7", showNew, newCustomerId, newStartTime, newWaitingId, error, notice, edit, searchParams, now = new Date() }: Props) {
@@ -89,7 +89,7 @@ export function BookingsPage({ bookings, customers, settings, syncHistory, date,
   return <main className="min-w-[1032px] px-7 pb-6 pt-5">
     {overlay && <ModalHost label="새 예약 등록">{overlay}</ModalHost>}
     {error && <p className="mb-5 rounded-[var(--radius-card)] border border-[var(--warning)] bg-[var(--warning-soft)] px-4 py-3 text-sm text-[var(--warning)]" role="alert">입력 내용을 수정하세요: {error}</p>}
-    {notice && <p className="mb-5 rounded-[var(--radius-card)] border border-[var(--success)] bg-[var(--success-soft)] px-4 py-3 text-sm text-[var(--success)]" role="status">{notice}</p>}
+    {notice && <NoticeBanner className="mb-5 rounded-[var(--radius-card)] border border-[var(--success)] bg-[var(--success-soft)] px-4 py-3 text-sm text-[var(--success)]">{notice}</NoticeBanner>}
     <PageToolbar description={<>단일 원장 일정입니다. 디자이너·직원 배정은 사용하지 않습니다. {selectedDate} · {visible.length}건 · {policy.bookingOpen}–{policy.bookingClose}</>}><Link className={button("lg", "primary")} href={openHref}>예약 등록</Link></PageToolbar>
     <section aria-label="예약 보기와 날짜 이동" className={`${card} mt-5 flex items-center justify-between gap-4 p-4`}><nav aria-label="예약 보기" className="flex gap-2">{[["day", "일"], ["month", "월"], ["period", "기간"]].map(([key, label]) => <Link className={button("md", activeView === key ? "primary" : "secondary")} href={link(selectedDate, key, period)} key={key}>{label} 보기</Link>)}</nav><div className="flex items-center gap-2"><Link className={button("md")} href={link(previousDate, activeView, period)}>이전</Link><Link className={button("md")} href={link(todayInSeoul(), activeView, period)}>오늘</Link><Link className={button("md")} href={link(nextDate, activeView, period)}>다음</Link>{activeView === "period" && <form method="get"><input name="date" type="hidden" value={selectedDate} /><input name="view" type="hidden" value="period" /><select aria-label="기간 일수" className={input} defaultValue={String(days)} name="period"><option value="7">7일</option><option value="14">14일</option><option value="31">31일</option></select><button className={button("md", "secondary", "ml-2")} type="submit">적용</button></form>}</div></section>
     <div className="mt-5 grid grid-cols-[minmax(0,1.4fr)_360px] gap-5"><section className={`${card} p-5`}><div className="flex items-baseline justify-between"><h2 className={typeScale.section}>{activeView === "month" ? `${selectedDate.slice(0, 7)} 월간` : activeView === "period" ? `${selectedDate}부터 ${days}일` : selectedDate}</h2><span className="text-sm text-[var(--muted)]">{visible.length}건</span></div>

@@ -87,7 +87,7 @@
 | 생일 양력·음력 표시 | 구현 | app/(shell)/customers/page.tsx; app/customer-actions.ts | components/customers/customers-page.test.tsx |
 | 고객 SMS 수신 기본값 | 구현 | app/(shell)/customers/page.tsx; app/customer-actions.ts | components/customers/customers-page.test.tsx |
 | 고객 화면 표시/이동 설정 | 구현 | app/(shell)/customers/page.tsx; app/customer-actions.ts | components/customers/customers-page.test.tsx |
-| 회원/비회원 선택 | 구현 | app/(shell)/sales/page.tsx; app/payment-actions.ts; components/sales/revenue-dashboard.tsx | lib/finance.test.ts; components/sales/revenue-dashboard.test.tsx |
+| 회원/비회원 선택 | 구현 | app/(shell)/sales/page.tsx; app/payment-actions.ts; components/sales/payment-customer.tsx; components/sales/revenue-dashboard.tsx | lib/finance.test.ts; components/sales/payment-customer.test.tsx; components/sales/revenue-dashboard.test.tsx |
 | 시술 대분류 선택: 컷, 펌, 매직, 드라이, 클리닉, 염색, 업스타일, 매니큐어, 세트메뉴, 기타 | 구현 | app/(shell)/sales/page.tsx; app/payment-actions.ts; components/sales/revenue-dashboard.tsx | lib/finance.test.ts; components/sales/revenue-dashboard.test.tsx |
 | 시술 상세 분류 선택 | 구현 | app/(shell)/sales/page.tsx; app/payment-actions.ts; components/sales/revenue-dashboard.tsx | lib/finance.test.ts; components/sales/revenue-dashboard.test.tsx |
 | 상세 스타일명 직접 입력 | 구현 | app/(shell)/sales/page.tsx; app/payment-actions.ts; components/sales/revenue-dashboard.tsx | lib/finance.test.ts; components/sales/revenue-dashboard.test.tsx |

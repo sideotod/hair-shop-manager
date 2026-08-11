@@ -6,7 +6,7 @@ import { memo, useCallback, useMemo, useState } from "react";
 import { queueMessage, saveAutomationRule } from "../../app/message-actions";
 import { button } from "../button";
 import { PageToolbar } from "../page-toolbar";
-import { SubmitButton } from "../submit-button";
+import { SubmitButton, NoticeBanner } from "../submit-button";
 import { eligibleRecipients, messageBytes, messageType, type MessageSegment, type Recipient } from "../../lib/messages";
 import type { JsonObject, JsonValue, SalonRecord } from "../../lib/salon-domain";
 
@@ -97,7 +97,7 @@ export function MessagesPage({ customers, messages, automations, settings, reque
   return <main className="min-w-0 px-7 pb-6 pt-5">
     <PageToolbar description="모든 발송은 저장 전용 dry-run입니다. 실제 전달 여부는 확인하거나 표시하지 않습니다."><span className="rounded-full border border-[var(--brand)] px-3 py-2 text-sm font-bold text-[var(--brand)]">상태: dry-run · SMS 기능 {smsEnabled ? "켜짐" : "꺼짐"}</span></PageToolbar>
     {!smsEnabled && <p className="mt-5 rounded-[var(--radius-card)] border border-[var(--warning)] bg-[var(--warning-soft)] px-4 py-3 text-sm font-bold" role="status">SMS 기능이 꺼져 있어 문자 요청을 저장할 수 없습니다. 설정의 고객 정책에서 SMS 기능을 켜세요.</p>}
-    {error && <p className="mt-5 rounded-[var(--radius-card)] border border-[var(--danger)] bg-[var(--danger-soft)] px-4 py-3 text-sm text-[var(--danger)]" role="alert">입력 내용을 수정하세요: {error}</p>}{notice && <p className="mt-5 rounded-[var(--radius-card)] border border-[var(--success)] bg-[var(--success-soft)] px-4 py-3 text-sm text-[var(--success)]" role="status">{notice} · 실제 발송 없음</p>}
+    {error && <p className="mt-5 rounded-[var(--radius-card)] border border-[var(--danger)] bg-[var(--danger-soft)] px-4 py-3 text-sm text-[var(--danger)]" role="alert">입력 내용을 수정하세요: {error}</p>}{notice && <NoticeBanner className="mt-5 rounded-[var(--radius-card)] border border-[var(--success)] bg-[var(--success-soft)] px-4 py-3 text-sm text-[var(--success)]">{notice} · 실제 발송 없음</NoticeBanner>}
     <nav aria-label="문자 작업 영역" className="mt-5 flex gap-1 border-b border-[var(--border)]"><a className={button("md", "primary")} href="#compose">직접 발송</a><a className={button("md", "secondary", "text-[var(--muted)] hover:text-[var(--brand)]")} href="#automation">자동 규칙</a><a className={button("md", "secondary", "text-[var(--muted)] hover:text-[var(--brand)]")} href="#history">발송 내역</a></nav>
     {/* 600+320 은 셸 바닥에서 31px 넘쳤다. 두 칸 다 바닥에서 들어가는 폭으로 내린다. */}
     <div className="mt-5 grid grid-cols-[minmax(520px,1.3fr)_minmax(300px,0.7fr)] gap-5">

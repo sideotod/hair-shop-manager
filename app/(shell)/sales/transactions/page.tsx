@@ -7,7 +7,7 @@ import { parseRevenueSearchParams, revenueRange, revenueRangeExclusive, serializ
 import { buildRevenueTransactions, filterRevenueSelection, type RevenueSelection } from "../../../../lib/revenue-data";
 import { createSalonStore } from "../../../../lib/salon-store";
 import { seoulBusinessDate } from "../../../../lib/seoul-date";
-import { SubmitButton } from "../../../../components/submit-button";
+import { SubmitButton, NoticeBanner } from "../../../../components/submit-button";
 
 const labels = { date: "날짜", payment: "결제수단", service: "시술" } as const;
 /**
@@ -38,7 +38,7 @@ export default async function TransactionsPage({ searchParams }: { searchParams:
       <PageToolbar description={<>선택 기간의 개별 거래를 환불·정정합니다. {selection ? `${labels[selection]} · ${selectionKey}` : `${revenueRange(query).label} · ${matched.length.toLocaleString("ko-KR")}건`}{matched.length > rows.length && ` 최근 ${ROW_LIMIT.toLocaleString("ko-KR")}건만 표시합니다 — 전체는 CSV로 내려받으세요.`}</>}><Link className={button("md")} href={analysisHref}>매출 분석으로</Link><Link className={button("md")} href={`/sales/revenue-csv?${serializeRevenueQuery(query)}`}>CSV 전체</Link><Link className={button("md", "primary")} href={paymentHref}>결제 등록</Link></PageToolbar>
         {/* `role="alert"` 이 이미 assertive 다. `aria-live` 를 겹치면 두 번 읽힌다. */}
         {value(params.error) && <p className="mt-5 rounded-[var(--radius-card)] border border-[var(--danger)] bg-[var(--danger-soft)] px-4 py-3 text-sm text-[var(--danger)]" role="alert">{value(params.error)}</p>}
-        {value(params.notice) && <p className="mt-5 rounded-[var(--radius-card)] border border-[var(--success)] bg-[var(--success-soft)] px-4 py-3 text-sm text-[var(--success)]" role="status">{value(params.notice)}</p>}
+        {value(params.notice) && <NoticeBanner className="mt-5 rounded-[var(--radius-card)] border border-[var(--success)] bg-[var(--success-soft)] px-4 py-3 text-sm text-[var(--success)]">{value(params.notice)}</NoticeBanner>}
         {customer && <section aria-label="결제 등록 고객" className="mt-5 rounded-[var(--radius-card)] border border-[var(--border)] bg-[var(--surface)] px-5 py-4"><p className="text-sm">결제 등록 고객: <strong>{customer.value.name ?? customer.id}</strong></p></section>}
         {/* 가로 스크롤 영역은 그 자체가 포커스를 받아야 키보드만으로 오른쪽 칸을 볼 수 있다. */}
         <section aria-label="필터된 개별 거래 기록" className={`mt-8 overflow-x-auto rounded-[var(--radius-card)] border border-[var(--border)] bg-[var(--surface)] ${focusRing}`} data-revenue-transactions tabIndex={0}>
