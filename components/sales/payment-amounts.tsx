@@ -3,6 +3,7 @@
 import { useState } from "react";
 
 import { PAYMENT_METHODS, settleAmounts, type PaymentMethod, type VatMode } from "../../lib/settlement";
+import { typeScale } from "../type";
 
 const field = "h-10 rounded-[var(--radius-control)] border border-[var(--border)] bg-[var(--surface)] px-3 text-[13px] text-[var(--foreground)]";
 const label = "grid gap-1 text-xs font-medium text-[var(--muted)]";
@@ -45,14 +46,14 @@ export function PaymentAmounts({ availablePoints, cardFeeRate: initialCardFeeRat
   const overPoints = availablePoints !== null && num(pointsUsed) > availablePoints;
 
   return <section className="rounded-[var(--radius-card)] border border-[var(--border)] bg-[var(--surface)] p-5">
-    <h2 className="text-lg font-bold">금액 · 결제수단</h2>
+    <h2 className={typeScale.section}>금액 · 결제수단</h2>
     <div className="mt-4 grid grid-cols-2 gap-4">
       <label className={label}>총 시술금액<input className={field} inputMode="numeric" name="grossWon" onChange={(event) => setGross(digits(event.target.value))} value={gross} /></label>
       <label className={label}>할인<input className={field} inputMode="numeric" name="discountWon" onChange={(event) => setDiscount(digits(event.target.value))} value={discount} /></label>
       <label className={label}>포인트 사용{availablePoints !== null && <span className="font-normal"> · 보유 {availablePoints.toLocaleString("ko-KR")}P</span>}<input aria-invalid={overPoints || undefined} className={field} inputMode="numeric" name="pointsUsedWon" onChange={(event) => setPointsUsed(digits(event.target.value))} value={pointsUsed} /></label>
       <label className={label}>포인트 적립<input className={field} inputMode="numeric" name="pointsEarnedWon" onChange={(event) => setPointsEarned(digits(event.target.value))} value={pointsEarned} /></label>
       <label className={label}>결제수단<select className={field} onChange={(event) => setPrimary(event.target.value as PaymentMethod)} value={primary}>{PAYMENT_METHODS.filter(({ key }) => key !== "points").map(({ key, label: name }) => <option key={key} value={key}>{name}</option>)}</select></label>
-      <p className="grid gap-1 self-end text-xs font-medium text-[var(--muted)]">실결제<output aria-live="polite" className="text-xl font-bold tabular-nums text-[var(--foreground)]">{won(netPaid)}</output></p>
+      <p className="grid gap-1 self-end text-xs font-medium text-[var(--muted)]">실결제<output aria-live="polite" className={`${typeScale.metric} tabular-nums text-[var(--foreground)]`}>{won(netPaid)}</output></p>
     </div>
 
     {taxable < 0 && <p className="mt-3 text-xs font-medium text-[var(--danger)]">할인과 포인트가 총 시술금액을 {won(-taxable)} 넘습니다.</p>}

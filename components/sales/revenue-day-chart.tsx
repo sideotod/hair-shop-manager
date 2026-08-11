@@ -2,6 +2,7 @@ import Link from "next/link";
 
 import { chartShell, chartWell } from "./revenue-chart-style";
 import type { RevenueAggregatePoint, RevenuePointState } from "../../lib/revenue-aggregate";
+import { typeScale } from "../type";
 
 const won = (value: number) => `₩${value.toLocaleString("ko-KR")}`;
 
@@ -73,13 +74,13 @@ export function RevenueDayChart({
       <header className="flex items-end justify-between gap-6 px-5 pb-4 pt-[18px]">
         <div>
           <h2
-            className="text-[10px] font-semibold tracking-[0.04em] text-[var(--muted)]"
+            className={`${typeScale.micro} text-[var(--muted)]`}
             id="revenue-day-chart-title"
           >
             일별 매출
           </h2>
           <p className="mt-[9px] flex items-baseline gap-3">
-            <strong className="font-mono text-[26px] font-semibold leading-none tracking-[-0.015em] tabular-nums">{won(total)}</strong>
+            <strong className={`font-mono ${typeScale.metric} tabular-nums`}>{won(total)}</strong>
             <span className="text-[12px] text-[var(--muted)]">
               {label} · {count.toLocaleString("ko-KR")}건
             </span>

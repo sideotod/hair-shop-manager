@@ -45,6 +45,28 @@ describe("design consistency", () => {
 
     expect(offenders).toEqual([]);
   });
+
+  /**
+   * 제목 크기(14px 이상)는 `components/type.ts` 만 소유한다.
+   *
+   * 이전에는 같은 위계의 카드 제목이 화면마다 달랐다 — 설정·예약·운영 `text-lg`(18px),
+   * 고객 `text-xl`(20px), 대시보드 13.5px. 화면을 옮길 때마다 같은 제목이 7px 씩 뛰었다.
+   * 크기를 손으로 적을 수 있으면 다음 화면에서 또 갈라진다.
+   *
+   * 문서화된 예외 하나: 사이드바 워드마크 21px. 브랜드 각인이지 본문 활자가 아니다.
+   * 13px 이하(본문·라벨·부연)는 아직 0.5px 단계가 남아 있다. 이 가드는 위쪽만 잠근다.
+   */
+  it("14px 이상 활자 크기는 타입 스케일만 소유한다", () => {
+    const offenders: string[] = [];
+    for (const [path, source] of files) {
+      if (path === "components/type.ts") continue;
+      const own = path === "components/app-shell.tsx" ? /\btext-\[(?!21px)(1[4-9]|[2-9]\d)(\.\d+)?px\]/ : /\btext-\[(1[4-9]|[2-9]\d)(\.\d+)?px\]/;
+      for (const line of lines(source, own)) offenders.push(`${path}:${line}`);
+      for (const line of lines(source, /\btext-(lg|xl|2xl|3xl|4xl|5xl|6xl)\b/)) offenders.push(`${path}:${line}`);
+    }
+
+    expect(offenders).toEqual([]);
+  });
 });
 
 function lines(source: string, pattern: RegExp) {

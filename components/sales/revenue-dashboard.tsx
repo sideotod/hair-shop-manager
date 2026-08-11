@@ -17,6 +17,7 @@ import {
 } from "./revenue-detail-drawer";
 import { SalesControls } from "./sales-controls";
 import { surface as card } from "../surface";
+import { typeScale } from "../type";
 import {
   serializeRevenueQuery,
   type RevenueQuery,
@@ -146,7 +147,7 @@ function ChartCard({
   return (
     <section className={`${chartCard} overflow-hidden`}>
       <div className="flex items-center justify-between px-[18px] pb-[13px] pt-[16px]">
-        <h2 className="text-[10px] font-semibold tracking-[0.04em] text-[var(--muted)]" id={`revenue-chart-${kind}-title`}>
+        <h2 className={`${typeScale.micro} text-[var(--muted)]`} id={`revenue-chart-${kind}-title`}>
           {title}
         </h2>
         {meta && <span className="text-[11.5px] text-[var(--muted)]">{meta}</span>}
@@ -318,7 +319,7 @@ export function RevenueDashboard({
         )}
         {/* 인쇄본에는 앱 헤더가 없다. 무엇을 언제 뽑은 종이인지 남긴다 (G7). */}
         <div className="print-only mb-4 border-b border-[var(--border)] pb-3">
-          <strong className="text-[17px] font-semibold">매출·결제</strong>
+          <strong className={typeScale.figure}>매출·결제</strong>
           <span className="ml-3 font-mono text-[12px]">{analytics.selectedPeriod.start} ~ {analytics.selectedPeriod.end}</span>
         </div>
         <SalesControls label={analytics.selectedPeriod.label} query={query} />
@@ -344,10 +345,10 @@ export function RevenueDashboard({
         >
           {kpis.map(({ label, value, delta }) => (
             <article className={`${card} px-[16px] py-[13px] transition-shadow duration-300 ease-[cubic-bezier(0.32,0.72,0,1)] hover:shadow-[0_1px_2px_rgba(13,21,18,0.05),0_20px_36px_-22px_rgba(13,21,18,0.35)]`} key={label}>
-              <h2 className="text-[10px] font-semibold tracking-[0.04em] text-[var(--muted)]">
+              <h2 className={`${typeScale.micro} text-[var(--muted)]`}>
                 {label}
               </h2>
-              <p className="mt-[8px] font-mono text-[17px] font-semibold leading-none tracking-[-0.015em] tabular-nums">
+              <p className={`mt-[8px] font-mono ${typeScale.figure} tabular-nums`}>
                 {won(value)}
               </p>
               {delta !== undefined && (
@@ -437,7 +438,7 @@ export function RevenueDashboard({
           </ChartCard>
           {bars("service", analytics.services, "시술 카테고리", motion.service)}
           <section className={`${card} p-5`}>
-            <h2 className="text-[10px] font-semibold tracking-[0.04em] text-[var(--muted)]">정산</h2>
+            <h2 className={`${typeScale.micro} text-[var(--muted)]`}>정산</h2>
             <table className="mt-3 w-full text-sm">
               <tbody>
                 {analytics.settlement.map((row) => (

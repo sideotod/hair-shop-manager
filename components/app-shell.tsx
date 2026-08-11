@@ -6,6 +6,7 @@ import { activeNavigationItem, matchNavigationItem, navigationItems } from "../l
 import type { JsonObject, JsonValue, SalonRecord } from "../lib/salon-domain";
 import { resolveVisualTokens } from "../lib/visual-tokens";
 import { floatingShadow } from "./surface";
+import { typeScale } from "./type";
 
 const groupOrder = ["운영", "정산", "관리"] as const;
 const menuGroups = groupOrder.map((label) => ({ label, items: navigationItems.filter((item) => item.group === label) }));
@@ -88,7 +89,7 @@ export function AppShell({
 
         <div className="flex min-h-0 min-w-0 flex-col overflow-hidden">
           <header className="flex h-[72px] shrink-0 items-center gap-5 border-b border-[var(--border)] bg-[var(--surface)] px-7 text-[13px]">
-            <div className="flex shrink-0 flex-col gap-0.5"><h1 className="text-[19px] font-semibold tracking-[-0.01em]">{title}</h1><span className="font-mono text-[10.5px] text-[var(--muted)]">{dateLabel}</span></div>
+            <div className="flex shrink-0 flex-col gap-0.5"><h1 className={typeScale.title}>{title}</h1><span className="font-mono text-[10.5px] text-[var(--muted)]">{dateLabel}</span></div>
             <div className="h-px min-w-0 flex-1" />
             <form action="/customers" className="flex h-10 w-[340px] shrink-0 items-center gap-2 rounded-[var(--radius-chip)] bg-[var(--background)] px-3" method="get" role="search">
               <select aria-label="고객 검색 기준" className="h-7 w-[76px] rounded-[var(--radius-control)] border border-[var(--border)] bg-[var(--surface)] px-2 text-[10.5px] text-[var(--brand)]" name="mode">
