@@ -4,6 +4,7 @@ import { useState } from "react";
 
 import { PAYMENT_METHODS, settleAmounts, type PaymentMethod, type VatMode } from "../../lib/settlement";
 import { typeScale } from "../type";
+import { useIsMember } from "./payment-customer";
 
 const field = "h-10 rounded-[var(--radius-control)] border border-[var(--border)] bg-[var(--surface)] px-3 text-[13px] text-[var(--foreground)]";
 const label = "grid gap-1 text-xs font-medium text-[var(--muted)]";
@@ -29,14 +30,24 @@ const won = (value: number) => `${value.toLocaleString("ko-KR")}원`;
 export function PaymentAmounts({ availablePoints, cardFeeRate: initialCardFeeRate, splitOpen: initialSplitOpen = false, vatMode: initialVatMode }: { availablePoints: number | null; cardFeeRate: number; splitOpen?: boolean; vatMode: VatMode }) {
   const [gross, setGross] = useState("0");
   const [discount, setDiscount] = useState("0");
-  const [pointsUsed, setPointsUsed] = useState("0");
-  const [pointsEarned, setPointsEarned] = useState("0");
+  const [pointsUsedInput, setPointsUsed] = useState("0");
+  const [pointsEarnedInput, setPointsEarned] = useState("0");
   const [expense, setExpense] = useState("0");
   const [vatMode, setVatMode] = useState<VatMode>(initialVatMode);
   const [cardFeeRate, setCardFeeRate] = useState(String(initialCardFeeRate));
   const [primary, setPrimary] = useState<PaymentMethod>("cash");
   const [splits, setSplits] = useState<Partial<Record<PaymentMethod, string>>>({});
   const [splitOpen, setSplitOpen] = useState(initialSplitOpen);
+
+  // 비회원은 포인트를 쓸 수도 쌓을 수도 없다 (`finance.ts:121`). 지금까지는 저장을 눌러야
+  // 알 수 있었다 — 구분은 고객 섹션, 포인트는 여기라 두 칸이 서로를 몰랐기 때문이다.
+  // 이제 `구분` 을 비회원으로 바꾸는 순간 두 칸이 0으로 잠긴다. 서버 검증은 그대로 두되
+  // 화면에서 도달할 수 없게 만든다 — 실패시키는 것보다 못 적게 하는 쪽이 싸다.
+  const member = useIsMember();
+  const pointsUsed = member ? pointsUsedInput : "0";
+  const pointsEarned = member ? pointsEarnedInput : "0";
+  const pointsCleared = !member && (num(pointsUsedInput) > 0 || num(pointsEarnedInput) > 0);
+  const pointsLock = member ? "" : " bg-[var(--background)] text-[var(--muted)]";
 
   const { taxable, netPaid, vat } = settleAmounts(num(gross), num(discount), num(pointsUsed), vatMode);
   // 포인트는 결제수단 합계에서 빠진다 (`finance.ts:57`). 기본 수단은 나머지를 받는 칸이다.
@@ -50,8 +61,8 @@ export function PaymentAmounts({ availablePoints, cardFeeRate: initialCardFeeRat
     <div className="mt-4 grid grid-cols-2 gap-4">
       <label className={label}>총 시술금액<input className={field} inputMode="numeric" name="grossWon" onChange={(event) => setGross(digits(event.target.value))} value={gross} /></label>
       <label className={label}>할인<input aria-describedby={taxable < 0 ? "payment-taxable-error" : undefined} aria-invalid={taxable < 0 || undefined} className={field} inputMode="numeric" name="discountWon" onChange={(event) => setDiscount(digits(event.target.value))} value={discount} /></label>
-      <label className={label}>포인트 사용{availablePoints !== null && <span className="font-normal"> · 보유 {availablePoints.toLocaleString("ko-KR")}P</span>}<input aria-describedby={overPoints ? "payment-points-error" : undefined} aria-invalid={overPoints || undefined} className={field} inputMode="numeric" name="pointsUsedWon" onChange={(event) => setPointsUsed(digits(event.target.value))} value={pointsUsed} /></label>
-      <label className={label}>포인트 적립<input className={field} inputMode="numeric" name="pointsEarnedWon" onChange={(event) => setPointsEarned(digits(event.target.value))} value={pointsEarned} /></label>
+      <label className={label}>포인트 사용{member && availablePoints !== null && <span className="font-normal"> · 보유 {availablePoints.toLocaleString("ko-KR")}P</span>}{!member && <span className="font-normal"> · 비회원 불가</span>}<input aria-describedby={overPoints ? "payment-points-error" : pointsCleared ? "payment-member-points-error" : undefined} aria-invalid={overPoints || undefined} className={`${field}${pointsLock}`} inputMode="numeric" name="pointsUsedWon" onChange={(event) => setPointsUsed(digits(event.target.value))} readOnly={!member} value={pointsUsed} /></label>
+      <label className={label}>포인트 적립{!member && <span className="font-normal"> · 비회원 불가</span>}<input aria-describedby={pointsCleared ? "payment-member-points-error" : undefined} className={`${field}${pointsLock}`} inputMode="numeric" name="pointsEarnedWon" onChange={(event) => setPointsEarned(digits(event.target.value))} readOnly={!member} value={pointsEarned} /></label>
       <label className={label}>결제수단<select className={field} onChange={(event) => setPrimary(event.target.value as PaymentMethod)} value={primary}>{PAYMENT_METHODS.filter(({ key }) => key !== "points").map(({ key, label: name }) => <option key={key} value={key}>{name}</option>)}</select></label>
       <p className="grid gap-1 self-end text-xs font-medium text-[var(--muted)]">실결제<output aria-live="polite" className={`${typeScale.metric} tabular-nums text-[var(--foreground)]`}>{won(netPaid)}</output></p>
     </div>
@@ -60,6 +71,8 @@ export function PaymentAmounts({ availablePoints, cardFeeRate: initialCardFeeRat
         `aria-describedby` 로 칸과 묶고 `role="alert"` 로 나타난 순간을 알린다. */}
     {taxable < 0 && <p className="mt-3 text-xs font-medium text-[var(--danger)]" id="payment-taxable-error" role="alert">할인과 포인트가 총 시술금액을 {won(-taxable)} 넘습니다.</p>}
     {overPoints && <p className="mt-3 text-xs font-medium text-[var(--warning)]" id="payment-points-error" role="alert">보유 포인트를 {won(num(pointsUsed) - (availablePoints ?? 0))} 초과했습니다.</p>}
+    {/* 적어 둔 값이 조용히 0이 되면 그게 더 나쁘다. 비운 사실을 말하고, 되돌리는 법도 말한다. */}
+    {pointsCleared && <p className="mt-3 text-xs font-medium text-[var(--warning)]" id="payment-member-points-error" role="alert">비회원은 포인트를 사용하거나 적립할 수 없어 두 칸을 0으로 두었습니다. 구분을 회원으로 바꾸면 되돌아옵니다.</p>}
     {remainder < 0 && <p className="mt-3 text-xs font-medium text-[var(--danger)]" id="payment-split-error" role="alert">분할 결제 합계가 실결제액을 {won(-remainder)} 넘습니다.</p>}
 
     <details className="mt-5 border-t border-[var(--border)] pt-4" onToggle={(event) => setSplitOpen(event.currentTarget.open)} open={splitOpen}>

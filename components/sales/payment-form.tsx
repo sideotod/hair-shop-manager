@@ -6,7 +6,7 @@ import { PageToolbar } from "../page-toolbar";
 import { SubmitButton, ActionForm, NoticeBanner } from "../submit-button";
 import { typeScale } from "../type";
 import { PaymentAmounts } from "./payment-amounts";
-import { PaymentCustomer } from "./payment-customer";
+import { PaymentCustomer, PaymentMemberScope } from "./payment-customer";
 import type { JsonObject, JsonValue } from "../../lib/salon-domain";
 
 type Customer = { id: string; value: JsonValue };
@@ -40,7 +40,9 @@ export function PaymentForm({ backTo = "/sales", customers, customerId, correcti
     {/* 오류 배너는 폼 안으로 들어갔다(`ActionForm`). 실패가 리다이렉트가 아니라 반환이 되면서
         문구가 폼과 같은 렌더에 실려야 입력값이 살아 있는 채로 오류만 갱신된다. */}
     {notice && <NoticeBanner className="mt-5 rounded-[var(--radius-card)] border border-[var(--success)] bg-[var(--success-soft)] px-4 py-3 text-sm text-[var(--success)]">{notice}</NoticeBanner>}
-    <ActionForm action={correctionTargetId ? correctPayment : savePayment} aria-label="결제 등록 양식" className="mt-8 grid w-full max-w-none grid-cols-2 gap-5" error={error} errorClassName="col-span-2 rounded-[var(--radius-card)] border border-[var(--danger)] bg-[var(--danger-soft)] px-4 py-3 text-sm text-[var(--danger)]"><input name="requestKey" type="hidden" value={requestKey} /><input name="returnTo" type="hidden" value={returnTo} />{correctionTargetId && <><input name="targetId" type="hidden" value={correctionTargetId} /><input name="reason" type="hidden" value="결제 정정" /></>}
+    {/* `구분`(고객 섹션)과 포인트 두 칸(금액 섹션)이 서로를 알아야 한다. 섹션은 그대로 두고
+        스코프만 씌운다 — 아래 마크업은 전부 서버에서 그려져 children 으로 통과한다. */}
+    <PaymentMemberScope><ActionForm action={correctionTargetId ? correctPayment : savePayment} aria-label="결제 등록 양식" className="mt-8 grid w-full max-w-none grid-cols-2 gap-5" error={error} errorClassName="col-span-2 rounded-[var(--radius-card)] border border-[var(--danger)] bg-[var(--danger-soft)] px-4 py-3 text-sm text-[var(--danger)]"><input name="requestKey" type="hidden" value={requestKey} /><input name="returnTo" type="hidden" value={returnTo} />{correctionTargetId && <><input name="targetId" type="hidden" value={correctionTargetId} /><input name="reason" type="hidden" value="결제 정정" /></>}
       <section className="rounded-[var(--radius-card)] border border-[var(--border)] bg-[var(--surface)] p-5"><h2 className={typeScale.section}>고객 · 시술</h2><div className="mt-4 grid grid-cols-2 gap-4">
         <PaymentCustomer customerId={customerId} customers={customers} />
         <label className="grid gap-1 text-xs font-medium text-[var(--muted)]">비회원 이름<input className={field} name="nonMemberName" /></label>
@@ -51,6 +53,6 @@ export function PaymentForm({ backTo = "/sales", customers, customerId, correcti
       <PaymentAmounts availablePoints={availablePoints} cardFeeRate={cardFeeRate} vatMode={vatMode} />
       <details className="col-span-2 rounded-[var(--radius-card)] border border-[var(--border)] bg-[var(--surface)] p-5"><summary className={summary}>기록 · {today} 10:00 — 날짜·시간·메모 수정</summary><div className="mt-4 grid grid-cols-4 gap-4"><label className="grid gap-1 text-xs font-medium text-[var(--muted)]">결제일<input className={field} defaultValue={today} name="occurredDate" type="date" /></label><label className="grid gap-1 text-xs font-medium text-[var(--muted)]">시간<input className={field} defaultValue="10:00" name="occurredTime" type="time" /></label><label className="grid gap-1 text-xs font-medium text-[var(--muted)]">일반 메모<input className={field} name="generalNote" /></label><label className="grid gap-1 text-xs font-medium text-[var(--muted)]">의약품 메모<input className={field} name="medicineNote" /></label><label className="grid gap-1 text-xs font-medium text-[var(--muted)]">두피 메모<input className={field} name="scalpNote" /></label><label className="grid gap-1 text-xs font-medium text-[var(--muted)]">모발 메모<input className={field} name="hairNote" /></label><label className="flex items-center gap-2 pt-5 text-sm font-medium"><input name="smsRequested" type="checkbox" />결제 SMS 발송</label></div></details>
       <SubmitButton extra="col-span-2 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--brand)]">{correctionTargetId ? "정정 결제 저장" : "결제 저장"}</SubmitButton>
-    </ActionForm>
+    </ActionForm></PaymentMemberScope>
   </div>;
 }

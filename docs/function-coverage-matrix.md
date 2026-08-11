@@ -102,7 +102,7 @@
 | N페이 | 구현 | app/(shell)/sales/page.tsx; app/payment-actions.ts; components/sales/revenue-dashboard.tsx | lib/finance.test.ts; components/sales/revenue-dashboard.test.tsx |
 | 기타 | 구현 | app/(shell)/sales/page.tsx; app/payment-actions.ts; components/sales/revenue-dashboard.tsx | lib/finance.test.ts; components/sales/revenue-dashboard.test.tsx |
 | 지역페이 | 구현 | app/(shell)/sales/page.tsx; app/payment-actions.ts; components/sales/revenue-dashboard.tsx | lib/finance.test.ts; components/sales/revenue-dashboard.test.tsx |
-| 포인트 적립 | 구현 | app/(shell)/sales/page.tsx; app/payment-actions.ts; components/sales/revenue-dashboard.tsx | lib/finance.test.ts; components/sales/revenue-dashboard.test.tsx |
+| 포인트 적립 | 구현 | app/(shell)/sales/page.tsx; app/payment-actions.ts; components/sales/revenue-dashboard.tsx; components/sales/payment-amounts.tsx | lib/finance.test.ts; components/sales/revenue-dashboard.test.tsx; components/sales/payment-customer.test.tsx |
 | 담당 디자이너/시술자 | 원장 1인 대체 | app/(shell)/sales/page.tsx; app/payment-actions.ts; components/sales/revenue-dashboard.tsx | lib/finance.test.ts; components/sales/revenue-dashboard.test.tsx |
 | 메모 150자 | 구현 | app/(shell)/sales/page.tsx; app/payment-actions.ts; components/sales/revenue-dashboard.tsx | lib/finance.test.ts; components/sales/revenue-dashboard.test.tsx |
 | 선택 메모/약품 메모 | 구현 | app/(shell)/sales/page.tsx; app/payment-actions.ts; components/sales/revenue-dashboard.tsx | lib/finance.test.ts; components/sales/revenue-dashboard.test.tsx |

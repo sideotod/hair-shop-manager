@@ -1,12 +1,31 @@
 "use client";
 
-import { useState } from "react";
+import { createContext, useContext, useState } from "react";
 
 import { customerOptions } from "../../lib/customer-options";
 import type { JsonValue } from "../../lib/salon-domain";
 
 const field = "h-10 rounded-[var(--radius-control)] border border-[var(--border)] bg-[var(--surface)] px-3 text-[13px] text-[var(--foreground)]";
 const label = "grid gap-1 text-xs font-medium text-[var(--muted)]";
+
+/**
+ * `구분` 은 고객 섹션에 있고 포인트 두 칸은 금액 섹션에 있다. 두 형제는 서로를 모른다.
+ * 그래서 비회원을 고르고 포인트를 적으면 `finance.ts:121` 이 저장 시점에야 튕겼다 —
+ * 화면에는 아무 경고도 없었다.
+ *
+ * 마크업을 옮겨 부모를 만들지 않는다(섹션 순서가 곧 원장이 읽는 순서다).
+ * 폼 전체를 감싸는 얇은 스코프 하나만 두고 두 잎이 같은 값을 읽는다.
+ * `children` 은 서버에서 그려진 그대로 통과한다.
+ */
+const MemberContext = createContext<readonly [string, (value: string) => void]>(["member", () => {}]);
+
+export function PaymentMemberScope({ children, initial = "member" }: { children: React.ReactNode; initial?: string }) {
+  const [memberType, setMemberType] = useState(initial);
+  return <MemberContext.Provider value={[memberType, setMemberType]}>{children}</MemberContext.Provider>;
+}
+
+/** 금액 섹션이 포인트칸을 잠글지 판단하는 값. 폼 밖에서는 항상 회원(`true`)이다. */
+export function useIsMember() { return useContext(MemberContext)[0] === "member"; }
 
 /**
  * 구분 · 회원 고객 — 결제 폼에서 유일하게 **비워두면 저장이 튕기는** 칸.
@@ -22,7 +41,7 @@ const label = "grid gap-1 text-xs font-medium text-[var(--muted)]";
  * Tab 순서에서도 뺀다 — 값이 무시될 칸에 키보드를 세울 이유가 없다.
  */
 export function PaymentCustomer({ customerId, customers }: { customerId?: string; customers: readonly { id: string; value: JsonValue }[] }) {
-  const [memberType, setMemberType] = useState("member");
+  const [memberType, setMemberType] = useContext(MemberContext);
   const member = memberType === "member";
   return <>
     <label className={label}>구분<select className={field} name="memberType" onChange={(event) => setMemberType(event.target.value)} value={memberType}><option value="member">회원</option><option value="non-member">비회원</option></select></label>
