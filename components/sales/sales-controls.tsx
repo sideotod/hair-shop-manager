@@ -29,6 +29,18 @@ function href(query: RevenueQuery, tab?: "payment" | "expenses") {
   return `/sales?${params}`;
 }
 
+/**
+ * 기간 이동 화살표. `누적` 에서는 이동할 기간이 없다.
+ *
+ * 예전에는 `aria-disabled` 만 붙은 `<Link>` 였다. 마우스는 `pointer-events-none` 이 막았지만
+ * 키보드는 Tab 으로 닿고 Enter 로 그대로 이동했다 — "비활성"이라 말만 하는 상태였다.
+ * 링크가 아닐 때는 링크를 그리지 않는다. 그러면 탭 순서에서도 함께 빠진다.
+ */
+function PeriodArrow({ disabled, href, label, children }: { disabled: boolean; href: string; label: string; children: React.ReactNode }) {
+  if (disabled) return <span aria-disabled="true" aria-label={label} className={arrow} role="link">{children}</span>;
+  return <Link aria-label={label} className={arrow} href={href}>{children}</Link>;
+}
+
 export function SalesControls({ query, label, tab }: { query: RevenueQuery; label: string; tab?: "payment" | "expenses" }) {
   return <>
     {/* 탭 줄은 언제나 본문 첫 줄이다. 설명문 툴바가 앞뒤로 오가면 탭마다 줄이 위아래로 튄다. */}
@@ -42,9 +54,9 @@ export function SalesControls({ query, label, tab }: { query: RevenueQuery; labe
         {viewOptions.map(([view, viewLabel]) => <Link aria-current={query.view === view ? "page" : undefined} className={navChip(query.view === view)} data-sales-period={view} href={href({ ...query, view }, tab)} key={view}>{viewLabel}</Link>)}
       </div>
       <div className="flex items-center gap-3">
-        <Link aria-disabled={query.view === "total"} aria-label="이전 기간" className={arrow} href={href(previousRevenueQuery(query), tab)}>←</Link>
+        <PeriodArrow disabled={query.view === "total"} href={href(previousRevenueQuery(query), tab)} label="이전 기간">←</PeriodArrow>
         <strong className="font-mono text-[12px] font-medium tabular-nums text-[var(--muted)]">{label}</strong>
-        <Link aria-disabled={query.view === "total"} aria-label="다음 기간" className={arrow} href={href(nextRevenueQuery(query), tab)}>→</Link>
+        <PeriodArrow disabled={query.view === "total"} href={href(nextRevenueQuery(query), tab)} label="다음 기간">→</PeriodArrow>
       </div>
     </nav>
   </>;

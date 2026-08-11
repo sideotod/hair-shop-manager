@@ -21,6 +21,18 @@
 export type ButtonSize = "lg" | "md" | "sm" | "xs";
 export type ButtonTone = "primary" | "secondary" | "quiet" | "warning";
 
+/**
+ * 키보드 포커스 링 단일 정의.
+ *
+ * 실측: 포커스 표시가 있는 곳은 설정 화면과 차트뿐이었고, 셸 검색창은 아예 `outline-none` 이었다.
+ * 마우스 없이 화면을 도는 원장은 지금 자기가 어디 있는지 볼 수 없다.
+ * `focus-visible` 만 쓴다 — 마우스 클릭에는 링이 뜨지 않는다.
+ */
+export const focusRing = "focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--brand)]";
+
+/** 어두운 사이드바 위. `--brand` 는 사이드바 배경과 대비가 낮아 링이 사라진다. */
+export const focusRingOnDark = "focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-white";
+
 // 높이는 `py-` 가 아니라 `h-` 로 못박는다. `py-` 만 쓰면 flex·grid 줄 안에서 stretch 되어
 // 같은 `md` 가 단독 38px, 입력창 옆 40px 로 갈라졌다(실측). 고정 높이는 stretch 를 이긴다.
 // `md` 를 40px 로 맞춘 이유: 화면 전체 입력창이 `h-10`(40px)이라 필터·조회 줄이 정확히 정렬된다.
@@ -41,5 +53,5 @@ const tones: Record<ButtonTone, string> = {
 /** 버튼·링크 공통 클래스. `extra` 는 여백·정렬처럼 크기와 무관한 것만 넣는다. */
 export function button(size: ButtonSize, tone: ButtonTone = "secondary", extra = "") {
   // `shrink-0`: 세로 flex 안에서 `h-` 가 눌려 40px 버튼이 22px 로 찌그러졌다(실측, /customers 고객 정책 저장).
-  return `inline-flex shrink-0 items-center justify-center gap-1.5 whitespace-nowrap rounded-[var(--radius-control)] border transition-colors ${sizes[size]} ${tones[tone]}${extra ? ` ${extra}` : ""}`;
+  return `inline-flex shrink-0 items-center justify-center gap-1.5 whitespace-nowrap rounded-[var(--radius-control)] border transition-colors ${focusRing} ${sizes[size]} ${tones[tone]}${extra ? ` ${extra}` : ""}`;
 }

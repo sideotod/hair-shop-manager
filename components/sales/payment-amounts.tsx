@@ -49,16 +49,18 @@ export function PaymentAmounts({ availablePoints, cardFeeRate: initialCardFeeRat
     <h2 className={typeScale.section}>금액 · 결제수단</h2>
     <div className="mt-4 grid grid-cols-2 gap-4">
       <label className={label}>총 시술금액<input className={field} inputMode="numeric" name="grossWon" onChange={(event) => setGross(digits(event.target.value))} value={gross} /></label>
-      <label className={label}>할인<input className={field} inputMode="numeric" name="discountWon" onChange={(event) => setDiscount(digits(event.target.value))} value={discount} /></label>
-      <label className={label}>포인트 사용{availablePoints !== null && <span className="font-normal"> · 보유 {availablePoints.toLocaleString("ko-KR")}P</span>}<input aria-invalid={overPoints || undefined} className={field} inputMode="numeric" name="pointsUsedWon" onChange={(event) => setPointsUsed(digits(event.target.value))} value={pointsUsed} /></label>
+      <label className={label}>할인<input aria-describedby={taxable < 0 ? "payment-taxable-error" : undefined} aria-invalid={taxable < 0 || undefined} className={field} inputMode="numeric" name="discountWon" onChange={(event) => setDiscount(digits(event.target.value))} value={discount} /></label>
+      <label className={label}>포인트 사용{availablePoints !== null && <span className="font-normal"> · 보유 {availablePoints.toLocaleString("ko-KR")}P</span>}<input aria-describedby={overPoints ? "payment-points-error" : undefined} aria-invalid={overPoints || undefined} className={field} inputMode="numeric" name="pointsUsedWon" onChange={(event) => setPointsUsed(digits(event.target.value))} value={pointsUsed} /></label>
       <label className={label}>포인트 적립<input className={field} inputMode="numeric" name="pointsEarnedWon" onChange={(event) => setPointsEarned(digits(event.target.value))} value={pointsEarned} /></label>
       <label className={label}>결제수단<select className={field} onChange={(event) => setPrimary(event.target.value as PaymentMethod)} value={primary}>{PAYMENT_METHODS.filter(({ key }) => key !== "points").map(({ key, label: name }) => <option key={key} value={key}>{name}</option>)}</select></label>
       <p className="grid gap-1 self-end text-xs font-medium text-[var(--muted)]">실결제<output aria-live="polite" className={`${typeScale.metric} tabular-nums text-[var(--foreground)]`}>{won(netPaid)}</output></p>
     </div>
 
-    {taxable < 0 && <p className="mt-3 text-xs font-medium text-[var(--danger)]">할인과 포인트가 총 시술금액을 {won(-taxable)} 넘습니다.</p>}
-    {overPoints && <p className="mt-3 text-xs font-medium text-[var(--warning)]">보유 포인트를 {won(num(pointsUsed) - (availablePoints ?? 0))} 초과했습니다.</p>}
-    {remainder < 0 && <p className="mt-3 text-xs font-medium text-[var(--danger)]">분할 결제 합계가 실결제액을 {won(-remainder)} 넘습니다.</p>}
+    {/* 셋 다 입력값이 만든 오류다. 눈으로는 칸 아래에 붙어 있지만, 보조 기술에는
+        `aria-describedby` 로 칸과 묶고 `role="alert"` 로 나타난 순간을 알린다. */}
+    {taxable < 0 && <p className="mt-3 text-xs font-medium text-[var(--danger)]" id="payment-taxable-error" role="alert">할인과 포인트가 총 시술금액을 {won(-taxable)} 넘습니다.</p>}
+    {overPoints && <p className="mt-3 text-xs font-medium text-[var(--warning)]" id="payment-points-error" role="alert">보유 포인트를 {won(num(pointsUsed) - (availablePoints ?? 0))} 초과했습니다.</p>}
+    {remainder < 0 && <p className="mt-3 text-xs font-medium text-[var(--danger)]" id="payment-split-error" role="alert">분할 결제 합계가 실결제액을 {won(-remainder)} 넘습니다.</p>}
 
     <details className="mt-5 border-t border-[var(--border)] pt-4" onToggle={(event) => setSplitOpen(event.currentTarget.open)} open={splitOpen}>
       <summary className="cursor-pointer text-xs font-medium text-[var(--muted)]">분할 결제 · 부가 항목{assigned > 0 && ` · 분할 ${won(assigned)}`}</summary>
@@ -71,7 +73,7 @@ export function PaymentAmounts({ availablePoints, cardFeeRate: initialCardFeeRat
       {/* 8칸 전부 남긴다 — 기능 제거 금지. 기본 수단과 포인트는 파생값이라 읽기 전용이다. */}
       <div className="mt-5 grid grid-cols-2 gap-3" data-payment-method-grid>{PAYMENT_METHODS.map(({ key, label: name }) => {
         const derived = key === "points" || key === primary;
-        return <label className={label} key={key}>{name}{key === primary && " · 나머지"}{key === "points" && " · 사용 포인트"}<input className={`${field}${derived ? " bg-[var(--background)] text-[var(--muted)]" : ""}`} inputMode="numeric" name={`payment_${key}`} onChange={derived ? undefined : (event) => setSplits((previous) => ({ ...previous, [key]: digits(event.target.value) }))} readOnly={derived} value={tender(key)} /></label>;
+        return <label className={label} key={key}>{name}{key === primary && " · 나머지"}{key === "points" && " · 사용 포인트"}<input aria-describedby={!derived && remainder < 0 ? "payment-split-error" : undefined} className={`${field}${derived ? " bg-[var(--background)] text-[var(--muted)]" : ""}`} inputMode="numeric" name={`payment_${key}`} onChange={derived ? undefined : (event) => setSplits((previous) => ({ ...previous, [key]: digits(event.target.value) }))} readOnly={derived} value={tender(key)} /></label>;
       })}</div>
     </details>
   </section>;

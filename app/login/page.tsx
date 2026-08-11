@@ -1,5 +1,6 @@
 import { loginOwner } from "../auth-actions";
 import { DEMO_OWNER_PASSWORD, isDemoMode } from "../../lib/auth";
+import { focusRing } from "../../components/button";
 import { surface } from "../../components/surface";
 import { typeScale } from "../../components/type";
 
@@ -17,10 +18,10 @@ export default async function LoginPage({ searchParams }: { searchParams: Promis
         <form action={loginOwner} className="mt-7 space-y-4">
           <div>
             <label className="mb-2 block text-sm font-medium" htmlFor="password">비밀번호</label>
-            <input aria-describedby={invalid ? "login-error" : undefined} aria-invalid={invalid} autoComplete="current-password" className="h-12 w-full rounded-[var(--radius-card)] border border-[var(--border)] px-4" id="password" name="password" required type="password" />
+            <input aria-describedby={invalid ? "login-error" : undefined} aria-invalid={invalid || undefined} autoComplete="current-password" className={`h-12 w-full rounded-[var(--radius-card)] border border-[var(--border)] px-4 ${focusRing}`} id="password" name="password" required type="password" />
           </div>
           {invalid && <p className="rounded-[var(--radius-control)] bg-[var(--danger-soft)] px-3 py-2 text-sm font-medium text-[var(--danger)]" id="login-error" role="alert">비밀번호를 확인해 주세요.</p>}
-          <button className="h-12 w-full rounded-[var(--radius-card)] bg-[var(--brand)] font-medium text-white" type="submit">로그인</button>
+          <button className={`h-12 w-full rounded-[var(--radius-card)] bg-[var(--brand)] font-medium text-white ${focusRing}`} type="submit">로그인</button>
         </form>
 
         {demoMode && <p className="mt-6 rounded-[var(--radius-card)] bg-[var(--brand-soft)] p-3 text-xs leading-5 text-[var(--brand)]">로컬 데모 원장 비밀번호: <strong>{DEMO_OWNER_PASSWORD}</strong></p>}

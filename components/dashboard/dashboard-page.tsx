@@ -4,6 +4,7 @@ import { button } from "../button";
 import { bookingSettings } from "../../lib/booking";
 import { displayStatus, minutesOfDay, railHeight, railHourMarks, railOffset, railTotalHeight, statusStyles } from "../../lib/day-rail";
 import type { AuditEvent, JsonObject, JsonValue, LedgerEntry, SalonRecord } from "../../lib/salon-domain";
+import { seoulDate } from "../../lib/seoul-date";
 import { surface as card } from "../surface";
 import { typeScale } from "../type";
 const dayNames = ["오늘", "내일", "모레", "글피"] as const;
@@ -76,7 +77,8 @@ export function DashboardPage({ data, today = new Date() }: { data: DashboardDat
   const shopName = typeof settings.shopName === "string" ? settings.shopName : "헤어해요";
   const ownerName = typeof settings.ownerName === "string" ? settings.ownerName : "서원";
   const smsRemaining = typeof settings.smsRemaining === "number" ? settings.smsRemaining : 0;
-  const todayKey = dateKey(today) ?? new Date().toISOString().slice(0, 10);
+  // 폴백도 서울 기준이어야 한다. UTC 는 09:00 이전에 어제를 오늘이라 부른다.
+  const todayKey = dateKey(today) ?? seoulDate();
   const customerNames = new Map(customers.map((record) => [record.id, textValue(objectValue(record), "name", record.id)]));
   const todayBookings = bookings.filter((record) => dateKey(textValue(objectValue(record), "startsAt")) === todayKey).sort((left, right) => textValue(objectValue(left), "startsAt").localeCompare(textValue(objectValue(right), "startsAt")));
   const dayCounts = dayNames.map((label, offset) => ({ label, count: bookings.filter((record) => dateKey(textValue(objectValue(record), "startsAt")) === addDays(todayKey, offset)).length }));
@@ -139,22 +141,26 @@ export function DashboardPage({ data, today = new Date() }: { data: DashboardDat
           </nav>
         </div>
 
-        {malformedDateCount > 0 && <p className="mt-4 rounded-[var(--radius-card)] border border-[var(--warning)] bg-[var(--warning-soft)] px-4 py-3 text-sm font-bold" role="status">날짜 확인 필요: {malformedDateCount}건</p>}
+        {/* 서버가 처음부터 그려 보내는 내용이다. `role="status"` 를 붙이면 살아 있는 영역이 되어
+            바뀐 적도 없는 문장을 읽는 순서에서 한 번, 알림으로 또 한 번 듣게 된다. */}
+        {malformedDateCount > 0 && <p className="mt-4 rounded-[var(--radius-card)] border border-[var(--warning)] bg-[var(--warning-soft)] px-4 py-3 text-sm font-bold">날짜 확인 필요: {malformedDateCount}건</p>}
 
         <div className="mt-5 grid min-h-0 grid-cols-[minmax(0,1fr)_336px] items-start gap-5" data-dashboard-timeline-layout="compact">
           <section aria-label="원장 예약 타임라인" className={`${card} flex min-h-0 flex-col overflow-hidden`}>
-            <div className="flex items-center gap-3 border-b border-[var(--border)] px-[18px] py-[15px]"><h2 className={typeScale.section}>하루 축</h2><div className="h-px min-w-0 flex-1" /><div className="flex items-center gap-2.5 font-mono text-[11px] text-[var(--muted)]">{dayCounts.map(({ label, count }, index) => <span key={label}>{index > 0 && <i className="mx-1 inline-block h-3 w-px bg-[var(--border)]" />} {label} <b className="text-[var(--foreground)]">{count}건</b></span>)}</div><Link className={button("xs")} href="/bookings">날짜별 예약 현황</Link><span className="font-mono text-[10.5px] text-[var(--muted)]">{policy.bookingOpen} – {policy.bookingClose} · {policy.bookingSlotMinutes}분</span></div>
-            <div className="min-h-0 flex-1 overflow-auto p-[18px]">
+            <div className="flex items-center gap-3 border-b border-[var(--border)] px-[18px] py-[15px]"><h2 className={typeScale.section}>하루 축</h2><div className="h-px min-w-0 flex-1" /><div className="flex items-center gap-2.5 font-mono text-[11px] text-[var(--muted)]">{dayCounts.map(({ label, count }, index) => <span key={label}>{index > 0 && <i className="mx-1 inline-block h-3 w-px bg-[var(--border)]" />} {label} <b className="text-[var(--foreground)]">{count}건</b></span>)}</div><Link className={button("xs")} href="/bookings">날짜별 예약 현황</Link><span className="font-mono text-[11px] text-[var(--muted)]">{policy.bookingOpen} – {policy.bookingClose} · {policy.bookingSlotMinutes}분</span></div>
+            {/* 축은 영업시간 전체를 그려 거의 항상 세로로 넘친다. 스크롤 상자는 스스로 포커스를
+                받을 수 있어야 키보드만 쓰는 원장이 축을 위아래로 넘길 수 있다. */}
+            <div aria-label="하루 축 스크롤 영역" className="min-h-0 flex-1 overflow-auto p-[18px] focus-visible:outline-2 focus-visible:outline-offset-[-2px] focus-visible:outline-[var(--brand)]" tabIndex={0}>
               {railBookings.length > 0 ? (
                 <div className="relative" style={{ height: `${railHeightPx}px` }}>
                   {hourMarks.map(({ label, top }) => (
                     <div className="absolute inset-x-0" key={label} style={{ top: `${top}px` }}>
-                      <span className="absolute left-0 -translate-y-1/2 font-mono text-[10.5px] text-[var(--muted)]">{label}</span>
+                      <span className="absolute left-0 -translate-y-1/2 font-mono text-[11px] text-[var(--muted)]">{label}</span>
                       <span className="absolute left-[56px] right-0 h-px bg-[rgba(224,222,215,0.85)]" />
                     </div>
                   ))}
                   {railGaps.map(({ height, minutes, startMinutes, top }) => (
-                    <Link className="absolute left-[56px] right-0 grid place-items-center rounded-[var(--radius-control)] text-[10.5px] text-[var(--muted)] hover:bg-[var(--brand-soft)] hover:text-[var(--brand)] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--brand)]" href={assignHref("", "", startMinutes)} key={`gap-${top}`} style={{ height: `${height}px`, top: `${top}px` }}>
+                    <Link className="absolute left-[56px] right-0 grid place-items-center rounded-[var(--radius-control)] text-[11px] text-[var(--muted)] hover:bg-[var(--brand-soft)] hover:text-[var(--brand)] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--brand)]" href={assignHref("", "", startMinutes)} key={`gap-${top}`} style={{ height: `${height}px`, top: `${top}px` }}>
                       {gapLabel(minutes, waitingCustomers.length)}
                     </Link>
                   ))}
@@ -165,10 +171,10 @@ export function DashboardPage({ data, today = new Date() }: { data: DashboardDat
                         <div className="flex h-full items-center gap-3 py-1.5 pl-[12px] pr-3">
                           <time className="shrink-0 font-mono text-[11px] text-[var(--muted)]" dateTime={booking.startsAt}>{timeFormatter.format(new Date(booking.startsAt))}</time>
                           <div className="min-w-0 flex-1">
-                            <strong className="block truncate text-[12.5px]">{booking.name}</strong>
-                            <span className="mt-0.5 block truncate text-[10.5px] text-[var(--muted)]">{booking.service}</span>
+                            <strong className="block truncate text-[13px]">{booking.name}</strong>
+                            <span className="mt-0.5 block truncate text-[11px] text-[var(--muted)]">{booking.service}</span>
                           </div>
-                          <span className={`shrink-0 rounded-full px-2.5 py-1 text-[10.5px] font-medium ${booking.style.badge}`}>
+                          <span className={`shrink-0 rounded-full px-2.5 py-1 text-[11px] font-medium ${booking.style.badge}`}>
                             <span aria-hidden="true" className={`mr-1 inline-block size-1.5 rounded-full align-middle ${booking.style.dot}`} />
                             {booking.style.label}
                           </span>
@@ -178,7 +184,7 @@ export function DashboardPage({ data, today = new Date() }: { data: DashboardDat
                   </ol>
                   {nowVisible && (
                     <div aria-label={`현재 시각 ${timeFormatter.format(today)}`} className="pointer-events-none absolute inset-x-0" data-now-line role="separator" style={{ top: `${railOffset(nowMinutes!, openMinutes)}px` }}>
-                      <span className="absolute left-0 -translate-y-1/2 rounded-[var(--radius-chip)] bg-[var(--accent)] px-[5px] py-[2px] font-mono text-[9.5px] leading-none text-white">{timeFormatter.format(today)}</span>
+                      <span className="absolute left-0 -translate-y-1/2 rounded-[var(--radius-chip)] bg-[var(--accent)] px-[5px] py-[2px] font-mono text-[10px] leading-none text-white">{timeFormatter.format(today)}</span>
                       <span className="absolute left-[44px] right-0 h-px bg-[var(--accent)]" />
                     </div>
                   )}
@@ -188,9 +194,9 @@ export function DashboardPage({ data, today = new Date() }: { data: DashboardDat
           </section>
 
           <aside className="min-h-0 space-y-[18px] overflow-auto pr-1">
-            <section aria-label="운영 현황" className={`${card} overflow-hidden`}><div className="flex items-center justify-between border-b border-[var(--border)] px-[18px] py-3"><h2 className={typeScale.section}>운영 현황</h2><span className="font-mono text-[10px] text-[var(--muted)]">확정 반영</span></div><dl className="px-[18px] py-2"><div className="flex items-end justify-between gap-2 border-b border-[var(--border)] py-[10px]"><dt className="text-[11px] text-[var(--muted)]">매출</dt><dd className={`font-mono ${typeScale.display}`}>₩{todaySales.toLocaleString("ko-KR")}</dd></div>{[["예약", `완료 ${completedToday}건 · 남은 ${todayBookings.length - completedToday}건`, `${todayBookings.length}건`], ["대기 고객", waitingCustomers.length ? "배정 대기" : "없음", `${waitingCustomers.length}명`], ["미수금", "없음", "₩0"], ["SMS 잔여", `자동 발송 ${enabledAutomations}건 예정`, `${smsRemaining.toLocaleString("ko-KR")}건`]].map(([label, subtitle, value]) => <div className="flex items-center gap-[8px] border-b border-[var(--border)] py-[10px] last:border-0" key={label}><div className="min-w-0 flex-1"><dt className="text-[12px]">{label}</dt><span className="mt-0.5 block text-[10.5px] text-[var(--muted)]">{subtitle}</span></div><dd className="font-mono font-medium">{value}</dd></div>)}<div className="flex items-center gap-2 pt-3 text-[10.5px] text-[var(--muted)]"><span className="h-[11px] w-[2px] bg-[var(--accent)]" />정정 {recentAudit.filter((event) => event.action.includes("correction")).length}건 · 삭제 없이 원장에 덧붙임</div></dl></section>
-            <section aria-label="대기 고객" className={`${card} overflow-hidden`}><div className="flex items-center justify-between border-b border-[var(--border)] px-[18px] py-3"><h2 className={typeScale.section}>대기 고객</h2><span className="font-mono text-[10.5px] text-[var(--muted)]">{waitingCustomers.length}명</span></div><ul className="px-[18px] py-1">{waitingCustomers.length ? waitingCustomers.slice(0, 3).map((record) => { const waiting = objectValue(record); const customerId = textValue(waiting, "customerId", ""); return <li className="flex items-center gap-2 border-b border-[var(--border)] py-3 last:border-0" key={record.id}><div className="min-w-0 flex-1"><strong className="block text-[12.5px]">{textValue(waiting, "name")}</strong><span className="mt-1 block text-[10.5px] text-[var(--muted)]">{textValue(waiting, "memo", "메모 없음")}</span></div><span className="font-mono text-[10.5px] text-[var(--muted)]">대기</span><Link className={button("xs")} href={assignHref(customerId, record.id, railGaps[0]?.startMinutes)}>배정</Link></li>; }) : <li className="py-5 text-sm text-[var(--muted)]">대기 고객이 없습니다.</li>}</ul></section>
-            <section aria-label="자동 문자" className={`${card} overflow-hidden`}><div className="flex items-center justify-between border-b border-[var(--border)] px-[18px] py-3"><h2 className={typeScale.section}>자동 문자</h2><span className="font-mono text-[10.5px] text-[var(--muted)]">오늘 예정</span></div><div className="grid grid-cols-2 gap-x-3 gap-y-3 px-[18px] py-3">{automations.length ? automations.slice(0, 6).map((record) => { const automation = objectValue(record); const enabled = textValue(automation, "status") === "사용"; return <div className="flex items-start gap-1.5" key={record.id}><span className={`mt-1 size-1.5 rounded-full ${enabled ? "bg-[var(--success)]" : "bg-[var(--muted)]"}`} /><div><strong className="block text-[11.5px]">{textValue(automation, "label")}</strong><span className="font-mono text-[10px] text-[var(--muted)]">{textValue(automation, "schedule")} · {enabled ? "켜짐" : "꺼짐"}</span></div></div>; }) : <p className="col-span-2 py-3 text-sm text-[var(--muted)]">대기 중인 자동화가 없습니다.</p>}</div><p className="mx-[18px] mb-3 rounded-[var(--radius-card)] bg-[var(--brand-soft)] px-2 py-1.5 text-[10.5px] text-[var(--brand)]">발송 전 확인 필요 · 설정 › 문자에서 켜고 끕니다</p></section>
+            <section aria-label="운영 현황" className={`${card} overflow-hidden`}><div className="flex items-center justify-between border-b border-[var(--border)] px-[18px] py-3"><h2 className={typeScale.section}>운영 현황</h2><span className="font-mono text-[10px] text-[var(--muted)]">확정 반영</span></div><dl className="px-[18px] py-2"><div className="flex items-end justify-between gap-2 border-b border-[var(--border)] py-[10px]"><dt className="text-[11px] text-[var(--muted)]">매출</dt><dd className={`font-mono ${typeScale.display}`}>₩{todaySales.toLocaleString("ko-KR")}</dd></div>{[["예약", `완료 ${completedToday}건 · 남은 ${todayBookings.length - completedToday}건`, `${todayBookings.length}건`], ["대기 고객", waitingCustomers.length ? "배정 대기" : "없음", `${waitingCustomers.length}명`], ["미수금", "없음", "₩0"], ["SMS 잔여", `자동 발송 ${enabledAutomations}건 예정`, `${smsRemaining.toLocaleString("ko-KR")}건`]].map(([label, subtitle, value]) => <div className="flex items-center gap-[8px] border-b border-[var(--border)] py-[10px] last:border-0" key={label}><div className="min-w-0 flex-1"><dt className="text-[12px]">{label}</dt><span className="mt-0.5 block text-[11px] text-[var(--muted)]">{subtitle}</span></div><dd className="font-mono font-medium">{value}</dd></div>)}<div className="flex items-center gap-2 pt-3 text-[11px] text-[var(--muted)]"><span className="h-[11px] w-[2px] bg-[var(--accent)]" />정정 {recentAudit.filter((event) => event.action.includes("correction")).length}건 · 삭제 없이 원장에 덧붙임</div></dl></section>
+            <section aria-label="대기 고객" className={`${card} overflow-hidden`}><div className="flex items-center justify-between border-b border-[var(--border)] px-[18px] py-3"><h2 className={typeScale.section}>대기 고객</h2><span className="font-mono text-[11px] text-[var(--muted)]">{waitingCustomers.length}명</span></div><ul className="px-[18px] py-1">{waitingCustomers.length ? waitingCustomers.slice(0, 3).map((record) => { const waiting = objectValue(record); const customerId = textValue(waiting, "customerId", ""); return <li className="flex items-center gap-2 border-b border-[var(--border)] py-3 last:border-0" key={record.id}><div className="min-w-0 flex-1"><strong className="block text-[13px]">{textValue(waiting, "name")}</strong><span className="mt-1 block text-[11px] text-[var(--muted)]">{textValue(waiting, "memo", "메모 없음")}</span></div><span className="font-mono text-[11px] text-[var(--muted)]">대기</span><Link aria-label={`${textValue(waiting, "name")} 예약 배정`} className={button("xs")} href={assignHref(customerId, record.id, railGaps[0]?.startMinutes)}>배정</Link></li>; }) : <li className="py-5 text-sm text-[var(--muted)]">대기 고객이 없습니다.</li>}</ul></section>
+            <section aria-label="자동 문자" className={`${card} overflow-hidden`}><div className="flex items-center justify-between border-b border-[var(--border)] px-[18px] py-3"><h2 className={typeScale.section}>자동 문자</h2><span className="font-mono text-[11px] text-[var(--muted)]">오늘 예정</span></div><div className="grid grid-cols-2 gap-x-3 gap-y-3 px-[18px] py-3">{automations.length ? automations.slice(0, 6).map((record) => { const automation = objectValue(record); const enabled = textValue(automation, "status") === "사용"; return <div className="flex items-start gap-1.5" key={record.id}><span className={`mt-1 size-1.5 rounded-full ${enabled ? "bg-[var(--success)]" : "bg-[var(--muted)]"}`} /><div><strong className="block text-[12px]">{textValue(automation, "label")}</strong><span className="font-mono text-[10px] text-[var(--muted)]">{textValue(automation, "schedule")} · {enabled ? "켜짐" : "꺼짐"}</span></div></div>; }) : <p className="col-span-2 py-3 text-sm text-[var(--muted)]">대기 중인 자동화가 없습니다.</p>}</div><p className="mx-[18px] mb-3 rounded-[var(--radius-card)] bg-[var(--brand-soft)] px-2 py-1.5 text-[11px] text-[var(--brand)]">발송 전 확인 필요 · 설정 › 문자에서 켜고 끕니다</p></section>
           </aside>
         </div>
 

@@ -197,7 +197,7 @@ export function RevenueBarChart({
       </table>
       {recent.length > 0 && (
         <div className="mt-auto border-t border-[var(--border)] px-5 py-3">
-          <ol className="flex flex-wrap gap-x-5 gap-y-1 text-[11.5px] text-[var(--muted)]">
+          <ol className="flex flex-wrap gap-x-5 gap-y-1 text-[12px] text-[var(--muted)]">
             {recent.map((point) => (
               <li className="flex gap-2.5" key={point.key}>
                 <span className="font-medium text-[var(--foreground)]">{point.label}</span>

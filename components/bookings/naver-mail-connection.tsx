@@ -7,6 +7,7 @@ import {
 import { button } from "../button";
 import { naverMailMetadata } from "../../lib/naver-mail";
 import type { JsonObject, JsonValue, SalonRecord } from "../../lib/salon-domain";
+import { SubmitButton } from "../submit-button";
 
 const input = "h-10 rounded-[var(--radius-control)] border border-[var(--border)] bg-[var(--surface)] px-3 text-sm focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--brand)]";
 
@@ -52,11 +53,11 @@ export function NaverMailConnection({ settings, history }: { settings: JsonObjec
     </div>
     {metadata.connected ? <div className="mt-4 grid grid-cols-[1fr_auto] items-end gap-4">
       <dl className="grid grid-cols-3 gap-3 rounded-[var(--radius-card)] border border-[var(--border)] p-4 text-sm"><div><dt className="text-xs text-[var(--muted)]">메일 주소</dt><dd className="mt-1 font-medium">{metadata.email}</dd></div><div><dt className="text-xs text-[var(--muted)]">마지막 UID</dt><dd className="mt-1 font-medium tabular-nums">{metadata.lastSyncUid || "초기 동기화 전"}</dd></div><div><dt className="text-xs text-[var(--muted)]">마지막 동기화</dt><dd className="mt-1 font-medium tabular-nums">{metadata.lastSyncAt || "초기 동기화 전"}</dd></div></dl>
-      <div className="flex gap-2"><form action={importInitialNaverBookings}><button className={button("md")} type="submit">초기 예약 불러오기</button></form><form action={syncNewNaverBookings}><button className={button("md", "primary")} type="submit">신규 메일 동기화</button></form><form action={disconnectNaverMail}><button className={button("md", "warning")} type="submit">연결 해제</button></form></div>
+      <div className="flex gap-2"><form action={importInitialNaverBookings}><SubmitButton size="md" tone="secondary">초기 예약 불러오기</SubmitButton></form><form action={syncNewNaverBookings}><SubmitButton size="md">신규 메일 동기화</SubmitButton></form><form action={disconnectNaverMail}><SubmitButton size="md" tone="warning">연결 해제</SubmitButton></form></div>
     </div> : <form action={connectNaverMail} className="mt-4 grid grid-cols-[1fr_1fr_auto] items-end gap-3" aria-label="네이버 예약 메일 연결">
       <label className="grid gap-1 text-xs font-medium text-[var(--muted)]"><span>네이버 메일 주소</span><input className={input} name="email" placeholder="example@naver.com" required type="email" /></label>
       <label className="grid gap-1 text-xs font-medium text-[var(--muted)]"><span>애플리케이션 비밀번호</span><input autoComplete="new-password" className={input} name="applicationPassword" required type="password" /></label>
-      <button className={button("md", "primary")} type="submit">연결 테스트 및 저장</button>
+      <SubmitButton size="md">연결 테스트 및 저장</SubmitButton>
     </form>}
     <div className="mt-5"><h4 className="text-sm font-bold">동기화·재시도 이력</h4>{history.length ? <ul className="mt-2 space-y-2">{history.slice(-6).reverse().map((entry) => <li className="rounded-[var(--radius-control)] bg-[var(--background)] px-3 py-2 text-xs" key={entry.id}>상태: {text(entry, "status")} · 결과: {text(entry, "result")} · {text(entry, "attemptedAt")}{text(entry, "message") ? ` · ${text(entry, "message")}` : ""}{typeof value(entry).changed === "number" ? ` · ${value(entry).changed}건` : ""}</li>)}</ul> : <p className="mt-2 text-sm text-[var(--muted)]">동기화 이력이 없습니다.</p>}</div>
   </section>;

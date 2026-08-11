@@ -86,7 +86,7 @@ export function RevenueDayChart({
             </span>
           </p>
           {/* 하루를 고르면 막대가 한 개라 비교가 안 된다. 그래서 그 날이 든 달을 그리는데, 왜 넓혔는지 밝힌다. */}
-          {contextNote && <p className="mt-[7px] text-[11.5px] text-[var(--muted)]">{contextNote}</p>}
+          {contextNote && <p className="mt-[7px] text-[12px] text-[var(--muted)]">{contextNote}</p>}
         </div>
         <p className="text-right text-[12px] text-[var(--muted)]">
           {span === "week" ? "전주" : "전월"} 대비{" "}
@@ -223,7 +223,7 @@ export function RevenueDayChart({
           ))}
         </tbody>
       </table>
-      <p className="px-5 pb-4 pt-[22px] text-[11.5px] text-[var(--muted)]">
+      <p className="px-5 pb-4 pt-[22px] text-[12px] text-[var(--muted)]">
         바닥 눈금만 있는 칸은 매출이 없던 날{partial ? ", 아무 표시도 없는 칸은 아직 오지 않은 날" : ""}입니다.
         {hasGold ? " 금색은 오늘과 정정 기록을 뜻합니다." : ""}
       </p>

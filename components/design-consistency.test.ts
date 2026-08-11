@@ -54,20 +54,34 @@ describe("design consistency", () => {
    * 크기를 손으로 적을 수 있으면 다음 화면에서 또 갈라진다.
    *
    * 문서화된 예외 하나: 사이드바 워드마크 21px. 브랜드 각인이지 본문 활자가 아니다.
-   * 13px 이하(본문·라벨·부연)는 아직 0.5px 단계가 남아 있다. 이 가드는 위쪽만 잠근다.
+   *
+   * 아래쪽도 같은 이유로 잠근다. 위쪽만 막아두니 13px 밑에서 0.5px 단계가 33곳까지 자랐다
+   * (10.5 · 11.5 · 12.5 · 9.5 · 9). 본문이 13px 인 화면에서 0.5px 차이는 아무 정보도 나르지
+   * 않으면서 같은 위계의 글자를 화면마다 다르게 만든다. 남은 발판은 10 · 11 · 12 · 13 뿐이다.
    */
-  it("14px 이상 활자 크기는 타입 스케일만 소유한다", () => {
+  it("활자 크기는 타입 스케일 발판만 쓴다", () => {
     const offenders: string[] = [];
     for (const [path, source] of files) {
       if (path === "components/type.ts") continue;
-      const own = path === "components/app-shell.tsx" ? /\btext-\[(?!21px)(1[4-9]|[2-9]\d)(\.\d+)?px\]/ : /\btext-\[(1[4-9]|[2-9]\d)(\.\d+)?px\]/;
-      for (const line of lines(source, own)) offenders.push(`${path}:${line}`);
+      const allowed = path === "components/app-shell.tsx" ? /^(10|11|12|13|21)px$/ : /^(10|11|12|13)px$/;
+      for (const [line, size] of sizeLiterals(source)) {
+        if (!allowed.test(size)) offenders.push(`${path}:${line} text-[${size}]`);
+      }
       for (const line of lines(source, /\btext-(lg|xl|2xl|3xl|4xl|5xl|6xl)\b/)) offenders.push(`${path}:${line}`);
     }
 
     expect(offenders).toEqual([]);
   });
 });
+
+/** `text-[13px]` 같은 리터럴 크기를 줄 번호와 함께 뽑는다. `text-sm` 등 유틸리티는 대상이 아니다. */
+function sizeLiterals(source: string) {
+  const found: [number, string][] = [];
+  const pattern = /\btext-\[(\d+(?:\.\d+)?px)\]/g;
+  let match: RegExpExecArray | null;
+  while ((match = pattern.exec(source))) found.push([source.slice(0, match.index).split("\n").length, match[1]]);
+  return found;
+}
 
 function lines(source: string, pattern: RegExp) {
   const found: number[] = [];

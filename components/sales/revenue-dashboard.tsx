@@ -150,7 +150,7 @@ function ChartCard({
         <h2 className={`${typeScale.micro} text-[var(--muted)]`} id={`revenue-chart-${kind}-title`}>
           {title}
         </h2>
-        {meta && <span className="text-[11.5px] text-[var(--muted)]">{meta}</span>}
+        {meta && <span className="text-[12px] text-[var(--muted)]">{meta}</span>}
       </div>
       <div className="border-t border-[var(--border)] px-[18px] pb-[10px] pt-[8px]">{children}</div>
     </section>
@@ -267,15 +267,15 @@ export function RevenueDashboard({
           {rows.map((row, index) => (
             <button
               aria-label={`${row.name} ${title} 상세 보기`}
-              className="flex w-full items-center gap-3 py-[10px] text-left hover:bg-[var(--background)] focus-visible:outline-2 focus-visible:outline-[var(--brand)]"
+              className="flex w-full items-center gap-3 py-[10px] text-left hover:bg-[var(--background)] focus-visible:outline-2 focus-visible:outline-offset-[-2px] focus-visible:outline-[var(--brand)]"
               data-revenue-selection={`${kind}:${row.name}`}
               key={row.name}
               onClick={(event) => open(kind, row.name, event.currentTarget)}
               type="button"
             >
               <span className="flex w-[80px] shrink-0 items-center gap-2">
-                <span className="text-[12.5px] font-semibold">{row.name}</span>
-                <span className="text-[11.5px] text-[var(--muted)]">{row.count}건</span>
+                <span className="text-[13px] font-semibold">{row.name}</span>
+                <span className="text-[12px] text-[var(--muted)]">{row.count}건</span>
               </span>
               {/* 항목이 하나면 막대는 항상 100%라 비교 정보가 없다. 막대 대신 사실을 쓴다 (A2-2). */}
               {rows.length > 1 ? (
@@ -290,18 +290,18 @@ export function RevenueDashboard({
                   />
                 </span>
               ) : (
-                <span className="min-w-0 flex-1 text-[11.5px] text-[var(--muted)]">이 기간의 유일한 유형입니다.</span>
+                <span className="min-w-0 flex-1 text-[12px] text-[var(--muted)]">이 기간의 유일한 유형입니다.</span>
               )}
               <span className="flex w-[145px] shrink-0 items-center justify-end gap-2.5">
                 <span className="font-mono text-[12px] font-medium tabular-nums">{won(row.sales)}</span>
-                <span className="w-[38px] text-right text-[11.5px] text-[var(--muted)]">{rows.length > 1 ? `${serviceTotal ? Math.round((row.sales / serviceTotal) * 100) : 0}%` : "전액"}</span>
+                <span className="w-[38px] text-right text-[12px] text-[var(--muted)]">{rows.length > 1 ? `${serviceTotal ? Math.round((row.sales / serviceTotal) * 100) : 0}%` : "전액"}</span>
               </span>
             </button>
           ))}
           {rows.length === 0 && <p className="py-6 text-center text-[12px] text-[var(--muted)]">기간에 해당하는 매출이 없습니다.</p>}
         </div>
       </ChartSurface>
-      <p className="mt-3 text-[11.5px] text-[var(--muted)]">유형은 설정 › 시술·가격에서 관리합니다.</p>
+      <p className="mt-3 text-[12px] text-[var(--muted)]">유형은 설정 › 시술·가격에서 관리합니다.</p>
       <DataTable caption={`${title} 표`} rows={rows} />
     </ChartCard>
   );
@@ -395,19 +395,22 @@ export function RevenueDashboard({
         </div>
         <div className="mt-5 grid grid-cols-[minmax(0,2fr)_392px] gap-5">
           <ChartCard kind="payment" title="결제 수단">
-            <div className="max-h-[280px] divide-y divide-[var(--border)] overflow-y-auto" data-revenue-chart="payment" ref={ref("payment")}>
+            {/* 서비스 차트와 같은 `ChartSurface` 를 쓴다. 예전에는 이 칸만 맨 `div` 라
+                스크롤 영역이 키보드로 잡히지 않았다. */}
+            <ChartSurface kind="payment" label="결제 수단" onReady={ref("payment")}>
+              <div className="divide-y divide-[var(--border)]">
               {analytics.payments.map((row, index) => (
                 <button
                   aria-label={`${row.name} 결제수단 상세 보기`}
-                  className="grid w-full grid-cols-[92px_minmax(0,1fr)_auto] items-center gap-4 py-[10px] text-left text-sm transition-colors duration-200 ease-[cubic-bezier(0.32,0.72,0,1)] hover:bg-[var(--background)] focus-visible:outline-2 focus-visible:outline-[var(--brand)]"
+                  className="grid w-full grid-cols-[92px_minmax(0,1fr)_auto] items-center gap-4 py-[10px] text-left text-sm transition-colors duration-200 ease-[cubic-bezier(0.32,0.72,0,1)] hover:bg-[var(--background)] focus-visible:outline-2 focus-visible:outline-offset-[-2px] focus-visible:outline-[var(--brand)]"
                   data-revenue-selection={`payment:${row.name}`}
                   key={row.name}
                   onClick={(event) => open("payment", row.name, event.currentTarget)}
                   type="button"
                 >
                   <span className="flex items-center gap-2">
-                    <span className="text-[12.5px] font-semibold">{row.name}</span>
-                    <span className="text-[11.5px] text-[var(--muted)]">{analytics.payments.length > 1 ? `${row.value}%` : "전액"}</span>
+                    <span className="text-[13px] font-semibold">{row.name}</span>
+                    <span className="text-[12px] text-[var(--muted)]">{analytics.payments.length > 1 ? `${row.value}%` : "전액"}</span>
                   </span>
                   {/* 항목이 하나면 막대는 항상 100%라 비교 정보가 없다 (A2-2). */}
                   {analytics.payments.length > 1 ? (
@@ -422,12 +425,13 @@ export function RevenueDashboard({
                       />
                     </span>
                   ) : (
-                    <span className="min-w-0 text-[11.5px] text-[var(--muted)]">이 기간의 유일한 결제 수단입니다.</span>
+                    <span className="min-w-0 text-[12px] text-[var(--muted)]">이 기간의 유일한 결제 수단입니다.</span>
                   )}
                   <span className="font-mono text-[12px] font-medium tabular-nums">{won(row.amount)}</span>
                 </button>
               ))}
-            </div>
+              </div>
+            </ChartSurface>
             <DataTable
               caption="결제수단 표"
               rows={analytics.payments.map((row) => ({
@@ -440,13 +444,14 @@ export function RevenueDashboard({
           <section className={`${card} p-5`}>
             <h2 className={`${typeScale.micro} text-[var(--muted)]`}>정산</h2>
             <table className="mt-3 w-full text-sm">
+              <caption className="sr-only">정산 내역</caption>
               <tbody>
                 {analytics.settlement.map((row) => (
                   <tr
                     className="border-b border-[var(--border)] last:border-0"
                     key={row.name}
                   >
-                    <th className="py-3 text-left font-medium">{row.name}</th>
+                    <th className="py-3 text-left font-medium" scope="row">{row.name}</th>
                     <td className="py-3 text-right font-bold tabular-nums">
                       {won(row.value)}
                     </td>

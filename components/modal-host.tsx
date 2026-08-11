@@ -57,5 +57,7 @@ export function ModalHost({ children, label }: { children: React.ReactNode; labe
     };
   }, []);
 
-  return <div aria-label={label} data-app-overlay ref={ref} role="presentation">{children}</div>;
+  // `role="presentation"` 은 의미를 지우는 역할이라 `aria-label` 을 함께 쓸 수 없다 —
+  // 지운 의미에 이름을 붙이는 셈이라 보조 기술이 라벨을 버린다. `group` 은 이름을 받는다.
+  return <div aria-label={label} data-app-overlay ref={ref} role="group">{children}</div>;
 }
