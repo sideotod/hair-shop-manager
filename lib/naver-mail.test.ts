@@ -79,8 +79,9 @@ describe("Naver booking mail", () => {
       customerName: "김하나",
       customerPhone: "01012345678",
       service: "여성 커트",
-      startsAt: "2026-08-04T14:30:00.000Z",
-      endsAt: "2026-08-04T15:30:00.000Z",
+      // 메일 본문의 "14:30" 은 서울 벽시계다. 저장은 참 시각 ISO 이므로 9시간 앞선다.
+      startsAt: "2026-08-04T05:30:00.000Z",
+      endsAt: "2026-08-04T06:30:00.000Z",
       status: "confirmed",
     });
   });

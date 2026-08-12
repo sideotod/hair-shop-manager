@@ -86,6 +86,7 @@ describe("RevenueDashboard", () => {
   it("renders the briefing sentence, visit patterns, and who-came table when the server sends them", () => {
     const briefing = {
       revenue: { headline: "₩3,262,000, 지난달보다 4% 줄었습니다.", evidence: "2026-07-01 ~ 2026-07-31 결제 89건", tone: "down" as const },
+      comparisonLabel: "지난달",
       weekdayHeadline: "금요일이 가장 붐빕니다 — 23건.",
       hourHeadline: "14시가 가장 붐빕니다 — 20건.",
       weekday: weekdayPattern([{ weekday: 5, gross: 804000, count: 23 }]),

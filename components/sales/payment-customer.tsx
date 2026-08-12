@@ -2,10 +2,11 @@
 
 import { createContext, useContext, useState } from "react";
 
+import { control } from "../button";
 import { customerOptions } from "../../lib/customer-options";
 import type { JsonValue } from "../../lib/salon-domain";
 
-const field = "h-10 rounded-[var(--radius-control)] border border-[var(--border)] bg-[var(--surface)] px-3 text-[13px] text-[var(--foreground)]";
+const field = control;
 const label = "grid gap-1 text-xs font-medium text-[var(--muted)]";
 
 /**

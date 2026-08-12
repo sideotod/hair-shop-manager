@@ -88,20 +88,22 @@ export function averageTicket(gross: number, visits: number) {
  * 기간 요약 한 문장. `deltaPrevious` 가 `null` 이면 — 직전 기간에 매출이 없었거나
  * 비교할 기간 자체가 없다는 뜻이다. 그럴 때 `+∞%` 를 찍지 않고 비교를 생략한다 (§18).
  *
- * `inProgress` 는 아직 끝나지 않은 기간이다. 8월 12일에 8월 전체를 7월 전체와 견주면
- * 언제나 "크게 줄었다"가 나온다 — 사실이 아니라 달력이 만든 착시다. 그래서 증감을 말하지 않는다.
+ * `partialComparison` 은 아직 끝나지 않은 기간을 견줄 때 채운다. 8월 12일에 8월 전체를
+ * 7월 **전체**와 견주면 언제나 "크게 줄었다"가 나온다 — 사실이 아니라 달력이 만든 착시다.
+ * 그래서 지난달도 같은 날짜까지만 잘라 견주고, 그렇게 했다는 것을 문장이 밝힌다.
  */
-export function revenueBriefing(summary: RevenueSummary, previousLabel: string, options: { inclusiveEnd?: string; inProgress?: boolean } = {}): SalonBriefing {
+export function revenueBriefing(summary: RevenueSummary, previousLabel: string, options: { inclusiveEnd?: string; partialComparison?: string } = {}): SalonBriefing {
   const end = options.inclusiveEnd ?? summary.period.endExclusive;
   const evidence = `${summary.period.start} ~ ${end} 결제 ${summary.count.toLocaleString("ko-KR")}건 · 총 매출 ${won(summary.gross)}`;
   if (summary.count === 0) return { headline: "이 기간에는 결제 기록이 없습니다.", evidence, tone: "unknown" };
-  if (options.inProgress) return { headline: `${won(summary.gross)} 벌었습니다. 아직 진행 중인 기간이라 ${previousLabel}과 비교하지 않습니다.`, evidence, tone: "unknown" };
   if (summary.deltaPrevious === null) return { headline: `${won(summary.gross)} 벌었습니다. ${previousLabel}에 견줄 기록이 없어 증감은 표시하지 않습니다.`, evidence, tone: "unknown" };
 
+  // 같은 날짜까지 잘라 견줬으면 그 사실을 비교 대상 이름에 붙인다.
+  const against = options.partialComparison ? `${previousLabel} 같은 기간(${options.partialComparison})` : previousLabel;
   const change = Math.abs(summary.deltaPrevious);
-  if (change < 1) return { headline: `${won(summary.gross)} 으로 ${previousLabel}과 거의 같습니다.`, evidence, tone: "flat" };
+  if (change < 1) return { headline: `${won(summary.gross)} 으로 ${against}과 거의 같습니다.`, evidence, tone: "flat" };
   const direction = summary.deltaPrevious > 0 ? "늘었습니다" : "줄었습니다";
-  return { headline: `${won(summary.gross)}, ${previousLabel}보다 ${change}% ${direction}.`, evidence, tone: summary.deltaPrevious > 0 ? "up" : "down" };
+  return { headline: `${won(summary.gross)}, ${against}보다 ${change}% ${direction}.`, evidence, tone: summary.deltaPrevious > 0 ? "up" : "down" };
 }
 
 /** 붐빈 요일/시간 한 문장. 표를 읽지 않아도 답이 보이게 한다. */

@@ -1,6 +1,6 @@
 import { randomUUID } from "node:crypto";
 
-import { configuredOwnerPasswordHash, hashOwnerPassword, verifyOwnerPassword, type AuthEnvironment } from "./auth";
+import { hashOwnerPassword, verifyOwnerPassword } from "./auth";
 import { bookingSettings } from "./booking";
 import type { JsonObject, SalonStore } from "./salon-domain";
 import { resolveVisualTokens, validateVisualTokenContrast } from "./visual-tokens";
@@ -19,7 +19,8 @@ const knownErrors = new Set([
   "영업 시간을 확인하세요.",
   "숨김 메뉴를 확인하세요.",
   "현재 비밀번호를 확인하세요.",
-  "새 비밀번호는 8자 이상이어야 합니다.",
+  "비밀번호가 이미 설정되어 있습니다.",
+  "새 비밀번호를 입력하세요.",
   "새 비밀번호 확인이 일치하지 않습니다.",
   "공지 제목과 내용을 입력하세요.",
   "공지 길이를 확인하세요.",
@@ -103,18 +104,29 @@ export function settingsErrorMessage(error: unknown) {
   return knownErrors.has(message) ? message : "설정을 저장하지 못했습니다.";
 }
 
-export function ownerPasswordHash(settings: JsonObject, env: AuthEnvironment = process.env) {
+/** 초기 비밀번호는 없다. 해시가 없으면 로그인 화면이 최초 설정 폼으로 바뀐다. */
+export function ownerPasswordHash(settings: JsonObject): string | null {
   const stored = settings.ownerPasswordHash;
-  return typeof stored === "string" && passwordHash.test(stored) ? stored : configuredOwnerPasswordHash(env);
+  return typeof stored === "string" && passwordHash.test(stored) ? stored : null;
 }
 
-export function changeOwnerPasswordRecord(store: SalonStore, formData: FormData, env: AuthEnvironment = process.env) {
-  const currentPassword = rawText(formData, "currentPassword");
-  const newPassword = rawText(formData, "newPassword");
-  if (!verifyOwnerPassword(currentPassword, ownerPasswordHash(store.getSettings(), env))) throw new Error("현재 비밀번호를 확인하세요.");
-  if (newPassword.length < 8) throw new Error("새 비밀번호는 8자 이상이어야 합니다.");
-  if (newPassword !== rawText(formData, "confirmPassword")) throw new Error("새 비밀번호 확인이 일치하지 않습니다.");
-  return store.saveSettings({ ownerPasswordHash: hashOwnerPassword(newPassword) }, actor);
+function newPassword(formData: FormData) {
+  const password = rawText(formData, "newPassword");
+  // 길이·문자 종류 제한은 두지 않는다. 보안은 저장 방식(scrypt 해시)이 맡는다.
+  if (!password) throw new Error("새 비밀번호를 입력하세요.");
+  if (password !== rawText(formData, "confirmPassword")) throw new Error("새 비밀번호 확인이 일치하지 않습니다.");
+  return password;
+}
+
+export function setInitialOwnerPasswordRecord(store: SalonStore, formData: FormData) {
+  if (ownerPasswordHash(store.getSettings())) throw new Error("비밀번호가 이미 설정되어 있습니다.");
+  return store.saveSettings({ ownerPasswordHash: hashOwnerPassword(newPassword(formData)) }, actor);
+}
+
+export function changeOwnerPasswordRecord(store: SalonStore, formData: FormData) {
+  const stored = ownerPasswordHash(store.getSettings());
+  if (!stored || !verifyOwnerPassword(rawText(formData, "currentPassword"), stored)) throw new Error("현재 비밀번호를 확인하세요.");
+  return store.saveSettings({ ownerPasswordHash: hashOwnerPassword(newPassword(formData)) }, actor);
 }
 
 export function saveNoticeRecord(store: SalonStore, formData: FormData) {

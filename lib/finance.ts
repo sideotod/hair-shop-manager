@@ -1,6 +1,7 @@
 import { randomUUID } from "node:crypto";
 
 import type { JsonObject, LedgerEntry, LedgerInput, SalonStore } from "./salon-domain";
+import { seoulInstant } from "./seoul-date";
 import { PAYMENT_METHODS, settleAmounts, type PaymentAmounts, type PaymentMethod, type VatMode } from "./settlement";
 
 // 결제수단 목록과 금액 파생은 `lib/settlement.ts` 에 산다 — 화면도 같은 것을 써야 하는데
@@ -85,9 +86,11 @@ function occurredAt(formData: FormData) {
   const date = text(formData, "occurredDate");
   const time = text(formData, "occurredTime");
   if (!/^\d{4}-\d{2}-\d{2}$/.test(date) || !/^\d{2}:\d{2}$/.test(time)) throw new Error("결제 날짜와 시간을 확인하세요.");
-  const result = new Date(`${date}T${time}:00+09:00`);
-  if (Number.isNaN(result.valueOf())) throw new Error("결제 날짜와 시간을 확인하세요.");
-  return result.toISOString();
+  try {
+    return seoulInstant(date, time);
+  } catch {
+    throw new Error("결제 날짜와 시간을 확인하세요.");
+  }
 }
 
 function note(formData: FormData, name: string) {

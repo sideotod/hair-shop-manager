@@ -3,7 +3,7 @@ import { renderToStaticMarkup } from "react-dom/server";
 import { describe, expect, it } from "vitest";
 
 import { hashOwnerPassword, verifyOwnerPassword } from "../../lib/auth";
-import { changeOwnerPasswordRecord, parseShopSettings, settingsErrorMessage } from "../../lib/settings";
+import { changeOwnerPasswordRecord, parseShopSettings, setInitialOwnerPasswordRecord, settingsErrorMessage } from "../../lib/settings";
 import { createSalonStore } from "../../lib/salon-store";
 import { SettingsPage } from "./settings-page";
 
@@ -77,12 +77,27 @@ describe("settings validation", () => {
     }
   });
 
-  it("rejects a wrong current password and a short new password", () => {
+  it("rejects a wrong current password and an empty new password", () => {
     const store = createSalonStore(":memory:");
     try {
       store.saveSettings({ ownerPasswordHash: hashOwnerPassword("current-password", "current-salt") }, "원장");
       expect(() => changeOwnerPasswordRecord(store, settingsForm({ currentPassword: "wrong-password", newPassword: "changed-password", confirmPassword: "changed-password" }))).toThrow("현재 비밀번호");
-      expect(() => changeOwnerPasswordRecord(store, settingsForm({ currentPassword: "current-password", newPassword: "short", confirmPassword: "short" }))).toThrow("8자 이상");
+      expect(() => changeOwnerPasswordRecord(store, settingsForm({ currentPassword: "current-password", newPassword: "", confirmPassword: "" }))).toThrow("새 비밀번호를 입력");
+      // 길이 제한은 없앴다. 짧은 비밀번호도 그대로 통과한다.
+      changeOwnerPasswordRecord(store, settingsForm({ currentPassword: "current-password", newPassword: "1", confirmPassword: "1" }));
+      expect(verifyOwnerPassword("1", String(store.getSettings().ownerPasswordHash))).toBe(true);
+    } finally {
+      store.close();
+    }
+  });
+
+  it("sets the first password only while none is stored", () => {
+    const store = createSalonStore(":memory:");
+    try {
+      setInitialOwnerPasswordRecord(store, settingsForm({ newPassword: "first-password", confirmPassword: "first-password" }));
+
+      expect(verifyOwnerPassword("first-password", String(store.getSettings().ownerPasswordHash))).toBe(true);
+      expect(() => setInitialOwnerPasswordRecord(store, settingsForm({ newPassword: "second", confirmPassword: "second" }))).toThrow("이미 설정");
     } finally {
       store.close();
     }

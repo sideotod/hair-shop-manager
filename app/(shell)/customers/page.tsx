@@ -29,6 +29,7 @@ export default async function Page({ searchParams }: { searchParams: Promise<Rec
       notice={value(params.notice) || undefined}
       page={value(params.page)}
       printLayout={value(params.printLayout)}
+      printing={value(params.print) === "1"}
       query={value(params.query)}
       segment={segment}
       segmentValue={value(params.segmentValue)}

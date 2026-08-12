@@ -48,7 +48,8 @@ describe("CustomersPage", () => {
     expect(html).toContain('data-selected-customer-payment="customer-seed-1"');
     expect(html).toContain('/sales?tab=payment&amp;customer=customer-seed-1');
 
-    expect(html).toContain("2026-07-31T10:00:00.000Z · 커트 · confirmed");
+    // 저장은 참 시각 ISO(`2026-07-31T01:00Z`), 표시는 서울 벽시계다.
+    expect(html).toContain("2026-07-31 10:00 · 커트 · confirmed");
     expect(html).toContain("2026-07-24 · 결제 · ₩10,480,000");
     expect(html).toContain("2026-07-24 · 1,000P");
     expect(html).toContain("SMS · dry-run");
@@ -71,9 +72,9 @@ describe("CustomersPage", () => {
   });
 
   it("renders distinct server-selected printable layouts and a native print control", () => {
-    const contact = page(undefined, { printLayout: "1" });
-    const membership = page(undefined, { printLayout: "2" });
-    const loyalty = page(undefined, { printLayout: "4" });
+    const contact = page(undefined, { printLayout: "1", printing: true });
+    const membership = page(undefined, { printLayout: "2", printing: true });
+    const loyalty = page(undefined, { printLayout: "4", printing: true });
 
     expect(contact).toContain('data-print-layout="1"');
     expect(contact).toContain("<th>휴대전화</th>");
@@ -81,7 +82,9 @@ describe("CustomersPage", () => {
     expect(membership).toContain("<th>등급</th>");
     expect(membership).not.toContain("<th>휴대전화</th>");
     expect(loyalty).toContain("<th>패밀리 번호</th>");
-    expect(loyalty).toContain("현재 양식 인쇄");
+    // 인쇄 버튼은 표 없이도 항상 있다. 눌러야 `?print=1` 로 표가 붙는다.
+    expect(page()).toContain("현재 양식 인쇄");
+    expect(page()).not.toContain('class="customer-print"');
   });
 
   it("renders usable customer policy choices and selected-customer bulk controls", () => {
@@ -144,8 +147,8 @@ describe("CustomersPage", () => {
     expect(close).not.toContain("new=1");
   });
 
-  // 858명을 한 화면에 흘리던 목록을 서버에서 자른다. 인쇄 양식만 전량을 유지한다.
-  it("pages the list, clamps out-of-range pages, and still prints every customer", () => {
+  // 858명을 한 화면에 흘리던 목록을 서버에서 자른다. 인쇄 표는 `?print=1` 일 때만 붙인다.
+  it("pages the list, clamps out-of-range pages, and prints every customer only on demand", () => {
     const store = createSalonStore(":memory:");
     const many = Array.from({ length: 120 }, (_, index) => ({
       id: `bulk-${index}`, kind: "customers" as const, value: { name: `고객${index}`, phone: `010-0000-${String(index).padStart(4, "0")}` },
@@ -167,9 +170,10 @@ describe("CustomersPage", () => {
     // 첫 페이지의 "이전"은 링크가 아니라 비활성 표시여야 한다.
     expect(first).toContain('aria-disabled="true"');
     expect(first).toContain("page=2");
-    // 인쇄 표는 페이지와 무관하게 전량이다. 1페이지 HTML 에도 마지막 고객이 들어 있어야 한다.
+    // 평소 응답에는 마지막 고객이 없다. 인쇄를 눌러야 전량이 실린다.
     expect(listRows(first)).not.toContain("bulk-119");
-    expect(first).toContain("고객119");
+    expect(first).not.toContain("고객119");
+    expect(page(store, { customers: many, printing: true })).toContain("고객119");
   });
 
   it("carries the active filters across pages and drops the open modal", () => {

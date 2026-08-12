@@ -24,6 +24,8 @@ const shiftDays = (date: string, days: number) => {
   return moved.toISOString().slice(0, 10);
 };
 
+const minDate = (a: string, b: string) => (a < b ? a : b);
+
 /**
  * 하루 단위 막대 한 벌. 주(7칸)와 달(28~31칸)이 같은 코드를 쓴다.
  * 서버 집계 하나로 만든다 (§14 — 프런트는 합산하지 않는다).
@@ -132,10 +134,18 @@ export default async function SalesPage({ searchParams }: { searchParams: Promis
     const bounds = store.ledgerBounds();
     const period = revenueRangeExclusive(query, bounds);
     const previous = previousRevenuePeriod(query, bounds);
+    // 오늘이 기간 안에 있으면 아직 끝나지 않은 기간이다.
+    const inProgress = businessToday >= period.start && businessToday < period.endExclusive;
+    // 진행 중인 달을 지난달 **전체**와 견주면 언제나 "크게 줄었다"가 나온다 — 달력이 만든 착시다.
+    // 그래서 지난달도 같은 날짜까지만 자른다. 8월 1~12일 ↔ 7월 1~12일.
+    const elapsedDays = inProgress ? dayAxis(period.start, businessToday).length + 1 : 0;
+    const previousComparable = previous && inProgress
+      ? { start: previous.start, endExclusive: minDate(shiftDays(previous.start, elapsedDays), previous.endExclusive) }
+      : previous;
     const summary = buildSummary(
       store.summarizeLedger(period.start, period.endExclusive),
       period,
-      previous ? store.summarizeLedger(previous.start, previous.endExclusive).gross : null,
+      previousComparable ? store.summarizeLedger(previousComparable.start, previousComparable.endExclusive).gross : null,
     );
     const ledger = store.listLedgerRange(period.start, period.endExclusive);
     // 개별 거래는 클라이언트로 넘기지 않는다 — 누적 기간에서 RSC 페이로드가 3MB를 넘는다 (A4-1).
@@ -143,12 +153,14 @@ export default async function SalesPage({ searchParams }: { searchParams: Promis
     // 요일·시간·고객 구성은 SQL 이 센다. 원장 5,576행을 프런트로 넘겨 다시 세지 않는다 (§14).
     const weekday = weekdayPattern(store.weekdayLedger(period.start, period.endExclusive));
     const hour = hourPattern(store.hourLedger(period.start, period.endExclusive));
+    const partialComparison = inProgress && summary.deltaPrevious !== null ? `${elapsedDays}일까지` : undefined;
     const briefing = {
-      // 오늘이 기간 안에 있으면 아직 끝나지 않은 기간이다 — 증감을 말하면 달력이 만든 착시를 사실로 파는 셈이다.
       revenue: revenueBriefing(summary, previousLabels[query.view], {
         inclusiveEnd: analytics.selectedPeriod.end,
-        inProgress: businessToday >= period.start && businessToday < period.endExclusive,
+        // 같은 날짜까지 잘라 견줬다는 사실을 문장이 스스로 밝힌다.
+        partialComparison,
       }),
+      comparisonLabel: partialComparison ? `${previousLabels[query.view]} ${partialComparison}` : previousLabels[query.view],
       weekdayHeadline: patternHeadline(weekday, "요일"),
       hourHeadline: patternHeadline(hour, "시간대"),
       weekday,

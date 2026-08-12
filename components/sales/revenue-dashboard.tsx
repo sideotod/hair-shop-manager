@@ -56,6 +56,8 @@ export type RevenueChartData = RevenueDayChartData | RevenueBarChartData;
 /** 서버가 만든 브리핑. 화면은 문장을 조립하지 않고 받아 쓴다. */
 export type RevenueBriefing = {
   readonly revenue: SalonBriefing;
+  /** KPI 카드의 증감 라벨. 진행 중인 기간이면 "지난달 같은 기간" 처럼 잘라 견준 사실을 말한다. */
+  readonly comparisonLabel: string;
   readonly weekdayHeadline: string;
   readonly hourHeadline: string;
   readonly weekday: readonly VisitPattern[];
@@ -348,6 +350,9 @@ export function RevenueDashboard({
   // 넉 장만 남긴다. VAT·지출은 정산 표가 이미 아홉 줄로 보여준다 —
   // 같은 숫자를 카드로 한 번 더 띄우면 화면 첫 줄에서 "봐야 할 것"이 다섯으로 늘어난다.
   const ticket = briefing?.averageTicket ?? null;
+  // 진행 중인 기간은 지난 기간을 같은 날짜까지 잘라 견준다. 카드의 라벨도 그 사실을 말해야
+  // 브리핑 문장과 어긋나지 않는다.
+  const deltaLabel = briefing?.comparisonLabel ?? "직전 기간";
   const kpis: readonly { label: string; value: string; delta?: number | null; note?: string }[] = [
     { label: "총 매출", value: won(summary ? summary.gross : settled("총 매출")), delta: summary?.deltaPrevious ?? null },
     { label: "실결제", value: won(summary ? summary.netPaid : settled("실결제")), note: "할인·포인트를 뺀 금액" },
@@ -456,7 +461,7 @@ export function RevenueDashboard({
               </p>
               {delta !== undefined ? (
                 <p className="mt-[7px] text-[11px] text-[var(--muted)]">
-                  직전 기간{" "}
+                  {deltaLabel}{" "}
                   {delta === null ? (
                     <span>–</span>
                   ) : (

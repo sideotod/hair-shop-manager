@@ -20,3 +20,9 @@ npm-debug.log*
 .claude/
 .agents/
 skills-lock.json
+
+# 로컬 검증 산출물
+.dev-verify.log
+audit-*.png
+qa-*.png
+preflight-*.png

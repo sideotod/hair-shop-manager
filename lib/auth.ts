@@ -2,7 +2,6 @@ import { createHmac, randomBytes, scryptSync, timingSafeEqual } from "node:crypt
 
 import { cookies } from "next/headers";
 
-export const DEMO_OWNER_PASSWORD = "952200";
 export const OWNER_SESSION_COOKIE = "hairhaeyo-owner-session";
 export type AuthEnvironment = Readonly<Record<string, string | undefined>>;
 
@@ -26,16 +25,6 @@ export function verifyOwnerPassword(password: string, storedHash: string): boole
   const expected = Buffer.from(expectedHex, "hex");
   const actual = scryptSync(password, salt, expected.length);
   return expected.length === actual.length && timingSafeEqual(expected, actual);
-}
-
-export const SEEDED_OWNER_PASSWORD_HASH = hashOwnerPassword(DEMO_OWNER_PASSWORD, "hairhaeyo-owner-demo");
-
-export function configuredOwnerPasswordHash(env: AuthEnvironment = process.env) {
-  if (env.NODE_ENV !== "production" && isDemoMode(env)) return SEEDED_OWNER_PASSWORD_HASH;
-  const configured = env.HAIRHAEYO_OWNER_PASSWORD_HASH?.trim();
-  if (!configured) throw new Error("HAIRHAEYO_OWNER_PASSWORD_HASH is required outside demo mode");
-  if (!/^scrypt\$[^$]+\$[0-9a-f]+$/i.test(configured)) throw new Error("HAIRHAEYO_OWNER_PASSWORD_HASH must be a valid scrypt hash");
-  return configured;
 }
 
 function configuredSessionSecret(env: AuthEnvironment) {

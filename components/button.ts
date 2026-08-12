@@ -33,6 +33,36 @@ export const focusRing = "focus-visible:outline-2 focus-visible:outline-offset-2
 /** 어두운 사이드바 위. `--brand` 는 사이드바 배경과 대비가 낮아 링이 사라진다. */
 export const focusRingOnDark = "focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-white";
 
+/**
+ * 목록 행 안의 텍스트 링크(테두리 없는 `sm`).
+ *
+ * 고객·예약·운영 세 화면이 같은 한 줄을 각자 적어 두었고 굵기만 갈라져 있었다 —
+ * 고객만 `font-bold`, 나머지 둘은 `font-medium`. 같은 역할이 화면마다 다른 무게로 보였다.
+ * `font-medium` 으로 맞춘다. 행 안의 보조 동작이 행 제목보다 굵을 이유가 없다.
+ */
+export const rowLink = `inline-flex h-8 items-center rounded-[var(--radius-control)] px-2 text-xs font-medium text-[var(--brand)] ${focusRing}`;
+
+/**
+ * 누를 수 없는 상태 표시. 버튼과 같은 줄에 서지만 동작이 아니다.
+ *
+ * dry-run 알림이 문자 화면과 설정 화면에 각각 적혀 있었고 글자 크기가 갈라져 있었다
+ * (`text-sm` / `text-xs`). 같은 문장이 화면마다 다른 크기로 나왔다.
+ * `xs` 버튼과 같은 26px 높이로 맞춘다 — 옆에 선 버튼보다 커 보이면 누를 수 있어 보인다.
+ */
+export const statusPill = "inline-flex h-[26px] items-center rounded-full border border-[var(--brand)] px-3 text-[11px] font-medium text-[var(--brand)]";
+
+/**
+ * 입력칸·선택칸 단일 정의. `md` 버튼과 같은 40px 라 필터 줄이 정확히 맞는다.
+ *
+ * 여덟 파일이 같은 한 줄을 각자 적어 두었고 세 갈래로 갈라져 있었다 —
+ * 포커스 링을 import 한 곳 / 손으로 펴 적은 곳 / **아예 없는 곳**(결제 3파일).
+ * 결제 화면은 키보드만 쓰는 원장이 지금 어느 칸에 있는지 볼 수 없었다.
+ * 글자도 `text-sm` 과 `text-[13px]` 로 갈라져 같은 폼 안에서 칸마다 크기가 달랐다.
+ *
+ * 폭·바깥 여백처럼 칸마다 다른 것만 뒤에 덧붙인다 (`${control} w-full`).
+ */
+export const control = `h-10 rounded-[var(--radius-control)] border border-[var(--border)] bg-[var(--surface)] px-3 text-sm text-[var(--foreground)] ${focusRing}`;
+
 // 높이는 `py-` 가 아니라 `h-` 로 못박는다. `py-` 만 쓰면 flex·grid 줄 안에서 stretch 되어
 // 같은 `md` 가 단독 38px, 입력창 옆 40px 로 갈라졌다(실측). 고정 높이는 stretch 를 이긴다.
 // `md` 를 40px 로 맞춘 이유: 화면 전체 입력창이 `h-10`(40px)이라 필터·조회 줄이 정확히 정렬된다.

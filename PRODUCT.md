@@ -21,7 +21,7 @@ web
 1. `docs/function-coverage-matrix.md` 263행 전부 구현 또는 명시적 대체 매핑
 2. SMS 발송과 네이버 예약 연동이 실제로 동작 (현재 API 권한·동기화 주기·충돌 규칙 미확정)
 3. 레거시 고객·예약·매출 이력 마이그레이션 및 원본 대조 검증
-4. Tauri Windows 설치 파일로 배포 (현재 번들 비활성)
+4. Tauri Windows 설치 파일로 배포 (`tauri.conf.json` 번들 활성, 타깃 `nsis`)
 
 ## Positioning
 
@@ -49,7 +49,7 @@ web
 
 **스택 (기존 코드베이스 확정).** Next.js 16 App Router · React 19 · TypeScript strict · Tailwind CSS 4 · Vitest · Tauri 2. 런타임 의존성은 `imapflow` / `mailparser` 둘뿐이다. UI 라이브러리는 없다 — 컴포넌트는 전부 자체 작성이며 새 의존성 추가는 명시적 결정 사항이다.
 
-**미확정.** 네이버 예약 API 권한 범위, 동기화 주기, 예약 충돌 해소 규칙. Tauri 번들 활성화, 앱 아이콘, 자동 업데이트, 백업 정책.
+**미확정.** 네이버 예약 API 권한 범위, 동기화 주기, 예약 충돌 해소 규칙. 자동 업데이트, 백업 정책.
 
 ## Brand Commitments
 

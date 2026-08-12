@@ -100,8 +100,9 @@ copy .env.example .env.development
 | 변수 | 설명 |
 | --- | --- |
 | `HAIRHAEYO_DEMO_MODE` | 데모 데이터·개발 모드 사용 여부 |
-| `HAIRHAEYO_OWNER_PASSWORD_HASH` | 원장 로그인 비밀번호 해시 |
 | `HAIRHAEYO_SESSION_SECRET` | 로그인 세션 서명용 비밀값 |
+
+원장 비밀번호는 초기값이 없습니다. 첫 실행 시 로그인 화면이 비밀번호 설정 화면으로 나타나며, 이후 변경은 설정 › 매장 · 원장 계정에서 합니다.
 
 비밀번호, 세션 비밀값, 고객 개인정보는 Git에 커밋하지 않습니다.
 
@@ -117,7 +118,7 @@ copy .env.example .env.development
 | `npm run tauri:build` | Tauri 설치 파일 빌드 |
 | `npm run tauri:info` | Tauri 환경 정보 확인 |
 
-Tauri 배포 번들은 현재 설정에서 비활성화되어 있습니다. 설치 파일을 실제 배포하기 전에는 번들 활성화, 앱 아이콘, 자동 업데이트, 데이터 백업 정책을 별도로 확정해야 합니다.
+Tauri 배포 번들은 `tauri.conf.json`에서 활성화되어 있고 타깃은 `nsis`입니다. 설치 파일을 실제 배포하기 전에는 자동 업데이트와 데이터 백업 정책을 별도로 확정해야 합니다.
 
 ## 프로젝트 구조
 

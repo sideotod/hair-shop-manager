@@ -30,12 +30,11 @@ describe("revenueBriefing", () => {
     expect(revenueBriefing(summary({ count: 0, gross: 0, deltaPrevious: null }), "지난달").headline).toBe("이 기간에는 결제 기록이 없습니다.");
   });
 
-  /** 8월 12일에 8월 전체를 7월 전체와 견주면 언제나 "줄었다"가 나온다. 달력이 만든 착시다. */
-  it("refuses to compare a period that has not finished", () => {
-    const brief = revenueBriefing(summary({ gross: 362000, count: 11, deltaPrevious: -88.9 }), "지난달", { inProgress: true });
-    expect(brief.headline).toContain("아직 진행 중인 기간이라");
-    expect(brief.headline).not.toContain("88.9");
-    expect(brief.tone).toBe("unknown");
+  /** 8월 12일에 8월 전체를 7월 **전체**와 견주면 언제나 "줄었다"가 나온다. 같은 날짜까지 잘라 견주고, 그 사실을 밝힌다. */
+  it("names the cut-off when it compares a period that has not finished", () => {
+    const brief = revenueBriefing(summary({ gross: 362000, count: 11, deltaPrevious: 4.2 }), "지난달", { partialComparison: "12일까지" });
+    expect(brief.headline).toBe("₩362,000, 지난달 같은 기간(12일까지)보다 4.2% 늘었습니다.");
+    expect(brief.tone).toBe("up");
   });
 
   /** 근거 줄은 화면이 보여주는 기간과 같아야 한다. 반열린 끝(9월 1일)을 그대로 쓰면 하루가 늘어 보인다. */

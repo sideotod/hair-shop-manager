@@ -3,10 +3,11 @@
 import { useState } from "react";
 
 import { PAYMENT_METHODS, settleAmounts, type PaymentMethod, type VatMode } from "../../lib/settlement";
+import { control } from "../button";
 import { typeScale } from "../type";
 import { useIsMember } from "./payment-customer";
 
-const field = "h-10 rounded-[var(--radius-control)] border border-[var(--border)] bg-[var(--surface)] px-3 text-[13px] text-[var(--foreground)]";
+const field = control;
 const label = "grid gap-1 text-xs font-medium text-[var(--muted)]";
 const digits = (value: string) => value.replace(/\D/g, "").replace(/^0+(?=\d)/, "") || "0";
 const num = (value: string) => Number(value || "0");

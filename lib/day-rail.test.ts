@@ -5,7 +5,8 @@ import { displayStatus, minutesOfDay, railHeight, railHourMarks, railOffset, rai
 describe("minutesOfDay", () => {
   it("시각 문자열과 ISO 문자열을 모두 읽는다", () => {
     expect(minutesOfDay("09:30")).toBe(570);
-    expect(minutesOfDay("2026-08-06T14:20:00.000Z")).toBe(860);
+    // 저장된 ISO 는 참 시각이다. 레일은 서울 벽시계를 그리므로 14:20Z 는 서울 23:20 = 1400분이다.
+    expect(minutesOfDay("2026-08-06T14:20:00.000Z")).toBe(1400);
   });
 
   it("형식이 어긋나면 null", () => {

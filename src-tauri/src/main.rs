@@ -13,7 +13,6 @@ use tauri_plugin_shell::ShellExt;
 const HOST: &str = "127.0.0.1";
 // ponytail: fixed local port; allocate dynamically if multi-instance desktop use is introduced
 const PORT: u16 = 3210;
-const INITIAL_OWNER_PASSWORD_HASH: &str = "scrypt$hairhaeyo-owner-demo$5f33ba6263e9ed43a89d66c282505cd049de9cbd4a20e5384117ac3c901bf94d7a95e120cb2ba97d47dbf32e51c4c9408ea60310d5ddeb32aab2b1a1aaed6d6f";
 
 fn session_secret() -> std::io::Result<String> {
     let mut bytes = [0_u8; 32];
@@ -66,7 +65,6 @@ fn main() {
                 .env("HOSTNAME", HOST)
                 .env("PORT", PORT.to_string())
                 .env("HAIRHAEYO_DB_PATH", app_data.join("hairhaeyo.sqlite"))
-                .env("HAIRHAEYO_OWNER_PASSWORD_HASH", INITIAL_OWNER_PASSWORD_HASH)
                 .env("HAIRHAEYO_SESSION_SECRET", session_secret_value)
                 .env("HAIRHAEYO_HEALTH_TOKEN", &health_token)
                 .spawn()?;

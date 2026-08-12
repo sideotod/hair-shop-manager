@@ -1,6 +1,6 @@
 import Link from "next/link";
 
-import { button } from "../button";
+import { button, focusRing } from "../button";
 import { bookingSettings } from "../../lib/booking";
 import { displayStatus, minutesOfDay, railHeight, railHourMarks, railOffset, railTotalHeight, statusStyles } from "../../lib/day-rail";
 import type { AuditEvent, JsonObject, JsonValue, LedgerEntry, SalonRecord } from "../../lib/salon-domain";
@@ -32,18 +32,8 @@ function dateKey(value: Date | string) {
   return `${part("year")}-${part("month")}-${part("day")}`;
 }
 
-/**
- * 예약의 날짜·시각은 문자열을 그대로 읽는다. `Intl` 로 돌리면 안 된다.
- *
- * 저장 형식이 원장과 예약에서 다르다. `finance.ts:88` 의 결제는 `+09:00` 을 붙여 참 UTC 로
- * 새기지만 `booking.ts:86` 의 예약은 벽시계 값에 `Z` 를 붙인다(`10:00` → `…T10:00:00.000Z`).
- * 그래서 두 문자열을 같은 `dateKey`/`timeFormatter`(`timeZone: "Asia/Seoul"`)에 넣으면
- * 예약만 +9h 를 한 번 더 먹었다 — `/bookings` 는 `10:00`, 대시보드는 `19:00` 이라 답했고
- * 자정을 넘긴 예약은 날짜까지 밀려 오늘 건수가 `/bookings` 2건 vs 대시보드 1건으로 갈렸다.
- * `/bookings` 도 `railBookings` 도 이미 슬라이스로 읽는다. 대시보드만 맞추면 한 답이 된다.
- * (저장 형식 자체를 고치는 건 기존 예약 전부의 마이그레이션이라 이번 범위 밖이다.)
- */
-function bookingDateKey(startsAt: string) { return /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}/.test(startsAt) ? startsAt.slice(0, 10) : null; }
+/** 예약도 원장과 같은 참 시각 ISO 다(`lib/seoul-date.ts`). 날짜 키는 `dateKey` 하나로 충분하다. */
+function bookingDateKey(startsAt: string) { return dateKey(startsAt); }
 
 function addDays(key: string, days: number) {
   const date = new Date(`${key}T00:00:00.000Z`);
@@ -124,6 +114,7 @@ export function DashboardPage({ data, today = new Date() }: { data: DashboardDat
       id: record.id,
       customerId,
       end,
+      label: `${String(Math.floor(start / 60)).padStart(2, "0")}:${String(start % 60).padStart(2, "0")}`,
       name: customerNames.get(customerId) ?? customerId,
       service: textValue(booking, "service"),
       start,
@@ -183,7 +174,7 @@ export function DashboardPage({ data, today = new Date() }: { data: DashboardDat
                     </div>
                   ))}
                   {railGaps.map(({ height, minutes, startMinutes, top }) => (
-                    <Link className="absolute left-[56px] right-0 grid place-items-center rounded-[var(--radius-control)] text-[11px] text-[var(--muted)] hover:bg-[var(--brand-soft)] hover:text-[var(--brand)] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--brand)]" href={assignHref("", "", startMinutes)} key={`gap-${top}`} style={{ height: `${height}px`, top: `${top}px` }}>
+                    <Link className={`absolute left-[56px] right-0 grid place-items-center rounded-[var(--radius-control)] text-[11px] text-[var(--muted)] hover:bg-[var(--brand-soft)] hover:text-[var(--brand)] ${focusRing}`} href={assignHref("", "", startMinutes)} key={`gap-${top}`} style={{ height: `${height}px`, top: `${top}px` }}>
                       {gapLabel(minutes, waitingCustomers.length)}
                     </Link>
                   ))}
@@ -192,7 +183,7 @@ export function DashboardPage({ data, today = new Date() }: { data: DashboardDat
                       <li className={`absolute left-[56px] right-0 overflow-hidden rounded-[var(--radius-control)] border ${booking.style.card}`} data-booking-status={booking.status} key={booking.id} style={{ height: `${railHeight(booking.end - booking.start)}px`, top: `${railOffset(booking.start, openMinutes)}px` }}>
                         <span aria-hidden="true" className={`absolute inset-y-0 left-0 w-[3px] ${booking.style.stripe}`} />
                         <div className="flex h-full items-center gap-3 py-1.5 pl-[12px] pr-3">
-                          <time className="shrink-0 font-mono text-[11px] text-[var(--muted)]" dateTime={booking.startsAt}>{booking.startsAt.slice(11, 16)}</time>
+                          <time className="shrink-0 font-mono text-[11px] text-[var(--muted)]" dateTime={booking.startsAt}>{booking.label}</time>
                           <div className="min-w-0 flex-1">
                             <strong className="block truncate text-[13px]">{booking.name}</strong>
                             <span className="mt-0.5 block truncate text-[11px] text-[var(--muted)]">{booking.service}</span>
@@ -218,7 +209,7 @@ export function DashboardPage({ data, today = new Date() }: { data: DashboardDat
 
           <aside className="min-h-0 space-y-[18px] overflow-auto pr-1">
             <section aria-label="운영 현황" className={`${card} overflow-hidden`}><div className="flex items-center justify-between border-b border-[var(--border)] px-[18px] py-3"><h2 className={typeScale.section}>운영 현황</h2><span className="font-mono text-[10px] text-[var(--muted)]">확정 반영</span></div><dl className="px-[18px] py-2"><div className="flex items-end justify-between gap-2 border-b border-[var(--border)] py-[10px]"><dt className="text-[11px] text-[var(--muted)]">매출</dt><dd className={`font-mono ${typeScale.display}`}>₩{todaySales.toLocaleString("ko-KR")}</dd></div>{[["예약", `완료 ${completedToday}건 · 남은 ${todayBookings.length - completedToday}건`, `${todayBookings.length}건`], ["대기 고객", waitingCustomers.length ? "배정 대기" : "없음", `${waitingCustomers.length}명`], ["미수금", "없음", "₩0"], ["SMS 잔여", `자동 발송 ${enabledAutomations}건 예정`, `${smsRemaining.toLocaleString("ko-KR")}건`]].map(([label, subtitle, value]) => <div className="flex items-center gap-[8px] border-b border-[var(--border)] py-[10px] last:border-0" key={label}><div className="min-w-0 flex-1"><dt className="text-[12px]">{label}</dt><span className="mt-0.5 block text-[11px] text-[var(--muted)]">{subtitle}</span></div><dd className="font-mono font-medium">{value}</dd></div>)}<div className="flex items-center gap-2 pt-3 text-[11px] text-[var(--muted)]"><span className="h-[11px] w-[2px] bg-[var(--accent)]" />정정 {recentAudit.filter((event) => event.action.includes("correction")).length}건 · 삭제 없이 원장에 덧붙임</div></dl></section>
-            <section aria-label="대기 고객" className={`${card} overflow-hidden`}><div className="flex items-center justify-between border-b border-[var(--border)] px-[18px] py-3"><h2 className={typeScale.section}>대기 고객</h2><span className="font-mono text-[11px] text-[var(--muted)]">{waitingCustomers.length}명</span></div><ul className="px-[18px] py-1">{waitingCustomers.length ? waitingCustomers.slice(0, 3).map((record) => { const waiting = objectValue(record); const customerId = textValue(waiting, "customerId", ""); return <li className="flex items-center gap-2 border-b border-[var(--border)] py-3 last:border-0" key={record.id}><div className="min-w-0 flex-1"><strong className="block text-[13px]">{textValue(waiting, "name")}</strong><span className="mt-1 block text-[11px] text-[var(--muted)]">{textValue(waiting, "memo", "메모 없음")}</span></div><span className="font-mono text-[11px] text-[var(--muted)]">대기</span><Link aria-label={`${textValue(waiting, "name")} 예약 배정`} className={button("xs")} href={assignHref(customerId, record.id, railGaps[0]?.startMinutes)}>배정</Link></li>; }) : <li className="py-5 text-sm text-[var(--muted)]">대기 고객이 없습니다.</li>}</ul></section>
+            <section aria-label="대기 고객" className={`${card} overflow-hidden`}><div className="flex items-center justify-between border-b border-[var(--border)] px-[18px] py-3"><h2 className={typeScale.section}>대기 고객</h2><span className="font-mono text-[11px] text-[var(--muted)]">{waitingCustomers.length}명</span></div><ul className="px-[18px] py-1">{waitingCustomers.length ? waitingCustomers.slice(0, 3).map((record) => { const waiting = objectValue(record); const customerId = textValue(waiting, "customerId", ""); return <li className="flex items-center gap-2 border-b border-[var(--border)] py-3 last:border-0" key={record.id}><div className="min-w-0 flex-1"><strong className="block text-[13px]">{textValue(waiting, "name")}</strong><span className="mt-1 block text-[11px] text-[var(--muted)]">{textValue(waiting, "memo", "메모 없음")}</span></div><span className="font-mono text-[11px] text-[var(--muted)]">대기</span><Link aria-label={`${textValue(waiting, "name")} 예약 배정`} className={button("xs")} href={assignHref(customerId, record.id, railGaps[0]?.startMinutes)}>예약 배정</Link></li>; }) : <li className="py-5 text-sm text-[var(--muted)]">대기 고객이 없습니다.</li>}</ul></section>
             <section aria-label="자동 문자" className={`${card} overflow-hidden`}><div className="flex items-center justify-between border-b border-[var(--border)] px-[18px] py-3"><h2 className={typeScale.section}>자동 문자</h2><span className="font-mono text-[11px] text-[var(--muted)]">오늘 예정</span></div><div className="grid grid-cols-2 gap-x-3 gap-y-3 px-[18px] py-3">{automations.length ? automations.slice(0, 6).map((record) => { const automation = objectValue(record); const enabled = textValue(automation, "status") === "사용"; return <div className="flex items-start gap-1.5" key={record.id}><span className={`mt-1 size-1.5 rounded-full ${enabled ? "bg-[var(--success)]" : "bg-[var(--muted)]"}`} /><div><strong className="block text-[12px]">{textValue(automation, "label")}</strong><span className="font-mono text-[10px] text-[var(--muted)]">{textValue(automation, "schedule")} · {enabled ? "켜짐" : "꺼짐"}</span></div></div>; }) : <p className="col-span-2 py-3 text-sm text-[var(--muted)]">대기 중인 자동화가 없습니다.</p>}</div><p className="mx-[18px] mb-3 rounded-[var(--radius-card)] bg-[var(--brand-soft)] px-2 py-1.5 text-[11px] text-[var(--brand)]">발송 전 확인 필요 · 설정 › 문자에서 켜고 끕니다</p></section>
           </aside>
         </div>

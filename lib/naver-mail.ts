@@ -2,6 +2,7 @@ import { ImapFlow } from "imapflow";
 import { simpleParser } from "mailparser";
 
 import type { JsonObject, JsonValue, SalonRecord, SalonStore } from "./salon-domain";
+import { seoulInstant } from "./seoul-date";
 
 export type NaverBookingStatus = "requested" | "confirmed" | "changed" | "cancelled";
 export type NaverMailMessage = {
@@ -68,7 +69,10 @@ export function parseNaverBookingMail(message: NaverMailMessage): ParsedNaverBoo
   if (!reservationNumber || !visit) return null;
   const [, year, month, day, startHour, startMinute, endHour, endMinute] = visit;
   const date = `${year}-${month.padStart(2, "0")}-${day.padStart(2, "0")}`;
-  const at = (hour: string, minute: string) => `${date}T${hour.padStart(2, "0")}:${minute}:00.000Z`;
+  // 메일 본문의 시각은 서울 벽시계다. 저장은 참 시각 ISO 한 규약으로만 한다.
+  const at = (hour: string, minute: string) => seoulInstant(date, `${hour.padStart(2, "0")}:${minute}`);
+  let startsAt: string; let endsAt: string;
+  try { startsAt = at(startHour, startMinute); endsAt = at(endHour, endMinute); } catch { return null; }
   return {
     uid: message.uid,
     receivedAt: message.receivedAt,
@@ -76,8 +80,8 @@ export function parseNaverBookingMail(message: NaverMailMessage): ParsedNaverBoo
     customerName: field(body, "예약자(?:명)?|고객명"),
     customerPhone: field(body, "연락처|휴대(?:전화|폰)|전화번호").replace(/\D/g, ""),
     service: field(body, "예약\\s*상품|예약상품|상품명|시술|서비스"),
-    startsAt: at(startHour, startMinute),
-    endsAt: at(endHour, endMinute),
+    startsAt,
+    endsAt,
     status,
   };
 }

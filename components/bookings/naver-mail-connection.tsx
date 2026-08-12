@@ -4,12 +4,12 @@ import {
   importInitialNaverBookings,
   syncNewNaverBookings,
 } from "../../app/naver-mail-actions";
-import { button } from "../button";
+import { button, control, rowLink } from "../button";
 import { naverMailMetadata } from "../../lib/naver-mail";
 import type { JsonObject, JsonValue, SalonRecord } from "../../lib/salon-domain";
 import { SubmitButton } from "../submit-button";
 
-const input = "h-10 rounded-[var(--radius-control)] border border-[var(--border)] bg-[var(--surface)] px-3 text-sm focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--brand)]";
+const input = control;
 
 function value(record: SalonRecord<JsonValue>): JsonObject {
   return record.value && typeof record.value === "object" && !Array.isArray(record.value) ? record.value as JsonObject : {};
@@ -33,7 +33,7 @@ export function NaverMailReplacementGuide() {
     <p className="mt-2 text-sm text-[var(--muted)]">스마트플레이스 회원 가입과 예약 알림 메일 수신을 먼저 설정하세요. 기존 네이버 예약 코드 입력은 네이버 메일 주소와 애플리케이션 비밀번호로 대체합니다.</p>
     <p className="mt-2 text-sm text-[var(--muted)]">네이버 메일 주소 = 네이버 계정, 매장 = Hairhaeyo 단일 매장, 담당자 = 원장 1인으로 매핑합니다. 예약 ID·고객 연락처·메모는 신뢰된 예약 메일에서 로컬 예약으로 저장합니다.</p>
     <details className="mt-3 rounded-[var(--radius-card)] bg-[var(--background)] p-3 text-sm"><summary className="cursor-pointer font-bold">예약 연동 FAQ</summary><p className="mt-2 text-[var(--muted)]">Hairhaeyo는 네이버 예약 직접 API·코드 연동을 제공하지 않습니다. 사용자가 승인한 예약 알림 메일 읽기 방식만 사용하며, 비밀번호는 Windows Credential Manager에만 저장합니다.</p></details>
-    <nav aria-label="네이버 예약 공식 도움말" className="mt-3 flex flex-wrap gap-x-4 gap-y-2 text-sm">{naverLinks.map(([label, href]) => <a aria-label={`${label} 새 창`} className="font-bold text-[var(--brand)]" href={href} key={href} rel="noopener noreferrer" target="_blank">{label}</a>)}</nav>
+    <nav aria-label="네이버 예약 공식 도움말" className="mt-3 -ml-2 flex flex-wrap gap-x-2 gap-y-1 text-sm">{naverLinks.map(([label, href]) => <a aria-label={`${label} 새 창`} className={`${rowLink} text-sm`} href={href} key={href} rel="noopener noreferrer" target="_blank">{label}</a>)}</nav>
   </section>;
 }
 

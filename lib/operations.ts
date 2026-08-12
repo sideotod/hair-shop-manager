@@ -1,6 +1,7 @@
 import { randomUUID } from "node:crypto";
 
 import type { JsonObject, LedgerEntry, LedgerInput, SalonStore } from "./salon-domain";
+import { seoulInstant } from "./seoul-date";
 
 const actor = "원장" as const;
 const text = (data: FormData, key: string) => typeof data.get(key) === "string" ? (data.get(key) as string).trim() : "";
@@ -16,7 +17,7 @@ export function isCalendarDate(value: string) { return /^\d{4}-\d{2}-\d{2}$/.tes
 function occurredAt(data: FormData) {
   const date = text(data, "occurredDate"); const time = text(data, "occurredTime");
   if (!isCalendarDate(date) || !/^(?:[01]\d|2[0-3]):[0-5]\d$/.test(time)) throw new Error("거래 날짜와 시간을 확인하세요.");
-  return `${date}T${time}:00.000Z`;
+  return seoulInstant(date, time);
 }
 function original(store: SalonStore, id: string) {
   const entry = store.listLedger().find((item) => item.id === id && item.kind === "expense");

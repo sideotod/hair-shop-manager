@@ -1,14 +1,20 @@
+import { seoulClock } from "./seoul-date";
+
 /** Figma Proposal B `3:77` 하루 축 기하: 가로선 간격 52px = 1시간, 레일 상단 여백 8px. */
 export const RAIL_HOUR_HEIGHT = 52;
 export const RAIL_TOP_PADDING = 8;
 
 const timeOfDay = /^([01]\d|2[0-3]):([0-5]\d)$/;
 
-/** "09:30" 또는 ISO 문자열에서 자정 기준 분. 파싱 실패 시 null. */
+/** "09:30" 또는 참 시각 ISO 문자열에서 서울 자정 기준 분. 파싱 실패 시 null. */
 export function minutesOfDay(value: string) {
-  const clock = timeOfDay.exec(value) ?? timeOfDay.exec(value.slice(11, 16));
+  const clock = timeOfDay.exec(value) ?? timeOfDay.exec(seoulTime(value));
   if (!clock) return null;
   return Number(clock[1]) * 60 + Number(clock[2]);
+}
+
+function seoulTime(value: string) {
+  return value && !Number.isNaN(new Date(value).valueOf()) ? seoulClock(value).time : "";
 }
 
 /** 자정 기준 분을 레일 상단 기준 px로. 영업 시작 이전 값은 0으로 고정. */

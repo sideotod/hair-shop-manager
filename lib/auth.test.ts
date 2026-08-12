@@ -1,20 +1,22 @@
+import { mkdtempSync, rmSync } from "node:fs";
+import { tmpdir } from "node:os";
+import { join } from "node:path";
+
 import { renderToStaticMarkup } from "react-dom/server";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
 import LoginPage from "../app/login/page";
 import {
-  configuredOwnerPasswordHash,
   createOwnerSessionToken,
   hashOwnerPassword,
   isDemoMode,
   isValidOwnerSession,
-  SEEDED_OWNER_PASSWORD_HASH,
   verifyOwnerPassword,
 } from "./auth";
+import { createSalonStore } from "./salon-store";
 
 const productionSecret = "production-session-secret-at-least-32-characters";
 const productionEnv = {
-  HAIRHAEYO_OWNER_PASSWORD_HASH: hashOwnerPassword("production-password", "production-owner-salt"),
   HAIRHAEYO_SESSION_SECRET: productionSecret,
   NODE_ENV: "production",
 } as const;
@@ -46,31 +48,33 @@ describe("owner authentication", () => {
     expect(isValidOwnerSession(undefined, now, productionEnv)).toBe(false);
   });
 
-  it("enables seeded credentials only when demo mode is explicitly enabled", () => {
+  it("keeps demo mode explicit and opt-in", () => {
     expect(isDemoMode({ HAIRHAEYO_DEMO_MODE: "1" })).toBe(true);
     expect(isDemoMode({ HAIRHAEYO_DEMO_MODE: "0" })).toBe(false);
-    expect(configuredOwnerPasswordHash({ HAIRHAEYO_DEMO_MODE: "1" })).toBe(SEEDED_OWNER_PASSWORD_HASH);
-    expect(configuredOwnerPasswordHash(productionEnv)).toBe(productionEnv.HAIRHAEYO_OWNER_PASSWORD_HASH);
-    expect(() => configuredOwnerPasswordHash({ NODE_ENV: "production" })).toThrow(/HAIRHAEYO_OWNER_PASSWORD_HASH/);
+    expect(isDemoMode({})).toBe(false);
   });
 
-  it("requires the configured owner password hash in production even when demo mode is flagged", () => {
-    const productionDemoEnv = { ...productionEnv, HAIRHAEYO_DEMO_MODE: "1" } as const;
+  it("asks for a new password until one is stored, then asks for the stored one", async () => {
+    const directory = mkdtempSync(join(tmpdir(), "hairhaeyo-auth-"));
+    const path = join(directory, "auth.sqlite");
+    vi.stubEnv("HAIRHAEYO_DB_PATH", path);
+    try {
+      const firstRun = renderToStaticMarkup(await LoginPage({ searchParams: Promise.resolve({}) }));
 
-    expect(() => configuredOwnerPasswordHash({ HAIRHAEYO_DEMO_MODE: "1", NODE_ENV: "production" })).toThrow(/HAIRHAEYO_OWNER_PASSWORD_HASH/);
-    expect(configuredOwnerPasswordHash(productionDemoEnv)).toBe(productionEnv.HAIRHAEYO_OWNER_PASSWORD_HASH);
-  });
+      const store = createSalonStore(path);
+      try { store.saveSettings({ ownerPasswordHash: hashOwnerPassword("owner-password", "owner-salt") }, "원장"); } finally { store.close(); }
+      const configured = renderToStaticMarkup(await LoginPage({ searchParams: Promise.resolve({}) }));
 
-  it("shows the seeded password on the login page only in demo mode", async () => {
-    vi.stubEnv("HAIRHAEYO_DEMO_MODE", "1");
-    const demoHtml = renderToStaticMarkup(await LoginPage({ searchParams: Promise.resolve({}) }));
-    vi.stubEnv("HAIRHAEYO_DEMO_MODE", "0");
-    const productionHtml = renderToStaticMarkup(await LoginPage({ searchParams: Promise.resolve({}) }));
-
-    expect(demoHtml).toContain("로컬 데모 원장 비밀번호");
-    expect(demoHtml).toContain("952200");
-    expect(productionHtml).not.toContain("로컬 데모 원장 비밀번호");
-    expect(productionHtml).not.toContain("952200</strong>");
+      expect(firstRun).toContain('name="newPassword"');
+      expect(firstRun).toContain('name="confirmPassword"');
+      expect(configured).toContain('name="password"');
+      expect(configured).not.toContain('name="newPassword"');
+      // 어떤 화면에서도 비밀번호나 해시가 마크업에 실려 나가지 않는다.
+      expect(firstRun + configured).not.toContain("scrypt$");
+      expect(firstRun + configured).not.toContain("owner-password");
+    } finally {
+      rmSync(directory, { force: true, recursive: true });
+    }
   });
 
   it("requires a safe production session secret and fails closed when it is unavailable", () => {
