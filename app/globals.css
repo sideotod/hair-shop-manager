@@ -1,5 +1,10 @@
 @import "tailwindcss";
 
+/* Playwright 가 남기는 콘솔 로그·스냅샷에는 RSC 페이로드가 통째로 들어 있다.
+   Tailwind 가 그걸 훑으면 `rounded-[var(--"])</script>…` 같은 쓰레기 클래스를 만들어
+   CSS 파싱이 통째로 깨진다. 산출물 폴더는 소스가 아니다. */
+@source not "../.playwright-mcp";
+
 @theme inline {
   --font-sans: var(--font-plex-kr), var(--font-pretendard), system-ui, -apple-system, "Segoe UI", sans-serif;
   --font-mono: var(--font-plex-mono), Consolas, "Courier New", monospace;

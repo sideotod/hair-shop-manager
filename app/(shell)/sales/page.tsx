@@ -106,6 +106,9 @@ function revenueChart(store: SalonStore, query: RevenueQuery, businessToday: str
   return monthOfDays(store, start.slice(0, 7), businessToday, query.view === "day" ? `${label}이 속한 달` : undefined);
 }
 
+/** 비교 상대를 부르는 이름. 화면 문장이 "지난달보다" 처럼 읽히게 한다. */
+const previousLabels: Record<RevenueQuery["view"], string> = { day: "어제", week: "지난주", month: "지난달", year: "지난해", total: "직전 기간" };
+
 export default async function SalesPage({ searchParams }: { searchParams: Promise<Record<string, string | string[] | undefined>> }) {
   const params = await searchParams;
   const store = createSalonStore();
@@ -137,6 +140,22 @@ export default async function SalesPage({ searchParams }: { searchParams: Promis
     const ledger = store.listLedgerRange(period.start, period.endExclusive);
     // 개별 거래는 클라이언트로 넘기지 않는다 — 누적 기간에서 RSC 페이로드가 3MB를 넘는다 (A4-1).
     const { transactions: _transactions, ...analytics } = buildRevenueAnalytics(buildRevenueTransactions(ledger, customers), query, businessToday);
-    return <RevenueDashboard analytics={analytics} chart={revenueChart(store, query, businessToday)} query={query} settings={settings} summary={summary} />;
+    // 요일·시간·고객 구성은 SQL 이 센다. 원장 5,576행을 프런트로 넘겨 다시 세지 않는다 (§14).
+    const weekday = weekdayPattern(store.weekdayLedger(period.start, period.endExclusive));
+    const hour = hourPattern(store.hourLedger(period.start, period.endExclusive));
+    const briefing = {
+      // 오늘이 기간 안에 있으면 아직 끝나지 않은 기간이다 — 증감을 말하면 달력이 만든 착시를 사실로 파는 셈이다.
+      revenue: revenueBriefing(summary, previousLabels[query.view], {
+        inclusiveEnd: analytics.selectedPeriod.end,
+        inProgress: businessToday >= period.start && businessToday < period.endExclusive,
+      }),
+      weekdayHeadline: patternHeadline(weekday, "요일"),
+      hourHeadline: patternHeadline(hour, "시간대"),
+      weekday,
+      hour,
+      customers: customerBriefing(store.customerMixLedger(period.start, period.endExclusive)),
+      averageTicket: averageTicket(summary.gross, summary.count),
+    };
+    return <RevenueDashboard analytics={analytics} briefing={briefing} chart={revenueChart(store, query, businessToday)} query={query} settings={settings} summary={summary} />;
   } finally { store.close(); }
 }

@@ -2,7 +2,7 @@
 
 import { useEffect, useRef, useState, useSyncExternalStore } from "react";
 
-import { button } from "../button";
+import { button, focusRing } from "../button";
 import { ModalHost } from "../modal-host";
 import { PageToolbar } from "../page-toolbar";
 import type { JsonObject } from "../../lib/salon-domain";
@@ -11,6 +11,7 @@ import { RevenueBarChart } from "./revenue-bar-chart";
 import { chartEase, chartShell, chartWell } from "./revenue-chart-style";
 import { RevenueDayChart } from "./revenue-day-chart";
 import type { RevenueAggregatePoint, RevenueSummary } from "../../lib/revenue-aggregate";
+import type { CustomerBriefing, SalonBriefing, VisitPattern } from "../../lib/salon-briefing";
 import {
   RevenueDetailDrawer,
   type RevenueSelection,
@@ -51,6 +52,17 @@ export type RevenueBarChartData = RevenueSeries & {
 };
 /** 기간 버튼이 고른 단 하나의 차트. 세 벌을 함께 그리지 않는다. */
 export type RevenueChartData = RevenueDayChartData | RevenueBarChartData;
+
+/** 서버가 만든 브리핑. 화면은 문장을 조립하지 않고 받아 쓴다. */
+export type RevenueBriefing = {
+  readonly revenue: SalonBriefing;
+  readonly weekdayHeadline: string;
+  readonly hourHeadline: string;
+  readonly weekday: readonly VisitPattern[];
+  readonly hour: readonly VisitPattern[];
+  readonly customers: CustomerBriefing;
+  readonly averageTicket: number | null;
+};
 const won = (value: number) => `₩${value.toLocaleString("ko-KR")}`;
 export function revenueChartMotion(
   reduced: boolean,
@@ -171,7 +183,7 @@ function ChartSurface({
     <div
       aria-describedby={`revenue-chart-${kind}-title`}
       aria-label={`${label} 차트 상호작용 영역`}
-      className="max-h-[280px] overflow-y-auto focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--brand)]"
+      className={`max-h-[280px] overflow-y-auto ${focusRing}`}
       data-revenue-chart={kind}
       onPointerDown={(event) => focusChartSurface(event.currentTarget)}
       ref={onReady}
@@ -203,14 +215,101 @@ function DataTable({
   );
 }
 
+/**
+ * 브리핑 머리글. 이 화면에서 원장이 처음 읽는 한 문장이고, 나머지는 그 문장의 근거다.
+ * 색은 방향(늘었다/줄었다)에만 쓴다 — 비교할 수 없을 때는 색도 쓰지 않는다.
+ */
+function BriefingHeadline({ briefing }: { briefing: SalonBriefing }) {
+  const tone = briefing.tone === "up" ? "text-[var(--success)]" : briefing.tone === "down" ? "text-[var(--danger)]" : "text-[var(--foreground)]";
+  return (
+    <section aria-label="기간 요약" className={`${card} p-5`}>
+      <h2 className={`${typeScale.micro} text-[var(--muted)]`}>이번 기간 한 줄</h2>
+      <p className={`mt-[10px] ${typeScale.title} ${tone}`}>{briefing.headline}</p>
+      <p className="mt-[8px] font-mono text-[11px] tabular-nums text-[var(--muted)]">{briefing.evidence}</p>
+    </section>
+  );
+}
+
+/**
+ * 방문 분포 한 벌 (요일 또는 시간대). 문장이 먼저 오고 막대는 근거다 —
+ * 막대만 있으면 원장은 눈으로 최대값을 찾아야 한다.
+ */
+function PatternCard({ title, headline, rows, reduced }: { title: string; headline: string; rows: readonly VisitPattern[]; reduced: boolean }) {
+  return (
+    <section className={`${card} flex flex-col p-5`}>
+      <h2 className={`${typeScale.micro} text-[var(--muted)]`}>{title}</h2>
+      <p className="mt-[10px] text-[13px]">{headline}</p>
+      <ul className="mt-4 grid content-start gap-[6px]">
+        {rows.map((row) => (
+          <li className="grid grid-cols-[34px_minmax(0,1fr)_58px] items-center gap-3" key={row.label}>
+            <span className={`text-[12px] ${row.busiest ? "font-semibold" : "text-[var(--muted)]"}`}>{row.label}</span>
+            <span className={`relative h-[16px] overflow-clip ${chartWell} rounded-[var(--radius-chip)]`}>
+              <span
+                className="absolute inset-y-[2px] left-0 w-full origin-left rounded-[var(--radius-chip)]"
+                style={{
+                  background: row.busiest ? "var(--brand)" : "color-mix(in srgb, var(--brand) 42%, var(--surface))",
+                  transform: `scaleX(${row.ratio})`,
+                  transition: reduced ? undefined : `transform 460ms ${chartEase}`,
+                }}
+              />
+            </span>
+            <span className="text-right font-mono text-[11px] tabular-nums text-[var(--muted)]">{row.count}건</span>
+          </li>
+        ))}
+      </ul>
+      <table className="sr-only">
+        <caption>{`${title} 표`}</caption>
+        <tbody>
+          {rows.map((row) => <tr key={row.label}><th>{row.label}</th><td>{`${row.count}건 · ${won(row.gross)}`}</td></tr>)}
+        </tbody>
+      </table>
+    </section>
+  );
+}
+
+/** 누가 왔는가. 비율을 못 내는 자리는 숫자 대신 `–` 를 둔다 — 0%로 속이지 않는다. */
+function CustomerCard({ customers, averageTicket: ticket }: { customers: CustomerBriefing; averageTicket: number | null }) {
+  const rows: readonly { label: string; value: string; note?: string }[] = [
+    { label: "방문", value: `${customers.visits.toLocaleString("ko-KR")}건` },
+    { label: "다녀간 고객", value: `${customers.customers.toLocaleString("ko-KR")}명`, note: customers.visitsPerCustomer === null ? undefined : `1인당 ${customers.visitsPerCustomer}회` },
+    { label: "이번이 첫 방문", value: `${customers.newCustomers.toLocaleString("ko-KR")}명` },
+    // "재방문율"이 아니라 "비중"이다. 코호트 추적이 아니므로 이름을 섞지 않는다.
+    { label: "재방문 고객 비중", value: customers.returningShare === null ? "–" : `${customers.returningShare}%`, note: `${customers.returning.toLocaleString("ko-KR")}명` },
+    { label: "객단가", value: ticket === null ? "–" : won(ticket), note: "총 매출 ÷ 결제 건수" },
+  ];
+  return (
+    <section className={`${card} p-5`}>
+      <h2 className={`${typeScale.micro} text-[var(--muted)]`}>누가 왔나</h2>
+      <table className="mt-3 w-full text-sm">
+        <caption className="sr-only">고객 구성</caption>
+        <tbody>
+          {rows.map((row) => (
+            <tr className="border-b border-[var(--border)] last:border-0" key={row.label}>
+              <th className="py-[11px] text-left font-medium" scope="row">{row.label}</th>
+              <td className="py-[11px] text-right">
+                <span className="font-mono font-semibold tabular-nums">{row.value}</span>
+                {row.note && <span className="ml-2 text-[11px] font-normal text-[var(--muted)]">{row.note}</span>}
+              </td>
+            </tr>
+          ))}
+        </tbody>
+      </table>
+      <p className="mt-3 text-[11px] text-[var(--muted)]">첫 방문은 전체 기록에서 처음 결제한 날을 기준으로 셉니다.</p>
+    </section>
+  );
+}
+
 export function RevenueDashboard({
   analytics,
+  briefing,
   chart,
   query,
   settings = {},
   summary,
 }: {
   analytics: RevenueAnalyticsView;
+  /** 서버가 만든 브리핑 문장과 방문 분포. */
+  briefing?: RevenueBriefing;
   /** 기간 버튼이 고른 차트 한 벌 (§11). */
   chart: RevenueChartData;
   query: RevenueQuery;
@@ -218,7 +317,8 @@ export function RevenueDashboard({
   /** 서버 집계 정본 (§14). 없으면 정산 표에서 읽어 같은 값을 쓴다. */
   summary?: RevenueSummary;
 }) {
-  const motion = revenueChartMotions(usePrefersReducedMotion());
+  const reduced = usePrefersReducedMotion();
+  const motion = revenueChartMotions(reduced);
   const [selection, setSelection] = useState<RevenueSelection | null>(null);
   const [trigger, setTrigger] = useState<Pick<HTMLElement, "focus"> | null>(
     null,
@@ -245,12 +345,14 @@ export function RevenueDashboard({
   const csvHref = `/sales/revenue-csv?${serializeRevenueQuery(query)}`;
   // KPI는 서버 집계에서 필드로 직접 읽는다. 이름 문자열로 찾지 않는다 (A3-8).
   const settled = (name: string) => analytics.settlement.find((row) => row.name === name)?.value ?? 0;
-  const kpis: readonly { label: string; value: number; delta?: number | null }[] = [
-    { label: "총 매출", value: summary ? summary.gross : settled("총 매출"), delta: summary?.deltaPrevious ?? null },
-    { label: "실결제", value: summary ? summary.netPaid : settled("실결제") },
-    { label: "VAT", value: summary ? summary.vat : settled("VAT") },
-    { label: "지출", value: summary ? summary.expense : settled("지출") },
-    { label: "샵 수익", value: summary ? summary.profit : settled("샵 수익") },
+  // 넉 장만 남긴다. VAT·지출은 정산 표가 이미 아홉 줄로 보여준다 —
+  // 같은 숫자를 카드로 한 번 더 띄우면 화면 첫 줄에서 "봐야 할 것"이 다섯으로 늘어난다.
+  const ticket = briefing?.averageTicket ?? null;
+  const kpis: readonly { label: string; value: string; delta?: number | null; note?: string }[] = [
+    { label: "총 매출", value: won(summary ? summary.gross : settled("총 매출")), delta: summary?.deltaPrevious ?? null },
+    { label: "실결제", value: won(summary ? summary.netPaid : settled("실결제")), note: "할인·포인트를 뺀 금액" },
+    { label: "샵 수익", value: won(summary ? summary.profit : settled("샵 수익")), note: "VAT·수수료·지출을 뺀 금액" },
+    { label: "객단가", value: ticket === null ? "–" : won(ticket), note: "총 매출 ÷ 결제 건수" },
   ];
   const serviceTotal = analytics.services.reduce((total, row) => total + row.sales, 0);
   const serviceMax = Math.max(0, ...analytics.services.map((row) => row.sales));
@@ -339,19 +441,20 @@ export function RevenueDashboard({
             CSV 내보내기
           </a>
         </PageToolbar>
+        {briefing && <div className="mt-5"><BriefingHeadline briefing={briefing.revenue} /></div>}
         <section
           aria-label="매출 핵심 지표"
-          className="mt-5 grid grid-cols-5 gap-3"
+          className="mt-5 grid grid-cols-4 gap-3"
         >
-          {kpis.map(({ label, value, delta }) => (
+          {kpis.map(({ label, value, delta, note }) => (
             <article className={`${card} px-[16px] py-[13px] transition-shadow duration-300 ease-[cubic-bezier(0.32,0.72,0,1)] hover:shadow-[0_1px_2px_rgba(13,21,18,0.05),0_20px_36px_-22px_rgba(13,21,18,0.35)]`} key={label}>
               <h2 className={`${typeScale.micro} text-[var(--muted)]`}>
                 {label}
               </h2>
               <p className={`mt-[8px] font-mono ${typeScale.figure} tabular-nums`}>
-                {won(value)}
+                {value}
               </p>
-              {delta !== undefined && (
+              {delta !== undefined ? (
                 <p className="mt-[7px] text-[11px] text-[var(--muted)]">
                   직전 기간{" "}
                   {delta === null ? (
@@ -363,6 +466,8 @@ export function RevenueDashboard({
                     </strong>
                   )}
                 </p>
+              ) : (
+                <p className="mt-[7px] text-[11px] text-[var(--muted)]">{note}</p>
               )}
             </article>
           ))}
@@ -393,6 +498,13 @@ export function RevenueDashboard({
             />
           )}
         </div>
+        {briefing && (
+          <div className="mt-5 grid grid-cols-[minmax(0,1fr)_minmax(0,1fr)_392px] items-stretch gap-5">
+            <PatternCard headline={briefing.weekdayHeadline} reduced={reduced} rows={briefing.weekday} title="요일별 방문" />
+            <PatternCard headline={briefing.hourHeadline} reduced={reduced} rows={briefing.hour} title="시간대별 방문" />
+            <CustomerCard averageTicket={briefing.averageTicket} customers={briefing.customers} />
+          </div>
+        )}
         <div className="mt-5 grid grid-cols-[minmax(0,2fr)_392px] gap-5">
           <ChartCard kind="payment" title="결제 수단">
             {/* 서비스 차트와 같은 `ChartSurface` 를 쓴다. 예전에는 이 칸만 맨 `div` 라

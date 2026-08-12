@@ -4,9 +4,9 @@ import { dirname, join } from "node:path";
 import { DatabaseSync } from "node:sqlite";
 import { isDeepStrictEqual } from "node:util";
 
-import type { AuditEvent, JsonObject, JsonValue, LedgerAggregateRow, LedgerEntry, LedgerInput, LedgerSummaryRow, LedgerUnit, RecordKind, SalonRecord, SalonSnapshot, SalonStore } from "./salon-domain";
+import type { AuditEvent, JsonObject, JsonValue, LedgerAggregateRow, LedgerCustomerMix, LedgerEntry, LedgerHourRow, LedgerInput, LedgerSummaryRow, LedgerUnit, LedgerWeekdayRow, RecordKind, SalonRecord, SalonSnapshot, SalonStore } from "./salon-domain";
 
-export type { AuditEvent, JsonObject, JsonValue, LedgerAggregateRow, LedgerEntry, LedgerInput, LedgerSummaryRow, LedgerUnit, RecordKind, SalonRecord, SalonSnapshot, SalonStore } from "./salon-domain";
+export type { AuditEvent, JsonObject, JsonValue, LedgerAggregateRow, LedgerCustomerMix, LedgerEntry, LedgerHourRow, LedgerInput, LedgerSummaryRow, LedgerUnit, LedgerWeekdayRow, RecordKind, SalonRecord, SalonSnapshot, SalonStore } from "./salon-domain";
 
 type RecordRow = {
   kind: string;
@@ -441,6 +441,49 @@ export function createSalonStore(filename = process.env.HAIRHAEYO_DB_PATH || joi
                COUNT(*) AS count
         FROM ledger WHERE occurred_at >= ? AND occurred_at < ?
       `).get(start, endExclusive) as LedgerSummaryRow;
+    },
+    /**
+     * 요일별 방문. 지출 행은 손님이 온 것이 아니므로 뺀다.
+     * `occurred_at` 은 UTC ISO 이고 서울 영업일과 달력 날짜가 같으므로(위 주석) `strftime` 을 그대로 쓴다.
+     */
+    weekdayLedger(start: string, endExclusive: string) {
+      return db.prepare(`
+        SELECT CAST(strftime('%w', occurred_at) AS INTEGER) AS weekday,
+               COALESCE(SUM(gross_won), 0) AS gross,
+               COUNT(*) AS count
+        FROM ledger WHERE occurred_at >= ? AND occurred_at < ? AND kind != 'expense'
+        GROUP BY weekday ORDER BY weekday
+      `).all(start, endExclusive) as LedgerWeekdayRow[];
+    },
+    /**
+     * 신규는 "이 기간에 처음 온 사람"이다 — 기간 안에서 처음이 아니라 **원장 전체에서** 처음.
+     * 그래서 고객별 최초 방문일을 먼저 구한 뒤 기간과 견준다. `visitType` 필드는 쓰지 않는다:
+     * 가져온 데이터에서 5,462행이 전부 `repeat` 이라 신규가 0으로 보인다.
+     */
+    customerMixLedger(start: string, endExclusive: string) {
+      return db.prepare(`
+        SELECT COUNT(*) AS visits,
+               COUNT(DISTINCT customer_id) AS customers,
+               (SELECT COUNT(*) FROM (
+                  SELECT customer_id, MIN(occurred_at) AS firstVisit
+                  FROM ledger WHERE kind != 'expense' AND customer_id IS NOT NULL
+                  GROUP BY customer_id
+                ) WHERE firstVisit >= ? AND firstVisit < ?) AS newCustomers
+        FROM ledger WHERE occurred_at >= ? AND occurred_at < ? AND kind != 'expense'
+      `).get(start, endExclusive, start, endExclusive) as LedgerCustomerMix;
+    },
+    /**
+     * 시간대별 방문. 서울 시각으로 묶는다 — `occurred_at` 은 UTC 이므로 9시간 더한다.
+     * 저장은 UTC, 화면은 서울. 이 변환을 SQL 밖으로 미루면 두 곳에서 어긋난다.
+     */
+    hourLedger(start: string, endExclusive: string) {
+      return db.prepare(`
+        SELECT CAST(strftime('%H', occurred_at, '+9 hours') AS INTEGER) AS hour,
+               COALESCE(SUM(gross_won), 0) AS gross,
+               COUNT(*) AS count
+        FROM ledger WHERE occurred_at >= ? AND occurred_at < ? AND kind != 'expense'
+        GROUP BY hour ORDER BY hour
+      `).all(start, endExclusive) as LedgerHourRow[];
     },
     ledgerBounds() {
       const row = db.prepare("SELECT substr(MIN(occurred_at), 1, 10) AS first, substr(MAX(occurred_at), 1, 10) AS last FROM ledger").get() as { first: string | null; last: string | null };

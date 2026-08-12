@@ -109,6 +109,30 @@ export type LedgerSummaryRow = {
 
 export type LedgerUnit = "day" | "month" | "year";
 
+/** Visit counts per weekday. `weekday` is 0 = Sunday … 6 = Saturday, matching `strftime('%w')`. */
+export type LedgerWeekdayRow = {
+  readonly weekday: number;
+  readonly gross: number;
+  readonly count: number;
+};
+
+/** Visit counts per Seoul hour (9–21). */
+export type LedgerHourRow = {
+  readonly hour: number;
+  readonly gross: number;
+  readonly count: number;
+};
+
+/**
+ * Who came, over one range. `newCustomers` counts customers whose *first ever* ledger row
+ * falls inside the range — so it needs the whole ledger, not just the range.
+ */
+export type LedgerCustomerMix = {
+  readonly visits: number;
+  readonly customers: number;
+  readonly newCustomers: number;
+};
+
 export type SalonStore = {
   close(): void;
   list<T extends JsonValue = JsonValue>(kind: RecordKind): readonly SalonRecord<T>[];
@@ -128,6 +152,12 @@ export type SalonStore = {
   aggregateLedger(start: string, endExclusive: string, unit: LedgerUnit): readonly LedgerAggregateRow[];
   /** Settlement totals over `[start, endExclusive)`. */
   summarizeLedger(start: string, endExclusive: string): LedgerSummaryRow;
+  /** Visit counts by weekday over `[start, endExclusive)`. Only weekdays with rows are returned. */
+  weekdayLedger(start: string, endExclusive: string): readonly LedgerWeekdayRow[];
+  /** Visit counts by Seoul hour over `[start, endExclusive)`. Only hours with rows are returned. */
+  hourLedger(start: string, endExclusive: string): readonly LedgerHourRow[];
+  /** Visits, unique customers, and first-ever visitors over `[start, endExclusive)`. */
+  customerMixLedger(start: string, endExclusive: string): LedgerCustomerMix;
   /** Earliest and latest business dates present, or null when the ledger is empty. */
   ledgerBounds(): { readonly first: string; readonly last: string } | null;
   getSettings(): JsonObject;

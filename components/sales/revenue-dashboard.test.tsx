@@ -2,6 +2,7 @@ import { renderToStaticMarkup } from "react-dom/server";
 import { describe, expect, it, vi } from "vitest";
 
 import { buildPoints, dailyAxis, monthlyAxis } from "../../lib/revenue-aggregate";
+import { customerBriefing, hourPattern, weekdayPattern } from "../../lib/salon-briefing";
 import { buildRevenueAnalytics, buildRevenueTransactions } from "../../lib/revenue-data";
 import { createSalonStore } from "../../lib/salon-store";
 import { dismissRevenueDrawer, revenueDrawerFocusTarget, RevenueDetailDrawer } from "./revenue-detail-drawer";
@@ -79,6 +80,24 @@ describe("RevenueDashboard", () => {
     expect(resolveRevenueSelection("date", { activeLabel: "7/24" }, data)).toEqual({ kind: "date", key: "7/24" });
     expect(resolveRevenueSelection("payment", { activeTooltipIndex: 0 }, data)).toEqual({ kind: "payment", key: "카드" });
     expect(resolveRevenueSelection("service", { activeTooltipIndex: 0 }, data)).toEqual({ kind: "service", key: "컬러" });
+  });
+
+  /** 브리핑이 없으면(=요약만 있는 호출) 화면은 문장 없이도 그대로 서야 한다. */
+  it("renders the briefing sentence, visit patterns, and who-came table when the server sends them", () => {
+    const briefing = {
+      revenue: { headline: "₩3,262,000, 지난달보다 4% 줄었습니다.", evidence: "2026-07-01 ~ 2026-07-31 결제 89건", tone: "down" as const },
+      weekdayHeadline: "금요일이 가장 붐빕니다 — 23건.",
+      hourHeadline: "14시가 가장 붐빕니다 — 20건.",
+      weekday: weekdayPattern([{ weekday: 5, gross: 804000, count: 23 }]),
+      hour: hourPattern([{ hour: 14, gross: 700000, count: 20 }]),
+      customers: customerBriefing({ visits: 89, customers: 72, newCustomers: 4 }),
+      averageTicket: 36652,
+    };
+    const html = renderToStaticMarkup(<RevenueDashboard analytics={analytics()} briefing={briefing} chart={dayChart()} query={{ view: "month", cursor: "2026-07-31" }} />);
+
+    for (const text of ["이번 기간 한 줄", "지난달보다 4% 줄었습니다", "금요일이 가장 붐빕니다", "14시가 가장 붐빕니다", "재방문 고객 비중", "객단가"]) expect(html).toContain(text);
+    // "재방문율" 은 코호트 지표의 이름이다. 우리가 세는 것은 비중이므로 그 이름을 쓰지 않는다.
+    expect(html).not.toContain("재방문율");
   });
 
   it("restores drawer focus", () => {
