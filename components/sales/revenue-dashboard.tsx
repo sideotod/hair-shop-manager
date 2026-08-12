@@ -66,6 +66,8 @@ export type RevenueBriefing = {
   readonly hourHeadline: string;
   readonly weekday: readonly VisitPattern[];
   readonly hour: readonly VisitPattern[];
+  /** 원본 이관 레코드에 실제 시간 정보가 있을 때만 시간대 분석을 표시한다. */
+  readonly availability?: { readonly hour: boolean };
   readonly customers: CustomerBriefing;
   readonly averageTicket: number | null;
 };
@@ -278,6 +280,22 @@ function PatternCard({ title, headline, rows, reduced }: { title: string; headli
           {rows.map((row) => <tr key={row.label}><th>{row.label}</th><td>{`${row.count}건 · ${won(row.gross)}`}</td></tr>)}
         </tbody>
       </table>
+    </section>
+  );
+}
+
+/** 결손값을 순위나 비중으로 꾸미지 않는다. 금액 정산은 여전히 원장 정본에서 읽힌다. */
+function UnavailableAnalysisCard({ title }: { title: string }) {
+  return (
+    <section aria-label={`${title} 원본 정보 없음`} className={`${card} p-5`}>
+      <h2 className={`${typeScale.micro} text-[var(--muted)]`}>{title}</h2>
+      <p className="mt-[10px] text-[13px] font-semibold">원본 정보 없음</p>
+      <p className="mt-[6px] text-[12px] leading-5 text-[var(--muted)]">
+        가져온 기록에 이 분석에 필요한 정보가 없습니다. 데이터 이관 시 복원됩니다.
+      </p>
+      <p className="mt-3 border-t border-[var(--border)] pt-3 text-[11px] leading-5 text-[var(--muted)]">
+        금액 기준 매출과 정산은 원장 기록으로 계속 확인할 수 있습니다.
+      </p>
     </section>
   );
 }
@@ -531,7 +549,7 @@ export function RevenueDashboard({
         {briefing && (
           <div className="mt-5 grid grid-cols-[minmax(0,1fr)_minmax(0,1fr)_392px] items-stretch gap-5">
             <PatternCard headline={briefing.weekdayHeadline} reduced={reduced} rows={briefing.weekday} title="요일별 방문" />
-            <PatternCard headline={briefing.hourHeadline} reduced={reduced} rows={briefing.hour} title="시간대별 방문" />
+            {briefing.availability?.hour === false ? <UnavailableAnalysisCard title="시간대별 방문" /> : <PatternCard headline={briefing.hourHeadline} reduced={reduced} rows={briefing.hour} title="시간대별 방문" />}
             <CustomerCard customers={briefing.customers} />
           </div>
         )}
@@ -539,7 +557,7 @@ export function RevenueDashboard({
             죽은 여백이 남았고, 정산 표는 오른쪽 392px 를 통째로 비운 채 홀로 서 있었다.
             내용의 양이 칸의 너비를 정하게 한다. */}
         <div className="mt-5 grid grid-cols-3 items-start gap-5">
-          <ChartCard kind="payment" title="결제 수단">
+          {analytics.availability.payment ? <ChartCard kind="payment" title="결제 수단">
             {/* 서비스 차트와 같은 `ChartSurface` 를 쓴다. 예전에는 이 칸만 맨 `div` 라
                 스크롤 영역이 키보드로 잡히지 않았다. */}
             <ChartSurface kind="payment" label="결제 수단" onReady={ref("payment")}>
@@ -584,8 +602,8 @@ export function RevenueDashboard({
                 sales: row.amount,
               }))}
             />
-          </ChartCard>
-          {bars("service", analytics.services, "시술 카테고리", motion.service)}
+          </ChartCard> : <UnavailableAnalysisCard title="결제 수단" />}
+          {analytics.availability.service ? bars("service", analytics.services, "시술 카테고리", motion.service) : <UnavailableAnalysisCard title="시술 카테고리" />}
           <section className={`${card} p-5`}>
             <h2 className={`${typeScale.micro} text-[var(--muted)]`}>정산</h2>
             <table className="mt-3 w-full text-sm">

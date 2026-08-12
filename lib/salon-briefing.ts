@@ -69,6 +69,11 @@ export function hourPattern(rows: readonly LedgerHourRow[]): readonly VisitPatte
   return pattern(rows, (row) => `${row.hour}시`, (row) => row.count, (row) => row.gross);
 }
 
+/** 이관 과정에서 모든 행에 넣은 같은 시각은 실제 방문 분포가 아니다. */
+export function isUsableHourPattern(rows: readonly LedgerHourRow[]) {
+  return rows.filter((row) => row.count > 0).length > 1;
+}
+
 export function customerBriefing(mix: LedgerCustomerMix): CustomerBriefing {
   const returning = Math.max(0, mix.customers - mix.newCustomers);
   return {

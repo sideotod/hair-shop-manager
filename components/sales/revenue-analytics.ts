@@ -25,6 +25,8 @@ export type RevenueTrend = { readonly date: string; readonly gross: number; read
 export type RevenueAmount = { readonly name: string; readonly sales: number; readonly count: number };
 export type PaymentRevenue = { readonly name: string; readonly amount: number; readonly value: number };
 export type SettlementRow = { readonly name: string; readonly value: number };
+/** 원장에 실제 분류값이 있을 때만 해당 분석 차원을 화면에 연다. */
+export type AnalyticsAvailability = { readonly service: boolean; readonly payment: boolean };
 
 export type RevenueAnalytics = {
   readonly selectedPeriod: RevenuePeriod;
@@ -32,6 +34,7 @@ export type RevenueAnalytics = {
   readonly trend: readonly RevenueTrend[];
   readonly services: readonly RevenueAmount[];
   readonly payments: readonly PaymentRevenue[];
+  readonly availability: AnalyticsAvailability;
   readonly settlement: readonly SettlementRow[];
   readonly transactions: readonly RevenueTransaction[];
 };

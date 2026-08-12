@@ -93,12 +93,19 @@ export function buildRevenueAnalytics(allRecords: readonly RevenueTransaction[],
   const expense = sum(transactions, (record) => record.expense);
   const refunds = sum(transactions.filter((record) => record.status === "환불"), (record) => record.netPaid);
   const range = revenueRange(query);
+  // Hairnury 이관 원장은 미분류/기타라는 고정값만 남긴다. 그 한 값으로 순위나 비중을
+  // 만들면 "실제 영업 분석"처럼 보이는 거짓 신호가 되므로, 서버에서 차원을 닫는다.
+  const availability = Object.freeze({
+    service: transactions.some((record) => record.service !== "미분류" && record.service !== "기타"),
+    payment: transactions.some((record) => Object.keys(record.paymentAmounts).some((name) => name !== "기타")),
+  });
   return Object.freeze({
     selectedPeriod: range,
     totals: Object.freeze({ today: sum(day, (record) => record.gross), month: sum(month, (record) => record.gross), total: sum(allRecords, (record) => record.gross) }),
     trend: Object.freeze(dates.map((date) => Object.freeze({ date: dateLabel(date), gross: byDate.get(date)!.gross, profit: byDate.get(date)!.profit }))),
     services: amounts(transactions, "service"),
     payments: paymentRevenue(transactions),
+    availability,
     settlement: Object.freeze([
       { name: "총 매출", value: gross }, { name: "할인", value: discount }, { name: "포인트 사용", value: points }, { name: "실결제", value: paid }, { name: "환불", value: refunds }, { name: "VAT", value: vat }, { name: "결제 수수료", value: fee }, { name: "지출", value: expense }, { name: "샵 수익", value: sum(transactions, (record) => record.profit) },
     ].map((row) => Object.freeze(row))),

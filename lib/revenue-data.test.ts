@@ -75,6 +75,18 @@ describe("server revenue aggregate", () => {
     }
   });
 
+  it("marks fallback-only imported service and payment dimensions unavailable without changing the settlement", () => {
+    const ledger = [
+      { id: "raw-import", requestKey: "raw-import", kind: "payment", occurredAt: "2026-08-12T12:00:00.000Z", correctionOf: null, grossWon: 362000, amountWon: 362000, discountWon: 0, vatWon: 0, feeWon: 9360, expenseWon: 0, incentiveWon: 0, pointsWon: 0, couponWon: 0, profitWon: 352640, details: { serviceMajor: "미분류", paymentMethods: { other: 362000 } } },
+    ] as LedgerEntry[];
+
+    const analytics = buildRevenueAnalytics(buildRevenueTransactions(ledger), { view: "month", cursor: "2026-08-12" }, "2026-08-12");
+
+    expect(analytics.availability).toEqual({ service: false, payment: false });
+    expect(analytics.settlement.find(({ name }) => name === "총 매출")?.value).toBe(362000);
+    expect(analytics.settlement.find(({ name }) => name === "샵 수익")?.value).toBe(352640);
+  });
+
   it("filters day, month, total, and accessible chart selections without staff filters", () => {
     const store = createSalonStore(":memory:");
     try {

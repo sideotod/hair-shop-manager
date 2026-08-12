@@ -27,3 +27,4 @@ audit-*.png
 qa-*.png
 preflight-*.png
 .data-verify/
+.data/demo/

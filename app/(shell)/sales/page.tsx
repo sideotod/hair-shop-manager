@@ -7,7 +7,7 @@ import { parseRevenueSearchParams, previousRevenuePeriod, revenueRange, revenueR
 import { SalesControls } from "../../../components/sales/sales-controls";
 import { buildPoints, buildSummary, dayAxis, delta, monthlyAxis, yearlyAxis } from "../../../lib/revenue-aggregate";
 import { buildRevenueAnalytics, buildRevenueTransactions } from "../../../lib/revenue-data";
-import { averageTicket, customerBriefing, hourPattern, patternHeadline, revenueBriefing, weekdayPattern } from "../../../lib/salon-briefing";
+import { averageTicket, customerBriefing, hourPattern, isUsableHourPattern, patternHeadline, revenueBriefing, weekdayPattern } from "../../../lib/salon-briefing";
 import { createSalonStore, type SalonStore } from "../../../lib/salon-store";
 import { seoulBusinessDate, seoulDate } from "../../../lib/seoul-date";
 
@@ -160,7 +160,8 @@ export default async function SalesPage({ searchParams }: { searchParams: Promis
     const { transactions: _transactions, ...analytics } = buildRevenueAnalytics(buildRevenueTransactions(ledger, customers), query, businessToday);
     // 요일·시간·고객 구성은 SQL 이 센다. 원장 5,576행을 프런트로 넘겨 다시 세지 않는다 (§14).
     const weekday = weekdayPattern(store.weekdayLedger(period.start, period.endExclusive));
-    const hour = hourPattern(store.hourLedger(period.start, period.endExclusive));
+    const hourRows = store.hourLedger(period.start, period.endExclusive);
+    const hour = hourPattern(hourRows);
     const mix = customerBriefing(store.customerMixLedger(period.start, period.endExclusive));
     const partialComparison = inProgress && summary.deltaPrevious !== null ? `${elapsedDays}일까지` : undefined;
     const briefing = {
@@ -175,6 +176,7 @@ export default async function SalesPage({ searchParams }: { searchParams: Promis
       hourHeadline: patternHeadline(hour, "시간대"),
       weekday,
       hour,
+      availability: { hour: isUsableHourPattern(hourRows) },
       customers: mix,
       // 객단가는 결제 건수가 아니라 방문 수로 나눈다 (한국 통용 정의: 총 매출 ÷ 방문 고객 수).
       averageTicket: averageTicket(summary.gross, mix.visits),

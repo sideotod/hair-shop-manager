@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import { averageTicket, customerBriefing, hourPattern, patternHeadline, revenueBriefing, weekdayPattern } from "./salon-briefing";
+import { averageTicket, customerBriefing, hourPattern, isUsableHourPattern, patternHeadline, revenueBriefing, weekdayPattern } from "./salon-briefing";
 import type { RevenueSummary } from "./revenue-aggregate";
 
 const summary = (over: Partial<RevenueSummary> = {}): RevenueSummary => ({
@@ -71,6 +71,11 @@ describe("visit patterns", () => {
   it("reports empty patterns instead of dividing by zero", () => {
     expect(weekdayPattern([]).every((row) => row.ratio === 0)).toBe(true);
     expect(patternHeadline(hourPattern([]), "시간대")).toBe("시간대별로 나눌 방문 기록이 없습니다.");
+  });
+
+  it("rejects one fixed imported hour as an unusable time-of-day analysis", () => {
+    expect(isUsableHourPattern([{ hour: 21, gross: 3262000, count: 89 }])).toBe(false);
+    expect(isUsableHourPattern([{ hour: 11, gross: 120000, count: 3 }, { hour: 14, gross: 400000, count: 9 }])).toBe(true);
   });
 });
 

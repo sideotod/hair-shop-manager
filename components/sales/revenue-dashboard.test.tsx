@@ -107,6 +107,23 @@ describe("RevenueDashboard", () => {
     expect(html).not.toMatch(/재방문율(?!”)/);
   });
 
+  it("replaces imported fallback dimensions with a non-interactive data-quality state", () => {
+    const briefing = {
+      revenue: { headline: "₩362,000 벌었습니다.", evidence: "결제 11건", tone: "flat" as const }, comparisonLabel: "지난달", inProgress: false,
+      weekdayHeadline: "금요일이 가장 붐빕니다 — 3건.", hourHeadline: "21시가 가장 붐빕니다 — 11건.",
+      weekday: weekdayPattern([{ weekday: 5, gross: 362000, count: 3 }]), hour: hourPattern([{ hour: 21, gross: 362000, count: 11 }]),
+      customers: customerBriefing({ visits: 11, customers: 10, newCustomers: 1 }), averageTicket: 32909,
+      availability: { hour: false },
+    };
+    const rawAnalytics = { ...analytics(), availability: { service: false, payment: false } };
+
+    const html = renderToStaticMarkup(<RevenueDashboard analytics={rawAnalytics} briefing={briefing} chart={dayChart()} query={{ view: "month", cursor: "2026-07-31" }} />);
+
+    expect(html).toContain("원본 정보 없음");
+    expect(html).toContain("데이터 이관 시 복원됩니다");
+    expect(html).not.toContain("21시가 가장 붐빕니다");
+  });
+
   it("restores drawer focus", () => {
     const trigger = { focus: vi.fn() }; expect(focusChartSurface(trigger)).toBe(trigger); restoreRevenueDrawerFocus(false, trigger); expect(trigger.focus).toHaveBeenCalledTimes(2);
   });
