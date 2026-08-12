@@ -38,6 +38,7 @@ export function RevenueDayChart({
   points,
   total,
   count,
+  comparisonNote,
   deltaPrevious,
   span = "month",
   contextNote,
@@ -49,6 +50,8 @@ export function RevenueDayChart({
   /** 서버 집계 총액. 점 합계와 반드시 같아야 한다 (§14). */
   total: number;
   count: number;
+  /** 진행 중인 기간을 잘라 견줬을 때 며칠까지인지. 끝난 기간이면 없다. */
+  comparisonNote?: string;
   deltaPrevious: number | null;
   /** 주는 7칸이라 모든 날짜를 쓰고, 달은 31칸이라 5일 간격으로만 쓴다. */
   span?: "week" | "month";
@@ -98,7 +101,7 @@ export function RevenueDayChart({
               {deltaPrevious}%
             </strong>
           )}
-          {partial && <span className="mt-[3px] block text-[11px]">진행 중인 {span === "week" ? "주" : "달"}이라 지난 {span === "week" ? "주" : "달"} 전체와 비교됩니다</span>}
+          {comparisonNote && <span className="mt-[3px] block text-[11px]">지난 {span === "week" ? "주" : "달"} 같은 기간({comparisonNote})과 견줬습니다</span>}
         </p>
       </header>
       {mismatch && (

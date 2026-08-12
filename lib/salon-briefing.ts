@@ -79,7 +79,14 @@ export function customerBriefing(mix: LedgerCustomerMix): CustomerBriefing {
   };
 }
 
-/** 객단가는 매출 합계가 있어야 나온다. 방문이 0이면 나누지 않는다. */
+/**
+ * 객단가 — 손님 한 사람이 한 번 와서 쓰고 간 돈.
+ *
+ * 나누는 값은 **결제 건수가 아니라 방문 수**다. 한국에서 통용되는 정의가
+ * "총 매출 ÷ 총 방문 고객 수"이고(고객수 × 객단가 × 방문횟수 = 매출),
+ * 같은 손님이 같은 날 두 번 결제하면 결제는 둘이지만 쓰고 간 것은 한 번 몫이다.
+ * 방문이 0이면 나누지 않는다.
+ */
 export function averageTicket(gross: number, visits: number) {
   return visits > 0 ? Math.round(gross / visits) : null;
 }

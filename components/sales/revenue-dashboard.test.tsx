@@ -87,6 +87,7 @@ describe("RevenueDashboard", () => {
     const briefing = {
       revenue: { headline: "₩3,262,000, 지난달보다 4% 줄었습니다.", evidence: "2026-07-01 ~ 2026-07-31 결제 89건", tone: "down" as const },
       comparisonLabel: "지난달",
+      inProgress: false,
       weekdayHeadline: "금요일이 가장 붐빕니다 — 23건.",
       hourHeadline: "14시가 가장 붐빕니다 — 20건.",
       weekday: weekdayPattern([{ weekday: 5, gross: 804000, count: 23 }]),
@@ -97,8 +98,13 @@ describe("RevenueDashboard", () => {
     const html = renderToStaticMarkup(<RevenueDashboard analytics={analytics()} briefing={briefing} chart={dayChart()} query={{ view: "month", cursor: "2026-07-31" }} />);
 
     for (const text of ["이번 기간 한 줄", "지난달보다 4% 줄었습니다", "금요일이 가장 붐빕니다", "14시가 가장 붐빕니다", "재방문 고객 비중", "객단가"]) expect(html).toContain(text);
-    // "재방문율" 은 코호트 지표의 이름이다. 우리가 세는 것은 비중이므로 그 이름을 쓰지 않는다.
-    expect(html).not.toContain("재방문율");
+    // "재방문율" 은 코호트 지표의 이름이다. 우리가 세는 것은 비중이므로 지표 이름으로 쓰지 않는다.
+    // 각주에서 "이 비중은 재방문율과 다른 값"이라고 밝히는 것은 반대로 꼭 필요하다 —
+    // 다른 프로그램에서는 같은 말이 네 가지 다른 뜻으로 쓰인다.
+    expect(html).toContain("재방문 고객 비중");
+    expect(html).toContain("“재방문율”과 다른 값");
+    // 지표 이름으로는 절대 쓰지 않는다 — 따옴표 안에서 "그것과 다르다"고 말할 때만 등장한다.
+    expect(html).not.toMatch(/재방문율(?!”)/);
   });
 
   it("restores drawer focus", () => {

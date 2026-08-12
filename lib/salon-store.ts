@@ -446,13 +446,20 @@ export function createSalonStore(filename = process.env.HAIRHAEYO_DB_PATH || joi
     /**
      * 요일별 방문. 지출 행은 손님이 온 것이 아니므로 뺀다.
      * `occurred_at` 은 UTC ISO 이고 서울 영업일과 달력 날짜가 같으므로(위 주석) `strftime` 을 그대로 쓴다.
+     *
+     * 세는 단위는 결제 건이 아니라 **(고객, 영업일) 쌍**이다 — `customerMixLedger` 의 방문과 같은 뜻.
+     * 두 카드가 같은 말을 다르게 세면 "방문 89건"과 "금요일 23건"의 합이 어긋난다.
      */
     weekdayLedger(start: string, endExclusive: string) {
       return db.prepare(`
-        SELECT CAST(strftime('%w', occurred_at) AS INTEGER) AS weekday,
-               COALESCE(SUM(gross_won), 0) AS gross,
+        SELECT CAST(strftime('%w', day) AS INTEGER) AS weekday,
+               COALESCE(SUM(gross), 0) AS gross,
                COUNT(*) AS count
-        FROM ledger WHERE occurred_at >= ? AND occurred_at < ? AND kind != 'expense'
+        FROM (
+          SELECT customer_id, substr(occurred_at, 1, 10) AS day, SUM(gross_won) AS gross
+          FROM ledger WHERE occurred_at >= ? AND occurred_at < ? AND kind != 'expense'
+          GROUP BY customer_id, day
+        )
         GROUP BY weekday ORDER BY weekday
       `).all(start, endExclusive) as LedgerWeekdayRow[];
     },
@@ -460,10 +467,16 @@ export function createSalonStore(filename = process.env.HAIRHAEYO_DB_PATH || joi
      * 신규는 "이 기간에 처음 온 사람"이다 — 기간 안에서 처음이 아니라 **원장 전체에서** 처음.
      * 그래서 고객별 최초 방문일을 먼저 구한 뒤 기간과 견준다. `visitType` 필드는 쓰지 않는다:
      * 가져온 데이터에서 5,462행이 전부 `repeat` 이라 신규가 0으로 보인다.
+     *
+     * 방문은 결제 건수가 아니라 **(고객, 영업일) 쌍**이다. 한 손님이 같은 날 두 번 결제하면
+     * (원장 전체에 92건 있다) 결제는 둘이지만 온 것은 한 번이다.
      */
     customerMixLedger(start: string, endExclusive: string) {
       return db.prepare(`
-        SELECT COUNT(*) AS visits,
+        SELECT (SELECT COUNT(*) FROM (
+                  SELECT DISTINCT customer_id, substr(occurred_at, 1, 10) AS day
+                  FROM ledger WHERE occurred_at >= ? AND occurred_at < ? AND kind != 'expense'
+                )) AS visits,
                COUNT(DISTINCT customer_id) AS customers,
                (SELECT COUNT(*) FROM (
                   SELECT customer_id, MIN(occurred_at) AS firstVisit
@@ -471,18 +484,25 @@ export function createSalonStore(filename = process.env.HAIRHAEYO_DB_PATH || joi
                   GROUP BY customer_id
                 ) WHERE firstVisit >= ? AND firstVisit < ?) AS newCustomers
         FROM ledger WHERE occurred_at >= ? AND occurred_at < ? AND kind != 'expense'
-      `).get(start, endExclusive, start, endExclusive) as LedgerCustomerMix;
+      `).get(start, endExclusive, start, endExclusive, start, endExclusive) as LedgerCustomerMix;
     },
     /**
      * 시간대별 방문. 서울 시각으로 묶는다 — `occurred_at` 은 UTC 이므로 9시간 더한다.
      * 저장은 UTC, 화면은 서울. 이 변환을 SQL 밖으로 미루면 두 곳에서 어긋난다.
+     *
+     * 한 손님이 같은 날 두 번 결제했다면 **먼저 결제한 시각**이 그가 온 시각이다.
+     * 결제를 그대로 세면 한 번 온 손님이 두 시간대에 동시에 서 있게 된다.
      */
     hourLedger(start: string, endExclusive: string) {
       return db.prepare(`
-        SELECT CAST(strftime('%H', occurred_at, '+9 hours') AS INTEGER) AS hour,
-               COALESCE(SUM(gross_won), 0) AS gross,
+        SELECT CAST(strftime('%H', firstAt, '+9 hours') AS INTEGER) AS hour,
+               COALESCE(SUM(gross), 0) AS gross,
                COUNT(*) AS count
-        FROM ledger WHERE occurred_at >= ? AND occurred_at < ? AND kind != 'expense'
+        FROM (
+          SELECT MIN(occurred_at) AS firstAt, SUM(gross_won) AS gross
+          FROM ledger WHERE occurred_at >= ? AND occurred_at < ? AND kind != 'expense'
+          GROUP BY customer_id, substr(occurred_at, 1, 10)
+        )
         GROUP BY hour ORDER BY hour
       `).all(start, endExclusive) as LedgerHourRow[];
     },

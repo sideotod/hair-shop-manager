@@ -29,9 +29,15 @@ const minDate = (a: string, b: string) => (a < b ? a : b);
 /**
  * 하루 단위 막대 한 벌. 주(7칸)와 달(28~31칸)이 같은 코드를 쓴다.
  * 서버 집계 하나로 만든다 (§14 — 프런트는 합산하지 않는다).
+ *
+ * 아직 끝나지 않은 기간이면 **지난 기간도 같은 날짜까지 잘라** 견준다.
+ * 브리핑 문장과 같은 규칙이어야 한다 — 한 화면에서 두 숫자가 서로 다른 말을 하면
+ * 원장은 어느 쪽을 믿을지 정할 방법이 없다.
  */
 function daySeries(store: SalonStore, start: string, endExclusive: string, previousStart: string, label: string, span: "week" | "month", businessToday: string, contextNote?: string) {
   const summary = store.summarizeLedger(start, endExclusive);
+  const inProgress = businessToday >= start && businessToday < endExclusive;
+  const previousEnd = inProgress ? minDate(shiftDays(previousStart, dayAxis(start, businessToday).length + 1), start) : start;
   return {
     kind: "day" as const,
     span,
@@ -40,7 +46,9 @@ function daySeries(store: SalonStore, start: string, endExclusive: string, previ
     points: buildPoints(store.aggregateLedger(start, endExclusive, "day"), "daily", dayAxis(start, endExclusive), businessToday),
     total: summary.gross,
     count: summary.count,
-    deltaPrevious: delta(summary.gross, store.summarizeLedger(previousStart, start).gross),
+    deltaPrevious: delta(summary.gross, store.summarizeLedger(previousStart, previousEnd).gross),
+    /** 잘라 견줬으면 며칠까지인지. 차트가 스스로 밝힌다. */
+    comparisonNote: inProgress ? `${dayAxis(start, businessToday).length + 1}일까지` : undefined,
   };
 }
 
@@ -153,6 +161,7 @@ export default async function SalesPage({ searchParams }: { searchParams: Promis
     // 요일·시간·고객 구성은 SQL 이 센다. 원장 5,576행을 프런트로 넘겨 다시 세지 않는다 (§14).
     const weekday = weekdayPattern(store.weekdayLedger(period.start, period.endExclusive));
     const hour = hourPattern(store.hourLedger(period.start, period.endExclusive));
+    const mix = customerBriefing(store.customerMixLedger(period.start, period.endExclusive));
     const partialComparison = inProgress && summary.deltaPrevious !== null ? `${elapsedDays}일까지` : undefined;
     const briefing = {
       revenue: revenueBriefing(summary, previousLabels[query.view], {
@@ -160,13 +169,15 @@ export default async function SalesPage({ searchParams }: { searchParams: Promis
         // 같은 날짜까지 잘라 견줬다는 사실을 문장이 스스로 밝힌다.
         partialComparison,
       }),
+      inProgress,
       comparisonLabel: partialComparison ? `${previousLabels[query.view]} ${partialComparison}` : previousLabels[query.view],
       weekdayHeadline: patternHeadline(weekday, "요일"),
       hourHeadline: patternHeadline(hour, "시간대"),
       weekday,
       hour,
-      customers: customerBriefing(store.customerMixLedger(period.start, period.endExclusive)),
-      averageTicket: averageTicket(summary.gross, summary.count),
+      customers: mix,
+      // 객단가는 결제 건수가 아니라 방문 수로 나눈다 (한국 통용 정의: 총 매출 ÷ 방문 고객 수).
+      averageTicket: averageTicket(summary.gross, mix.visits),
     };
     return <RevenueDashboard analytics={analytics} briefing={briefing} chart={revenueChart(store, query, businessToday)} query={query} settings={settings} summary={summary} />;
   } finally { store.close(); }

@@ -39,6 +39,8 @@ export type RevenueDayChartData = RevenueSeries & {
   readonly span: "week" | "month";
   /** 고른 기간과 그린 기간이 다를 때만 채운다 (일별 → 그 날이 속한 달). */
   readonly contextNote?: string;
+  /** 진행 중인 기간을 잘라 견줬을 때 며칠까지인지. */
+  readonly comparisonNote?: string;
   readonly deltaPrevious: number | null;
 };
 /** 월 또는 연 단위 막대. */
@@ -58,6 +60,8 @@ export type RevenueBriefing = {
   readonly revenue: SalonBriefing;
   /** KPI 카드의 증감 라벨. 진행 중인 기간이면 "지난달 같은 기간" 처럼 잘라 견준 사실을 말한다. */
   readonly comparisonLabel: string;
+  /** 아직 끝나지 않은 기간인가. 점선 테두리로 "확정 아님"을 알린다. */
+  readonly inProgress: boolean;
   readonly weekdayHeadline: string;
   readonly hourHeadline: string;
   readonly weekday: readonly VisitPattern[];
@@ -220,12 +224,18 @@ function DataTable({
 /**
  * 브리핑 머리글. 이 화면에서 원장이 처음 읽는 한 문장이고, 나머지는 그 문장의 근거다.
  * 색은 방향(늘었다/줄었다)에만 쓴다 — 비교할 수 없을 때는 색도 쓰지 않는다.
+ *
+ * 아직 끝나지 않은 기간이면 점선 테두리를 두른다. Amplitude 가 진행 중인 구간을
+ * 점선으로 감싸고 Datawrapper 가 추정 구간을 점선으로 그리는 것과 같은 문법이다 —
+ * "이 숫자는 아직 확정이 아니다"를 색이나 문장 없이도 알아보게 한다.
  */
-function BriefingHeadline({ briefing }: { briefing: SalonBriefing }) {
+function BriefingHeadline({ briefing, inProgress }: { briefing: SalonBriefing; inProgress: boolean }) {
   const tone = briefing.tone === "up" ? "text-[var(--success)]" : briefing.tone === "down" ? "text-[var(--danger)]" : "text-[var(--foreground)]";
   return (
-    <section aria-label="기간 요약" className={`${card} p-5`}>
-      <h2 className={`${typeScale.micro} text-[var(--muted)]`}>이번 기간 한 줄</h2>
+    <section aria-label="기간 요약" className={`${card} p-5 ${inProgress ? "border-dashed" : ""}`}>
+      <h2 className={`${typeScale.micro} text-[var(--muted)]`}>
+        이번 기간 한 줄{inProgress && <span className="ml-2 font-normal tracking-normal">아직 진행 중</span>}
+      </h2>
       <p className={`mt-[10px] ${typeScale.title} ${tone}`}>{briefing.headline}</p>
       <p className="mt-[8px] font-mono text-[11px] tabular-nums text-[var(--muted)]">{briefing.evidence}</p>
     </section>
@@ -269,15 +279,21 @@ function PatternCard({ title, headline, rows, reduced }: { title: string; headli
   );
 }
 
-/** 누가 왔는가. 비율을 못 내는 자리는 숫자 대신 `–` 를 둔다 — 0%로 속이지 않는다. */
-function CustomerCard({ customers, averageTicket: ticket }: { customers: CustomerBriefing; averageTicket: number | null }) {
-  const rows: readonly { label: string; value: string; note?: string }[] = [
-    { label: "방문", value: `${customers.visits.toLocaleString("ko-KR")}건` },
-    { label: "다녀간 고객", value: `${customers.customers.toLocaleString("ko-KR")}명`, note: customers.visitsPerCustomer === null ? undefined : `1인당 ${customers.visitsPerCustomer}회` },
-    { label: "이번이 첫 방문", value: `${customers.newCustomers.toLocaleString("ko-KR")}명` },
+/**
+ * 누가 왔는가. 비율을 못 내는 자리는 숫자 대신 `–` 를 둔다 — 0%로 속이지 않는다.
+ * 건당 결제액은 KPI 카드가 이미 보여주므로 여기서 되풀이하지 않는다.
+ */
+function CustomerCard({ customers }: { customers: CustomerBriefing }) {
+  // 각 줄이 자기 계산법을 달고 다닌다. 조사해 보니 "재방문율"이 업계에서 최소 네 가지
+  // 서로 호환되지 않는 뜻으로 쓰이고 있었다 — 다른 프로그램을 쓰던 원장이 같은 말을
+  // 다른 뜻으로 알고 온다. Phorest 만이 숫자마다 계산법을 붙이는데, 그 편이 옳다.
+  const rows: readonly { label: string; value: string; note?: string; how: string }[] = [
+    // 방문은 결제 건수가 아니다. 한 손님이 같은 날 두 번 결제해도 온 것은 한 번이다.
+    { label: "방문", value: `${customers.visits.toLocaleString("ko-KR")}회`, how: "손님이 온 날 수 (같은 날 두 번 결제해도 1회)" },
+    { label: "다녀간 고객", value: `${customers.customers.toLocaleString("ko-KR")}명`, note: customers.visitsPerCustomer === null ? undefined : `1인당 ${customers.visitsPerCustomer}회`, how: "이 기간에 온 사람 수 (중복 제외)" },
+    { label: "이번이 첫 방문", value: `${customers.newCustomers.toLocaleString("ko-KR")}명`, how: "전체 기록에서 이 기간에 처음 결제한 사람" },
     // "재방문율"이 아니라 "비중"이다. 코호트 추적이 아니므로 이름을 섞지 않는다.
-    { label: "재방문 고객 비중", value: customers.returningShare === null ? "–" : `${customers.returningShare}%`, note: `${customers.returning.toLocaleString("ko-KR")}명` },
-    { label: "객단가", value: ticket === null ? "–" : won(ticket), note: "총 매출 ÷ 결제 건수" },
+    { label: "재방문 고객 비중", value: customers.returningShare === null ? "–" : `${customers.returningShare}%`, note: `${customers.returning.toLocaleString("ko-KR")}명`, how: "다녀간 고객 중 전에도 왔던 사람의 비율" },
   ];
   return (
     <section className={`${card} p-5`}>
@@ -287,8 +303,11 @@ function CustomerCard({ customers, averageTicket: ticket }: { customers: Custome
         <tbody>
           {rows.map((row) => (
             <tr className="border-b border-[var(--border)] last:border-0" key={row.label}>
-              <th className="py-[11px] text-left font-medium" scope="row">{row.label}</th>
-              <td className="py-[11px] text-right">
+              <th className="py-[10px] text-left font-medium" scope="row">
+                {row.label}
+                <span className="mt-[3px] block text-[11px] font-normal text-[var(--muted)]">{row.how}</span>
+              </th>
+              <td className="py-[10px] text-right align-top">
                 <span className="font-mono font-semibold tabular-nums">{row.value}</span>
                 {row.note && <span className="ml-2 text-[11px] font-normal text-[var(--muted)]">{row.note}</span>}
               </td>
@@ -296,7 +315,9 @@ function CustomerCard({ customers, averageTicket: ticket }: { customers: Custome
           ))}
         </tbody>
       </table>
-      <p className="mt-3 text-[11px] text-[var(--muted)]">첫 방문은 전체 기록에서 처음 결제한 날을 기준으로 셉니다.</p>
+      <p className="mt-3 text-[11px] text-[var(--muted)]">
+        지난 기간에 온 손님이 다시 왔는지를 따로 추적하지는 않습니다 — 이 비중은 &ldquo;재방문율&rdquo;과 다른 값입니다.
+      </p>
     </section>
   );
 }
@@ -357,7 +378,7 @@ export function RevenueDashboard({
     { label: "총 매출", value: won(summary ? summary.gross : settled("총 매출")), delta: summary?.deltaPrevious ?? null },
     { label: "실결제", value: won(summary ? summary.netPaid : settled("실결제")), note: "할인·포인트를 뺀 금액" },
     { label: "샵 수익", value: won(summary ? summary.profit : settled("샵 수익")), note: "VAT·수수료·지출을 뺀 금액" },
-    { label: "객단가", value: ticket === null ? "–" : won(ticket), note: "총 매출 ÷ 결제 건수" },
+    { label: "객단가", value: ticket === null ? "–" : won(ticket), note: "총 매출 ÷ 방문 수" },
   ];
   const serviceTotal = analytics.services.reduce((total, row) => total + row.sales, 0);
   const serviceMax = Math.max(0, ...analytics.services.map((row) => row.sales));
@@ -446,7 +467,7 @@ export function RevenueDashboard({
             CSV 내보내기
           </a>
         </PageToolbar>
-        {briefing && <div className="mt-5"><BriefingHeadline briefing={briefing.revenue} /></div>}
+        {briefing && <div className="mt-5"><BriefingHeadline briefing={briefing.revenue} inProgress={briefing.inProgress} /></div>}
         <section
           aria-label="매출 핵심 지표"
           className="mt-5 grid grid-cols-4 gap-3"
@@ -480,6 +501,7 @@ export function RevenueDashboard({
         <div className="mt-5">
           {chart.kind === "day" ? (
             <RevenueDayChart
+              comparisonNote={chart.comparisonNote}
               contextNote={chart.contextNote}
               count={chart.count}
               deltaPrevious={chart.deltaPrevious}
@@ -507,7 +529,7 @@ export function RevenueDashboard({
           <div className="mt-5 grid grid-cols-[minmax(0,1fr)_minmax(0,1fr)_392px] items-stretch gap-5">
             <PatternCard headline={briefing.weekdayHeadline} reduced={reduced} rows={briefing.weekday} title="요일별 방문" />
             <PatternCard headline={briefing.hourHeadline} reduced={reduced} rows={briefing.hour} title="시간대별 방문" />
-            <CustomerCard averageTicket={briefing.averageTicket} customers={briefing.customers} />
+            <CustomerCard customers={briefing.customers} />
           </div>
         )}
         <div className="mt-5 grid grid-cols-[minmax(0,2fr)_392px] gap-5">
@@ -576,6 +598,12 @@ export function RevenueDashboard({
                 ))}
               </tbody>
             </table>
+            {/* 표에 아홉 줄이 있어도 "무엇에서 무엇을 뺐는지"는 보이지 않는다. 두 관계식을 적는다.
+                앞의 것은 국내 POS(페이히어)가 공개한 정의와 같고, 뒤의 것은 lib/finance.ts 의 계산이다. */}
+            <p className="mt-3 border-t border-[var(--border)] pt-3 text-[11px] leading-[1.7] text-[var(--muted)]">
+              총 매출 = 실결제 + 할인 + 포인트 사용<br />
+              샵 수익 = 실결제 − VAT − 결제 수수료 − 지출
+            </p>
           </section>
         </div>
       </main>
