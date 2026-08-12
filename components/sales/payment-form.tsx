@@ -1,7 +1,5 @@
-import Link from "next/link";
-
 import { correctPayment, savePayment } from "../../app/payment-actions";
-import { button, focusRing } from "../button";
+import { control, focusRing } from "../button";
 import { PageToolbar } from "../page-toolbar";
 import { SubmitButton, ActionForm, NoticeBanner } from "../submit-button";
 import { typeScale } from "../type";
@@ -10,7 +8,7 @@ import { PaymentCustomer, PaymentMemberScope } from "./payment-customer";
 import type { JsonObject, JsonValue } from "../../lib/salon-domain";
 
 type Customer = { id: string; value: JsonValue };
-const field = "h-10 rounded-[var(--radius-control)] border border-[var(--border)] bg-[var(--surface)] px-3 text-[13px] text-[var(--foreground)]";
+const field = control;
 /**
  * 접힌 `<details>` 는 Tab 을 **한 번**만 먹는다. 펼치면 안쪽 칸이 순서에 들어온다.
  *
@@ -27,7 +25,7 @@ const record = (customer: Customer) => customer.value && typeof customer.value =
  * 렌더 중 `crypto.randomUUID()` 를 부르면 같은 요청의 재렌더마다 값이 달라져
  * 마크업이 매번 새 바이트가 되고(캐시 무효) 멱등성 키의 의미도 사라진다.
  */
-export function PaymentForm({ backTo = "/sales", customers, customerId, correctionTargetId, error, notice, requestKey, returnTo = "/sales?tab=payment", settings = {}, today }: { backTo?: string; customers: readonly Customer[]; customerId?: string; correctionTargetId?: string; error?: string; notice?: string; requestKey: string; returnTo?: string; settings?: JsonObject; today: string }) {
+export function PaymentForm({ customers, customerId, correctionTargetId, error, notice, requestKey, returnTo = "/sales?tab=payment", settings = {}, today }: { customers: readonly Customer[]; customerId?: string; correctionTargetId?: string; error?: string; notice?: string; requestKey: string; returnTo?: string; settings?: JsonObject; today: string }) {
   const vatMode = settings.vatMode === "separate" ? "separate" : "included";
   const cardFeeRate = typeof settings.cardFeeRate === "number" ? settings.cardFeeRate : 0;
   // `finance.ts:122` 는 보유 포인트 초과를 저장 시점에 던진다. 고객이 이미 정해져 있으면
@@ -36,7 +34,8 @@ export function PaymentForm({ backTo = "/sales", customers, customerId, correcti
   const points = selected && record(selected)?.points;
   const availablePoints = typeof points === "number" && Number.isSafeInteger(points) ? points : null;
   return <div>
-    <PageToolbar description="원장 계정으로 불변 거래 기록을 추가합니다." title="결제 등록"><Link className={button("md", "secondary", "text-[var(--brand)]")} href={backTo}>매출 분석</Link></PageToolbar>
+    {/* `매출 분석` 복귀 링크는 바로 위 `매출 기능` 탭바(`sales-controls.tsx`)가 같은 href 로 이미 제공한다. */}
+    <PageToolbar description="원장 계정으로 불변 거래 기록을 추가합니다." title="결제 등록" />
     {/* 오류 배너는 폼 안으로 들어갔다(`ActionForm`). 실패가 리다이렉트가 아니라 반환이 되면서
         문구가 폼과 같은 렌더에 실려야 입력값이 살아 있는 채로 오류만 갱신된다. */}
     {notice && <NoticeBanner className="mt-5 rounded-[var(--radius-card)] border border-[var(--success)] bg-[var(--success-soft)] px-4 py-3 text-sm text-[var(--success)]">{notice}</NoticeBanner>}
@@ -52,7 +51,7 @@ export function PaymentForm({ backTo = "/sales", customers, customerId, correcti
       </div></section>
       <PaymentAmounts availablePoints={availablePoints} cardFeeRate={cardFeeRate} vatMode={vatMode} />
       <details className="col-span-2 rounded-[var(--radius-card)] border border-[var(--border)] bg-[var(--surface)] p-5"><summary className={summary}>기록 · {today} 10:00 — 날짜·시간·메모 수정</summary><div className="mt-4 grid grid-cols-4 gap-4"><label className="grid gap-1 text-xs font-medium text-[var(--muted)]">결제일<input className={field} defaultValue={today} name="occurredDate" type="date" /></label><label className="grid gap-1 text-xs font-medium text-[var(--muted)]">시간<input className={field} defaultValue="10:00" name="occurredTime" type="time" /></label><label className="grid gap-1 text-xs font-medium text-[var(--muted)]">일반 메모<input className={field} name="generalNote" /></label><label className="grid gap-1 text-xs font-medium text-[var(--muted)]">의약품 메모<input className={field} name="medicineNote" /></label><label className="grid gap-1 text-xs font-medium text-[var(--muted)]">두피 메모<input className={field} name="scalpNote" /></label><label className="grid gap-1 text-xs font-medium text-[var(--muted)]">모발 메모<input className={field} name="hairNote" /></label><label className="flex items-center gap-2 pt-5 text-sm font-medium"><input name="smsRequested" type="checkbox" />결제 SMS 발송</label></div></details>
-      <SubmitButton extra="col-span-2 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--brand)]">{correctionTargetId ? "정정 결제 저장" : "결제 저장"}</SubmitButton>
+      <SubmitButton extra="col-span-2">{correctionTargetId ? "정정 결제 저장" : "결제 저장"}</SubmitButton>
     </ActionForm></PaymentMemberScope>
   </div>;
 }
