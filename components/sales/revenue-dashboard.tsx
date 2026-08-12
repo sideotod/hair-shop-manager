@@ -189,7 +189,10 @@ function ChartSurface({
     <div
       aria-describedby={`revenue-chart-${kind}-title`}
       aria-label={`${label} 차트 상호작용 영역`}
-      className={`max-h-[280px] overflow-y-auto ${focusRing}`}
+      // 시술 유형은 설정에서 관리하는 목록이라 열 몇 개로 끝난다. 280px 에 잘리면
+      // 마지막 한 줄이 반쯤 잘린 채 스크롤을 강요한다 — 다 보여줄 수 있으면 다 보여준다.
+      // 상한은 남겨 둔다: 유형이 스무 개가 되면 그때는 스크롤이 맞다.
+      className={`max-h-[420px] overflow-y-auto ${focusRing}`}
       data-revenue-chart={kind}
       onPointerDown={(event) => focusChartSurface(event.currentTarget)}
       ref={onReady}
@@ -532,7 +535,10 @@ export function RevenueDashboard({
             <CustomerCard customers={briefing.customers} />
           </div>
         )}
-        <div className="mt-5 grid grid-cols-[minmax(0,2fr)_392px] gap-5">
+        {/* 세 카드가 한 줄에 선다. 예전에는 결제 수단이 2fr 을 차지해 네 줄짜리 목록 아래로
+            죽은 여백이 남았고, 정산 표는 오른쪽 392px 를 통째로 비운 채 홀로 서 있었다.
+            내용의 양이 칸의 너비를 정하게 한다. */}
+        <div className="mt-5 grid grid-cols-3 items-start gap-5">
           <ChartCard kind="payment" title="결제 수단">
             {/* 서비스 차트와 같은 `ChartSurface` 를 쓴다. 예전에는 이 칸만 맨 `div` 라
                 스크롤 영역이 키보드로 잡히지 않았다. */}
