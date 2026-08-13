@@ -36,7 +36,10 @@ describe("BookingsPage", () => {
 
     expect(html).toContain('aria-label="새 예약 등록"');
     expect(html).toContain('name="reminderDayBefore"');
-    expect(html).toContain('name="bookingOpen"');
+    // 예약 정책 폼은 `/settings?section=booking` 하나로 모았다 (설계 §5.3). 업무 화면은 값만 보여주고 링크한다.
+    expect(html).not.toContain('name="bookingOpen"');
+    expect(html).toContain('href="/settings?section=booking"');
+    expect(html).toContain("09:30–21:00");
     expect(html).toContain('aria-label="네이버 예약 메일 연결"');
     expect(html).toContain('name="applicationPassword"');
     expect(html).toContain("Windows Credential Manager");
@@ -45,11 +48,11 @@ describe("BookingsPage", () => {
     expect(html).not.toContain('name="staff"');
   });
 
-  it("keeps secondary booking settings and Naver connection collapsed by default", () => {
+  it("keeps the Naver connection collapsed by default", () => {
     const html = page();
 
     expect(html).toContain('data-booking-settings="true"');
-    expect(html).toContain("예약 설정 · 네이버 예약 메일 연동");
+    expect(html).toContain("네이버 예약 메일 연동");
     expect(html).not.toContain('data-booking-settings="true" open=""');
   });
 
@@ -83,5 +86,34 @@ describe("BookingsPage", () => {
 
     expect(close).toContain("edit=booking-seed-1");
     expect(close).not.toContain("new=1");
+  });
+
+  /** 행마다 결제·확정·완료를 다 펼치면 20행이 Tab 60정거장이 된다 (설계 §4.1). */
+  describe("행의 다음 동작", () => {
+    const booking = (id: string, status: string, startsAt = "2026-07-31T01:00:00.000Z") => ({ id, kind: "bookings", value: { customerId: "customer-seed-1", service: "커트", startsAt, endsAt: "2026-07-31T02:00:00.000Z", status }, createdAt: startsAt, updatedAt: startsAt, archivedAt: null });
+    /** 한 행이 여는 `<details>` 안에도 버튼이 있으므로 행 밖의 다음 동작만 센다. */
+    const nextActions = (html: string) => [...html.matchAll(/data-booking-next="([a-z]+)"/g)].map((match) => match[1]);
+    const one = (status: string) => nextActions(page({ bookings: [booking("booking-next", status)] }));
+
+    it("confirmed 와 in-progress 는 결제 등록 하나", () => {
+      expect(one("confirmed")).toEqual(["payment"]);
+      // 지금이 예약 구간 안이면 `lib/day-rail.ts:53` 이 in-progress 를 파생한다. 결제 동작은 같다.
+      const now = new Date("2026-07-31T01:30:00.000Z");
+      expect(nextActions(page({ bookings: [booking("booking-next", "confirmed")], now }))).toEqual(["payment"]);
+    });
+
+    it("waiting 은 예약 확정 하나, completed 는 없음", () => {
+      expect(one("waiting")).toEqual(["confirm"]);
+      expect(one("completed")).toEqual([]);
+      expect(one("cancelled")).toEqual([]);
+    });
+
+    it("결제 링크가 현재 보기·날짜·기간을 returnTo 로 들고 간다", () => {
+      const html = page({ bookings: [booking("booking-next", "confirmed")], searchParams: { date: "2026-07-31", view: "period", period: "14" }, view: "period", period: "14" });
+      const href = html.match(/href="([^"]*tab=payment[^"]*)"/)?.[1] ?? "";
+
+      expect(href).toContain("booking=booking-next");
+      expect(decodeURIComponent(href.split("returnTo=")[1] ?? "")).toBe("/bookings?date=2026-07-31&view=period&period=14");
+    });
   });
 });

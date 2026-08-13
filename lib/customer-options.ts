@@ -32,7 +32,7 @@ function nameless(name: string) {
  * 타이핑 점프(이 화면의 유일한 검색 수단)가 무의미해진다.
  * 다만 숫자가 한글보다 앞서므로 이름 없는 100명이 목록 머리를 통째로 차지했다 —
  * 드롭다운을 열면 `000 (0234)` 가 30줄 먼저 나오고 진짜 이름은 그 아래에 있었다.
- * 이름 있는 사람을 앞에, 이름 없는 행을 뒤로 보낸다. 지우지는 않는다 — 원장의 고객이다.
+ * 이름 있는 사람을 앞에, 이름 없는 행을 뒤로 보낸다. 지우지는 않는다 — 사용자의 고객이다.
  */
 export function customerOptions(customers: readonly Customer[]) {
   const counts = new Map<string, number>();

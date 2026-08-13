@@ -107,7 +107,9 @@ export function buildRevenueAnalytics(allRecords: readonly RevenueTransaction[],
     payments: paymentRevenue(transactions),
     availability,
     settlement: Object.freeze([
-      { name: "총 매출", value: gross }, { name: "할인", value: discount }, { name: "포인트 사용", value: points }, { name: "실결제", value: paid }, { name: "환불", value: refunds }, { name: "VAT", value: vat }, { name: "결제 수수료", value: fee }, { name: "지출", value: expense }, { name: "샵 수익", value: sum(transactions, (record) => record.profit) },
+      // `샵 수익` 이었다. 그 이름은 사용자가 실제로 번 돈으로 읽히는데, 임대료·재료비·인건비가
+      // 하나도 빠지지 않은 값이다. 이름은 **뺀 것만** 말하고 안 뺀 것을 주장하지 않는다.
+      { name: "총 매출", value: gross }, { name: "할인", value: discount }, { name: "포인트 사용", value: points }, { name: "실결제", value: paid }, { name: "환불", value: refunds }, { name: "VAT", value: vat }, { name: "결제 수수료", value: fee }, { name: "지출", value: expense }, { name: "수수료 차감 후", value: sum(transactions, (record) => record.profit) },
     ].map((row) => Object.freeze(row))),
     transactions,
   });

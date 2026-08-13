@@ -3,7 +3,7 @@ import { randomUUID } from "node:crypto";
 import type { JsonObject, JsonValue, SalonRecord, SalonStore } from "./salon-domain";
 import { seoulClock, seoulClockOrEmpty, seoulInstant } from "./seoul-date";
 
-const actor = "원장" as const;
+const actor = "사용자" as const;
 const statuses = new Set(["confirmed", "waiting", "completed"]);
 
 export type BookingInterval = {
@@ -116,4 +116,3 @@ export function markBookingCompleted(store: SalonStore, id: string) {
   const history = Array.isArray(current.statusHistory) ? current.statusHistory : [];
   return store.save("bookings", id, { ...current, status: "completed", statusHistory: [...history, { status: "completed", at: new Date().toISOString(), actor }] }, actor);
 }
-export function saveBookingSettingsRecord(store: SalonStore, formData: FormData) { const current = store.getSettings(); const policy = bookingSettings({ bookingOpen: text(formData, "bookingOpen") || (typeof current.bookingOpen === "string" ? current.bookingOpen : undefined), bookingClose: text(formData, "bookingClose") || (typeof current.bookingClose === "string" ? current.bookingClose : undefined), bookingSlotMinutes: Number(text(formData, "bookingSlotMinutes") || current.bookingSlotMinutes || 30) }); const reminderText = text(formData, "reminderText"); if (reminderText.length > 150) throw new Error("메모는 150자 이하로 입력하세요."); return store.saveSettings({ ...policy, bookingAllowOverlap: checked(formData, "bookingAllowOverlap"), reminderDayBefore: checked(formData, "reminderDayBefore"), reminderDayOf: checked(formData, "reminderDayOf"), reminderText }, actor); }

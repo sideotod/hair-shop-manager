@@ -133,9 +133,29 @@ export function DashboardPage({ data, today = new Date() }: { data: DashboardDat
     return gap >= policy.bookingSlotMinutes ? [{ height: railHeight(gap), minutes: gap, startMinutes: start, top: railOffset(start, openMinutes) }] : [];
   });
   // 빈 슬롯이 "배정 가능"이라고 말만 하던 자리에 실제 목적지를 준다.
-  // 예약 폼은 `defaultValue` 로만 채운다 — 원장이 시간을 고칠 수 있어야 한다.
+  // 예약 폼은 `defaultValue` 로만 채운다 — 사용자가 시간을 고칠 수 있어야 한다.
   const clock = (minutes: number) => `${String(Math.floor(minutes / 60)).padStart(2, "0")}:${String(minutes % 60).padStart(2, "0")}`;
   const assignHref = (customerId = "", startMinutes?: number) => `/bookings?new=1&date=${todayKey}${customerId ? `&customerId=${encodeURIComponent(customerId)}` : ""}${startMinutes === undefined ? "" : `&startTime=${clock(startMinutes)}`}`;
+  // 예약 블록의 다음 동작은 예약 화면 행과 같은 규칙이다(설계 §4.1·§4.2).
+  // `returnTo` 를 `/` 로 주면 `app/payment-actions.ts:12` 허용 목록에 없어 `/sales` 로 떨어진다.
+  // 대시보드는 오늘 하루 화면이므로 오늘 날짜의 예약 목록으로 돌려보낸다.
+  // `waiting` 은 확정이 POST 라 링크로 못 만든다 — 확정 버튼이 있는 그 행으로 보낸다.
+  const dayHref = `/bookings?date=${todayKey}`;
+  const nextHref = (booking: { id: string; status: string }) =>
+    booking.status === "confirmed" || booking.status === "in-progress" ? `/sales?tab=payment&booking=${booking.id}&returnTo=${encodeURIComponent(dayHref)}`
+    : booking.status === "waiting" ? `${dayHref}&edit=${booking.id}`
+    : null;
+  /**
+   * 빈 시간과 예약을 시작 분으로 합쳐 하나의 `<ol>` 로 그린다.
+   *
+   * 예약 블록이 포커스를 받는 순간 두 배열을 따로 그리는 건 깨진다 — DOM 순서가
+   * "빈 시간 전부 → 예약 전부" 라 Tab 이 하루를 두 번 훑으며 시간 순서를 잃는다.
+   * 위치는 그대로 `absolute` 다. 이건 DOM 순서 변경이지 레이아웃 변경이 아니다.
+   */
+  const railItems = [
+    ...railGaps.map((gap) => ({ gap, key: `gap-${gap.top}`, sort: gap.startMinutes } as const)),
+    ...railBookings.map((booking) => ({ booking, key: booking.id, sort: booking.start } as const)),
+  ].sort((left, right) => left.sort - right.sort);
   const completedToday = railBookings.filter((booking) => booking.status === "completed").length;
   const enabledAutomations = automations.filter((record) => textValue(objectValue(record), "status") === "사용").length;
 
@@ -154,10 +174,10 @@ export function DashboardPage({ data, today = new Date() }: { data: DashboardDat
         {malformedDateCount > 0 && <p className="mt-4 rounded-[var(--radius-card)] border border-[var(--warning)] bg-[var(--warning-soft)] px-4 py-3 text-sm font-bold">날짜 확인 필요: {malformedDateCount}건</p>}
 
         <div className="mt-5 grid min-h-0 grid-cols-[minmax(0,1fr)_336px] items-start gap-5" data-dashboard-timeline-layout="compact">
-          <section aria-label="원장 예약 타임라인" className={`${card} flex min-h-0 flex-col overflow-hidden`}>
+          <section aria-label="사용자 예약 타임라인" className={`${card} flex min-h-0 flex-col overflow-hidden`}>
             <div className="flex items-center gap-3 border-b border-[var(--border)] px-[18px] py-[15px]"><h2 className={typeScale.section}>하루 축</h2><div className="h-px min-w-0 flex-1" /><div className="flex items-center gap-2.5 font-mono text-[11px] text-[var(--muted)]">{dayCounts.map(({ label, count }, index) => <span key={label}>{index > 0 && <i className="mx-1 inline-block h-3 w-px bg-[var(--border)]" />} {label} <b className="text-[var(--foreground)]">{count}건</b></span>)}</div><Link className={button("xs")} href="/bookings">날짜별 예약 현황</Link><span className="font-mono text-[11px] text-[var(--muted)]">{policy.bookingOpen} – {policy.bookingClose} · {policy.bookingSlotMinutes}분</span></div>
             {/* 축은 영업시간 전체를 그려 거의 항상 세로로 넘친다. 스크롤 상자는 스스로 포커스를
-                받을 수 있어야 키보드만 쓰는 원장이 축을 위아래로 넘길 수 있다. */}
+                받을 수 있어야 키보드만 쓰는 사용자가 축을 위아래로 넘길 수 있다. */}
             <div aria-label="하루 축 스크롤 영역" className="min-h-0 flex-1 overflow-auto p-[18px] focus-visible:outline-2 focus-visible:outline-offset-[-2px] focus-visible:outline-[var(--brand)]" tabIndex={0}>
               {railBookings.length > 0 ? (
                 <div className="relative" style={{ height: `${railHeightPx}px` }}>
@@ -167,26 +187,29 @@ export function DashboardPage({ data, today = new Date() }: { data: DashboardDat
                       <span className="absolute left-[56px] right-0 h-px bg-[rgba(224,222,215,0.85)]" />
                     </div>
                   ))}
-                  {railGaps.map(({ height, minutes, startMinutes, top }) => (
-                    <Link className={`absolute left-[56px] right-0 grid place-items-center rounded-[var(--radius-control)] text-[11px] text-[var(--muted)] hover:bg-[var(--brand-soft)] hover:text-[var(--brand)] ${focusRing}`} href={assignHref("", startMinutes)} key={`gap-${top}`} style={{ height: `${height}px`, top: `${top}px` }}>
-                      {minutes}분 비어 있음
-                    </Link>
-                  ))}
                   <ol>
-                    {railBookings.map((booking) => (
-                      <li className={`absolute left-[56px] right-0 overflow-hidden rounded-[var(--radius-control)] border ${booking.style.card}`} data-booking-status={booking.status} key={booking.id} style={{ height: `${railHeight(booking.end - booking.start)}px`, top: `${railOffset(booking.start, openMinutes)}px` }}>
-                        <span aria-hidden="true" className={`absolute inset-y-0 left-0 w-[3px] ${booking.style.stripe}`} />
-                        <div className="flex h-full items-center gap-3 py-1.5 pl-[12px] pr-3">
-                          <time className="shrink-0 font-mono text-[11px] text-[var(--muted)]" dateTime={booking.startsAt}>{booking.label}</time>
+                    {railItems.map((item) => "gap" in item ? (
+                      <li className="absolute left-[56px] right-0" key={item.key} style={{ height: `${item.gap.height}px`, top: `${item.gap.top}px` }}>
+                        <Link className={`grid h-full place-items-center rounded-[var(--radius-control)] text-[11px] text-[var(--muted)] hover:bg-[var(--brand-soft)] hover:text-[var(--brand)] ${focusRing}`} href={assignHref("", item.gap.startMinutes)}>
+                          {item.gap.minutes}분 비어 있음
+                        </Link>
+                      </li>
+                    ) : (
+                      <li className={`absolute left-[56px] right-0 overflow-hidden rounded-[var(--radius-control)] border ${item.booking.style.card}`} data-booking-status={item.booking.status} key={item.key} style={{ height: `${railHeight(item.booking.end - item.booking.start)}px`, top: `${railOffset(item.booking.start, openMinutes)}px` }}>
+                        <span aria-hidden="true" className={`absolute inset-y-0 left-0 w-[3px] ${item.booking.style.stripe}`} />
+                        {/* 축 위에서 가장 큰 물체가 지금까지 죽어 있었다 — 빈 시간만 링크였다(설계 §4.2).
+                            완료·취소는 다음 동작이 없으므로 링크로 감싸지 않는다. 감싸고 비활성화하면 Tab 만 늘어난다. */}
+                        {(() => { const href = nextHref(item.booking); const inner = <div className="flex h-full items-center gap-3 py-1.5 pl-[12px] pr-3">
+                          <time className="shrink-0 font-mono text-[11px] text-[var(--muted)]" dateTime={item.booking.startsAt}>{item.booking.label}</time>
                           <div className="min-w-0 flex-1">
-                            <strong className="block truncate text-[13px]">{booking.name}</strong>
-                            <span className="mt-0.5 block truncate text-[11px] text-[var(--muted)]">{booking.service}</span>
+                            <strong className="block truncate text-[13px]">{item.booking.name}</strong>
+                            <span className="mt-0.5 block truncate text-[11px] text-[var(--muted)]">{item.booking.service}</span>
                           </div>
-                          <span className={`shrink-0 rounded-full px-2.5 py-1 text-[11px] font-medium ${booking.style.badge}`}>
-                            <span aria-hidden="true" className={`mr-1 inline-block size-1.5 rounded-full align-middle ${booking.style.dot}`} />
-                            {booking.style.label}
+                          <span className={`shrink-0 rounded-full px-2.5 py-1 text-[11px] font-medium ${item.booking.style.badge}`}>
+                            <span aria-hidden="true" className={`mr-1 inline-block size-1.5 rounded-full align-middle ${item.booking.style.dot}`} />
+                            {item.booking.style.label}
                           </span>
-                        </div>
+                        </div>; return href ? <Link className={`block h-full rounded-[var(--radius-control)] ${focusRing}`} href={href}>{inner}</Link> : inner; })()}
                       </li>
                     ))}
                   </ol>

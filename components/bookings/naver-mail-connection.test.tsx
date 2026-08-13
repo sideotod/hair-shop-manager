@@ -7,7 +7,7 @@ describe("NaverMailConnection", () => {
   it("renders the user-approved mail replacement and official Naver help links", () => {
     const html = renderToStaticMarkup(<NaverMailConnection history={[]} settings={{}} />);
 
-    for (const label of ["스마트플레이스 회원 가입", "기존 네이버 예약 코드", "네이버 메일 주소 = 네이버 계정", "매장 = Hairhaeyo 단일 매장", "담당자 = 원장 1인", "예약 연동 FAQ", "직접 API·코드 연동을 제공하지 않습니다."]) expect(html).toContain(label);
+    for (const label of ["스마트플레이스 회원 가입", "기존 네이버 예약 코드", "네이버 메일 주소 = 네이버 계정", "매장 = Hairhaeyo 단일 매장", "담당자 = 사용자 1인", "예약 연동 FAQ", "직접 API·코드 연동을 제공하지 않습니다."]) expect(html).toContain(label);
     for (const url of ["https://smartplace.naver.com/", "https://help.naver.com/", "https://help.pay.naver.com/", "https://booking.naver.com/"]) {
       const tag = html.match(new RegExp(`<a[^>]*href="${url.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")}"[^>]*>`))?.[0] ?? "";
       expect(tag).toContain('target="_blank"');

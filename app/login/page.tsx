@@ -22,8 +22,8 @@ export default async function LoginPage({ searchParams }: { searchParams: Promis
     <main className="grid min-h-screen place-items-center bg-[var(--background)] px-8">
       <section className={`w-full max-w-md p-8 ${surface}`} aria-labelledby="login-title">
         <p className="text-xs font-bold tracking-[0.18em] text-[var(--brand)]">HAIRHAEYO</p>
-        <h1 className={`mt-3 ${typeScale.title}`} id="login-title">{configured ? "원장 로그인" : "원장 비밀번호 설정"}</h1>
-        <p className="mt-2 text-sm text-[var(--muted)]">{configured ? "헤어해요 운영 화면은 원장 계정만 사용할 수 있습니다." : "초기 비밀번호가 없습니다. 사용할 비밀번호를 지금 정해 주세요."}</p>
+        <h1 className={`mt-3 ${typeScale.title}`} id="login-title">{configured ? "사용자 로그인" : "사용자 비밀번호 설정"}</h1>
+        <p className="mt-2 text-sm text-[var(--muted)]">{configured ? "헤어해요 운영 화면은 사용자 계정만 사용할 수 있습니다." : "초기 비밀번호가 없습니다. 사용할 비밀번호를 지금 정해 주세요."}</p>
 
         {configured
           ? <form action={loginOwner} className="mt-7 space-y-4">

@@ -157,7 +157,7 @@ describe("immutable payment records", () => {
         expenseWon: 0,
         pointsWon: 100,
         profitWon: 9670,
-        details: expect.objectContaining({ operator: "원장", serviceMajor: "커트", smsRequested: true }),
+        details: expect.objectContaining({ operator: "사용자", serviceMajor: "커트", smsRequested: true }),
       });
       expect(store.get<{ points?: number }>("customers", "customer-seed-1")?.value.points).toBe(100);
 
@@ -173,7 +173,7 @@ describe("immutable payment records", () => {
     const store = createSalonStore(":memory:");
     try {
       const customer = store.get<Record<string, string | number>>("customers", "customer-seed-1");
-      store.save("customers", "customer-seed-1", { ...customer?.value, points: 500 }, "원장");
+      store.save("customers", "customer-seed-1", { ...customer?.value, points: 500 }, "사용자");
 
       const saved = recordPayment(store, form({
         ...paymentBase,
@@ -220,7 +220,7 @@ describe("immutable payment records", () => {
       const payment = recordPayment(store, form(paymentBase));
       refundPaymentRecord(store, form({ targetId: payment.id, requestKey: "first-reversal", reason: "환불" }));
 
-      expect(() => store.appendLedger({ requestKey: "second-reversal", kind: "correction", correctionOf: payment.id, amountWon: -payment.amountWon, details: {} }, "원장")).toThrow("already reversed");
+      expect(() => store.appendLedger({ requestKey: "second-reversal", kind: "correction", correctionOf: payment.id, amountWon: -payment.amountWon, details: {} }, "사용자")).toThrow("already reversed");
     } finally {
       store.close();
     }
@@ -252,7 +252,7 @@ describe("immutable payment records", () => {
     const store = createSalonStore(":memory:");
     try {
       const customer = store.get<Record<string, string | number>>("customers", "customer-seed-1");
-      store.save("customers", "customer-seed-1", { ...customer?.value, points: 100 }, "원장");
+      store.save("customers", "customer-seed-1", { ...customer?.value, points: 100 }, "사용자");
       const usedOnly = { ...paymentBase, requestKey: "correction-used-only", pointsEarnedWon: "0", pointsUsedWon: "100", payment_card: "10900", payment_points: "100" };
       const original = recordPayment(store, form(usedOnly));
       expect(store.get<{ points?: number }>("customers", "customer-seed-1")?.value.points).toBe(0);
@@ -268,7 +268,7 @@ describe("immutable payment records", () => {
     const store = createSalonStore(":memory:");
     try {
       const customer = store.get<Record<string, string | number>>("customers", "customer-seed-1");
-      store.save("customers", "customer-seed-1", { ...customer?.value, points: 100 }, "원장");
+      store.save("customers", "customer-seed-1", { ...customer?.value, points: 100 }, "사용자");
       const earnedAndUsed = { ...paymentBase, requestKey: "correction-earned-used", pointsEarnedWon: "50", pointsUsedWon: "100", payment_card: "10900", payment_points: "100" };
       const original = recordPayment(store, form(earnedAndUsed));
       expect(store.get<{ points?: number }>("customers", "customer-seed-1")?.value.points).toBe(50);

@@ -50,7 +50,7 @@ describe("button scale", () => {
     // 손으로 크기를 정하는 네 가지 형태를 모두 잡는다.
     //   1) `px-4 py-2`   2) `h-10 … px-4`(높이로 지정)
     //   3) `rounded-[var(--radius-card)] … px-4`   4) `rounded-[var(--radius-control)] … py-2`(px 없이 py 만)
-    // 2·3·4 가 guard 를 빠져나가 revenue-dashboard·customers-page·customer-print-button 이 스케일 밖에 남아 있었다.
+    // 2·3·4 가 guard 를 빠져나가 revenue-dashboard·customers-page 가 스케일 밖에 남아 있었다.
     const shapes = [
       /px-[0-9.]+\s+py-(?:[0-9.]+|\[[^\]]+\])/,
       /h-(?:[0-9.]+|\[[^\]]+\])[\s\S]*?px-[0-9.]+/,

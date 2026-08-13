@@ -227,7 +227,7 @@ function DataTable({
 }
 
 /**
- * 브리핑 머리글. 이 화면에서 원장이 처음 읽는 한 문장이고, 나머지는 그 문장의 근거다.
+ * 브리핑 머리글. 이 화면에서 사용자가 처음 읽는 한 문장이고, 나머지는 그 문장의 근거다.
  * 색은 방향(늘었다/줄었다)에만 쓴다 — 비교할 수 없을 때는 색도 쓰지 않는다.
  *
  * 아직 끝나지 않은 기간이면 점선 테두리를 두른다. Amplitude 가 진행 중인 구간을
@@ -249,7 +249,7 @@ function BriefingHeadline({ briefing, inProgress }: { briefing: SalonBriefing; i
 
 /**
  * 방문 분포 한 벌 (요일 또는 시간대). 문장이 먼저 오고 막대는 근거다 —
- * 막대만 있으면 원장은 눈으로 최대값을 찾아야 한다.
+ * 막대만 있으면 사용자는 눈으로 최대값을 찾아야 한다.
  */
 function PatternCard({ title, headline, rows, reduced }: { title: string; headline: string; rows: readonly VisitPattern[]; reduced: boolean }) {
   return (
@@ -306,7 +306,7 @@ function UnavailableAnalysisCard({ title }: { title: string }) {
  */
 function CustomerCard({ customers }: { customers: CustomerBriefing }) {
   // 각 줄이 자기 계산법을 달고 다닌다. 조사해 보니 "재방문율"이 업계에서 최소 네 가지
-  // 서로 호환되지 않는 뜻으로 쓰이고 있었다 — 다른 프로그램을 쓰던 원장이 같은 말을
+  // 서로 호환되지 않는 뜻으로 쓰이고 있었다 — 다른 프로그램을 쓰던 사용자가 같은 말을
   // 다른 뜻으로 알고 온다. Phorest 만이 숫자마다 계산법을 붙이는데, 그 편이 옳다.
   const rows: readonly { label: string; value: string; note?: string; how: string }[] = [
     // 방문은 결제 건수가 아니다. 한 손님이 같은 날 두 번 결제해도 온 것은 한 번이다.
@@ -398,7 +398,7 @@ export function RevenueDashboard({
   const kpis: readonly { label: string; value: string; delta?: number | null; note?: string }[] = [
     { label: "총 매출", value: won(summary ? summary.gross : settled("총 매출")), delta: summary?.deltaPrevious ?? null },
     { label: "실결제", value: won(summary ? summary.netPaid : settled("실결제")), note: "할인·포인트를 뺀 금액" },
-    { label: "샵 수익", value: won(summary ? summary.profit : settled("샵 수익")), note: "VAT·수수료·지출을 뺀 금액" },
+    { label: "수수료 차감 후", value: won(summary ? summary.profit : settled("수수료 차감 후")), note: "VAT·수수료를 뺀 금액" },
     { label: "객단가", value: ticket === null ? "–" : won(ticket), note: "총 매출 ÷ 방문 수" },
   ];
   const serviceTotal = analytics.services.reduce((total, row) => total + row.sales, 0);
@@ -455,7 +455,7 @@ export function RevenueDashboard({
     </ChartCard>
   );
   return (
-      <main className="px-7 pb-6 pt-5" data-revenue-print>
+      <main className="px-7 pb-6 pt-5">
         {selection && (
           <ModalHost label="매출 상세">
             <RevenueDetailDrawer
@@ -466,20 +466,8 @@ export function RevenueDashboard({
             />
           </ModalHost>
         )}
-        {/* 인쇄본에는 앱 헤더가 없다. 무엇을 언제 뽑은 종이인지 남긴다 (G7). */}
-        <div className="print-only mb-4 border-b border-[var(--border)] pb-3">
-          <strong className={typeScale.figure}>매출·결제</strong>
-          <span className="ml-3 font-mono text-[12px]">{analytics.selectedPeriod.start} ~ {analytics.selectedPeriod.end}</span>
-        </div>
         <SalesControls label={analytics.selectedPeriod.label} query={query} />
-        <PageToolbar className="mt-5" description={<>결제 기록과 정산을 같은 기준으로 확인합니다. {analytics.selectedPeriod.start} ~ {analytics.selectedPeriod.end}</>} noPrint>
-          <button
-            className={button("md", "secondary", "text-[var(--brand)]")}
-            onClick={() => window.print()}
-            type="button"
-          >
-            인쇄
-          </button>
+        <PageToolbar className="mt-5" description={<>결제 기록과 정산을 같은 기준으로 확인합니다. {analytics.selectedPeriod.start} ~ {analytics.selectedPeriod.end}</>}>
           <a
             className={button("md", "primary")}
             download={`hairhaeyo-revenue-${analytics.selectedPeriod.start}_${analytics.selectedPeriod.end}.csv`}
@@ -617,16 +605,21 @@ export function RevenueDashboard({
                     <th className="py-3 text-left font-medium" scope="row">{row.name}</th>
                     <td className="py-3 text-right font-bold tabular-nums">
                       {won(row.value)}
+                      {/* ₩0 이 "정말 0원"인지 "기록이 없어 0원"인지는 숫자만으로 구별되지 않는다.
+                          지출은 실제로 한 건도 없고 VAT 는 5,578건 중 1건이다(실측). */}
+                      {row.value === 0 && <span className="ml-2 text-[11px] font-normal text-[var(--muted)]">기록 없음</span>}
                     </td>
                   </tr>
                 ))}
               </tbody>
             </table>
-            {/* 표에 아홉 줄이 있어도 "무엇에서 무엇을 뺐는지"는 보이지 않는다. 두 관계식을 적는다.
-                앞의 것은 국내 POS(페이히어)가 공개한 정의와 같고, 뒤의 것은 lib/finance.ts 의 계산이다. */}
+            {/* 표에 아홉 줄이 있어도 "무엇에서 무엇을 뺐는지"는 보이지 않는다. 관계식을 적는다.
+                앞의 것은 국내 POS(페이히어)가 공개한 정의와 같고, 뒤의 것은 lib/finance.ts 의 계산이다.
+                빠지지 **않은** 비용은 이름을 대서 밝힌다 — 이 숫자를 순이익으로 읽는 것이 가장 비싼 오해다. */}
             <p className="mt-3 border-t border-[var(--border)] pt-3 text-[11px] leading-[1.7] text-[var(--muted)]">
               총 매출 = 실결제 + 할인 + 포인트 사용<br />
-              샵 수익 = 실결제 − VAT − 결제 수수료 − 지출
+              수수료 차감 후 = 실결제 − VAT − 결제 수수료 − 지출<br />
+              <span className="text-[var(--warning)]">임대료·재료비·인건비는 빠지지 않았습니다.</span>
             </p>
           </section>
         </div>

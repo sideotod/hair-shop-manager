@@ -23,9 +23,16 @@ npm-debug.log*
 .agents/
 
 # 로컬 검증 산출물
-.dev-verify.log
+.dev-verify*.log
 audit-*.png
 qa-*.png
 preflight-*.png
 .data-verify/
 .data/demo/
+# DB 를 손보기 전 떠 두는 사본. `.backup-*` 은 6번 줄이 이미 잡지만 이름이 갈릴 수 있다.
+.data/*.bak-*
+# 스크린샷·감사 산출물. 실행할 때마다 새로 만들어지고 소스가 아니다.
+output/
+.tmp-*/
+# 화면 실측 중 남는 임시 캡처. 이름이 제각각이라 확장자로 잡는다.
+/*.png

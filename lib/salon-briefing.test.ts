@@ -62,7 +62,7 @@ describe("visit patterns", () => {
   });
 
   it("draws only the hours that had visits", () => {
-    const rows = hourPattern([{ hour: 11, gross: 120000, count: 3 }, { hour: 14, gross: 400000, count: 9 }]);
+    const rows = hourPattern([{ hour: 11, gross: 120000, count: 3, minutes: 3 }, { hour: 14, gross: 400000, count: 9, minutes: 7 }]);
     expect(rows.map((row) => row.label)).toEqual(["11시", "14시"]);
     expect(rows[0].ratio).toBeCloseTo(1 / 3);
     expect(patternHeadline(rows, "시간대")).toBe("14시가 가장 붐빕니다 — 9건.");
@@ -73,9 +73,24 @@ describe("visit patterns", () => {
     expect(patternHeadline(hourPattern([]), "시간대")).toBe("시간대별로 나눌 방문 기록이 없습니다.");
   });
 
-  it("rejects one fixed imported hour as an unusable time-of-day analysis", () => {
-    expect(isUsableHourPattern([{ hour: 21, gross: 3262000, count: 89 }])).toBe(false);
-    expect(isUsableHourPattern([{ hour: 11, gross: 120000, count: 3 }, { hour: 14, gross: 400000, count: 9 }])).toBe(true);
+  /**
+   * 이관 자료는 원본에 시각이 없어 날짜만 읽고 정오로 채운다. 그래도 시간대 분포는 생기므로
+   * 칸 개수만으로는 가려낼 수 없다 — 실측한 858명 자료는 아홉 칸이 전부 279의 배수였다.
+   * 사람이 찍은 시각은 분이 흩어진다. 그것이 유일하게 믿을 수 있는 신호다.
+   */
+  it("rejects imported hours whose minutes never move", () => {
+    // 한 칸만 있으면 분포가 아니다.
+    expect(isUsableHourPattern([{ hour: 21, gross: 3262000, count: 89, minutes: 1 }])).toBe(false);
+    // 칸이 여럿이어도 분이 전부 :00 이면 가져오기가 만든 모양이다.
+    expect(isUsableHourPattern([
+      { hour: 11, gross: 120000, count: 3, minutes: 1 },
+      { hour: 14, gross: 400000, count: 9, minutes: 1 },
+    ])).toBe(false);
+    // 한 칸에서라도 분이 흩어지면 사람이 찍은 시각이다.
+    expect(isUsableHourPattern([
+      { hour: 11, gross: 120000, count: 3, minutes: 1 },
+      { hour: 14, gross: 400000, count: 9, minutes: 7 },
+    ])).toBe(true);
   });
 });
 

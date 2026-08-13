@@ -5,12 +5,12 @@ import { bookingSettings } from "./booking";
 import type { JsonObject, SalonStore } from "./salon-domain";
 import { resolveVisualTokens, validateVisualTokenContrast } from "./visual-tokens";
 
-const actor = "원장" as const;
+const actor = "사용자" as const;
 const color = /^#[0-9a-f]{6}$/i;
 const passwordHash = /^scrypt\$[^$]+\$[0-9a-f]+$/i;
 const knownErrors = new Set([
   "비율은 0~100 사이로 입력하세요.",
-  "매장명과 원장 표시 이름을 입력하세요.",
+  "매장명과 사용자 표시 이름을 입력하세요.",
   "설정 값을 확인하세요.",
   "색상은 #RRGGBB 형식으로 입력하세요.",
   "색상 대비는 배경·글자와 흰색 기준 4.5:1 이상이어야 합니다.",
@@ -54,7 +54,7 @@ export function parseShopSettings(formData: FormData, current: JsonObject): Json
     "reminderText", "helpPhone", "helpEmail", "vatMode",
   ]) if (formData.has(name)) values[name] = text(formData, name);
   if (formData.has("reminderText") && text(formData, "reminderText").length > 150) throw new Error("예약 추가 문구는 150자 이하로 입력하세요.");
-  for (const name of ["shopName", "ownerName"]) if (formData.has(name) && !values[name]) throw new Error("매장명과 원장 표시 이름을 입력하세요.");
+  for (const name of ["shopName", "ownerName"]) if (formData.has(name) && !values[name]) throw new Error("매장명과 사용자 표시 이름을 입력하세요.");
   for (const [name, allowed] of [
     ["customerOpenMode", new Set(["same-window", "new-window"])],
     ["customerDisplayMode", new Set(["comfortable", "compact"])],
@@ -96,10 +96,15 @@ export function parseShopSettings(formData: FormData, current: JsonObject): Json
     values.smsEnabled = text(formData, "smsEnabled") === "on";
     values.defaultSmsOptIn = text(formData, "defaultSmsOptIn") === "on";
     const hiddenMenus = formData.getAll("hiddenMenus").filter((value): value is string => typeof value === "string");
-    if (hiddenMenus.some((value) => !new Set(["/customers", "/bookings", "/sales", "/messages", "/operations"]).has(value))) throw new Error("숨김 메뉴를 확인하세요.");
-    values.hiddenMenus = hiddenMenus;
+    // `/operations` 는 사라졌지만 이미 저장된 설정 행에는 남아 있다. 던지면 그 사용자는 고객 정책을
+    // 영영 저장하지 못한다 — 폼이 못 보내는 값이라 체크를 풀 수도 없다. 걸러서 다음 저장에 자연히 빠지게 한다 (설계 §5.2).
+    const allowed = new Set(["/customers", "/bookings", "/sales", "/messages"]);
+    if (hiddenMenus.some((value) => !allowed.has(value) && value !== "/operations")) throw new Error("숨김 메뉴를 확인하세요.");
+    values.hiddenMenus = hiddenMenus.filter((value) => allowed.has(value));
   }
-  if (section === "booking") values.bookingAllowOverlap = text(formData, "bookingAllowOverlap") === "on";
+  // 알림 두 칸은 `saveBookingSettingsRecord` 가 유일한 writer 였다. 그 액션을 지우면서 여기로 옮기지 않으면
+  // 예약 전일·당일 알림이 저장할 곳을 잃는다 (설계 §5.3). 체크박스는 `bookingAllowOverlap` 과 같은 규약이다.
+  if (section === "booking") for (const name of ["bookingAllowOverlap", "reminderDayBefore", "reminderDayOf"]) values[name] = text(formData, name) === "on";
   return values;
 }
 

@@ -1,6 +1,7 @@
 import { savePayment } from "../../app/payment-actions";
+import { serviceMajorOptions } from "../../lib/operations";
 import { formatPhone } from "../../lib/phone";
-import type { JsonObject } from "../../lib/salon-domain";
+import type { JsonObject, JsonValue, SalonRecord } from "../../lib/salon-domain";
 import { control } from "../button";
 import { PaymentAmounts } from "../sales/payment-amounts";
 import { PaymentMemberScope } from "../sales/payment-customer";
@@ -21,13 +22,15 @@ const label = "grid gap-1 text-xs font-medium text-[var(--muted)]";
  * 금액 섹션은 `/sales` 와 **같은 컴포넌트**를 쓴다. 검증식(`settleAmounts()`)이 한 벌이어야
  * 화면 합계와 저장 결과가 갈라지지 않는다.
  */
-export function CustomerPaymentDialog({ customer, error, pointEarnRate, requestKey, returnTo, today, vatMode, cardFeeRate }: {
-  cardFeeRate: number; customer: { id: string; value: JsonObject }; error?: string; pointEarnRate: number; requestKey: string; returnTo: string; today: string; vatMode: "included" | "separate";
+export function CustomerPaymentDialog({ catalog = [], customer, defaultDate, defaultTime, error, pointEarnRate, requestKey, returnTo, vatMode, cardFeeRate }: {
+  cardFeeRate: number; catalog?: readonly SalonRecord<JsonValue>[]; customer: { id: string; value: JsonObject }; defaultDate: string; defaultTime: string; error?: string; pointEarnRate: number; requestKey: string; returnTo: string; vatMode: "included" | "separate";
 }) {
   const name = typeof customer.value.name === "string" ? customer.value.name : "-";
   const phone = typeof customer.value.phone === "string" ? customer.value.phone : "";
   const points = typeof customer.value.points === "number" ? customer.value.points : 0;
   const prepaid = typeof customer.value.prepaidWon === "number" ? customer.value.prepaidWon : 0;
+  // 정정 경로가 없는 화면이라 `current` 를 넘길 옛 값이 없다 (`operations.ts:65`).
+  const majors = serviceMajorOptions(catalog);
 
   return <PaymentMemberScope><ActionForm action={savePayment} aria-label={`${name} 결제 등록`} className="grid gap-4" error={error} errorClassName="rounded-[var(--radius-card)] border border-[var(--danger)] bg-[var(--danger-soft)] px-4 py-3 text-sm text-[var(--danger)]">
     <input name="requestKey" type="hidden" value={requestKey} />
@@ -40,15 +43,15 @@ export function CustomerPaymentDialog({ customer, error, pointEarnRate, requestK
       <span className="mt-1 block text-xs text-[var(--muted)]">포인트 <span className="tabular-nums">{points.toLocaleString("ko-KR")}P</span> · 선결제 잔액 <span className="tabular-nums">₩{prepaid.toLocaleString("ko-KR")}</span></span>
     </p>
 
-    <label className={label}>시술 대분류<select className={field} defaultValue="커트" name="serviceMajor"><option>커트</option><option>펌</option><option>매직</option><option>드라이</option><option>클리닉</option><option>컬러</option><option>업스타일</option><option>매니큐어</option><option>세트메뉴</option><option>기타</option></select></label>
+    <label className={label}>시술 대분류<select className={field} defaultValue={majors[0]} name="serviceMajor">{majors.map((major) => <option key={major}>{major}</option>)}</select></label>
     <label className={label}>시술 상세<input className={field} name="serviceDetail" /></label>
     <label className={label}>스타일명<input className={field} name="styleName" /></label>
 
     <PaymentAmounts availablePoints={points} cardFeeRate={cardFeeRate} pointEarnRate={pointEarnRate} vatMode={vatMode} />
 
     <div className="grid grid-cols-2 gap-4">
-      <label className={label}>결제일<input className={field} defaultValue={today} name="occurredDate" type="date" /></label>
-      <label className={label}>시간<input className={field} defaultValue="10:00" name="occurredTime" type="time" /></label>
+      <label className={label}>결제일<input className={field} defaultValue={defaultDate} name="occurredDate" type="date" /></label>
+      <label className={label}>시간<input className={field} defaultValue={defaultTime} name="occurredTime" type="time" /></label>
     </div>
 
     <SubmitButton extra="w-full">결제 저장</SubmitButton>

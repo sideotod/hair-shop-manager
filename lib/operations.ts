@@ -3,7 +3,7 @@ import { randomUUID } from "node:crypto";
 import type { JsonObject, JsonValue, LedgerEntry, LedgerInput, SalonRecord, SalonStore } from "./salon-domain";
 import { seoulInstant } from "./seoul-date";
 
-const actor = "원장" as const;
+const actor = "사용자" as const;
 const text = (data: FormData, key: string) => typeof data.get(key) === "string" ? (data.get(key) as string).trim() : "";
 const won = (data: FormData, key: string) => {
   const value = text(data, key) || "0";

@@ -25,7 +25,7 @@ const waiting = db.prepare("SELECT COUNT(*) AS n FROM records WHERE kind = 'wait
 const archived = db.prepare("SELECT COUNT(*) AS n FROM records WHERE kind = 'customers' AND archived_at IS NOT NULL").get();
 
 const removals = REMOVED.map((key) => `'$.${key}'`).join(", ");
-// `updated_at` 을 그대로 다시 쓴다. 정리는 원장이 고친 사건이 아니라 형식 변경이다 —
+// `updated_at` 을 그대로 다시 쓴다. 정리는 사용자가 고친 사건이 아니라 형식 변경이다 —
 // 수정 시각이 오늘로 밀리면 "최근 수정 고객" 이 858명이 된다.
 db.exec(`UPDATE records SET payload = json_remove(payload, ${removals}), updated_at = updated_at WHERE kind = 'customers'`);
 db.exec("DELETE FROM records WHERE kind = 'waiting-customers'");

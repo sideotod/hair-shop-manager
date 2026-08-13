@@ -1,9 +1,11 @@
 import Link from "next/link";
+import { useSearchParams } from "next/navigation";
+import { Fragment } from "react";
 
-import { logoutOwner } from "../app/auth-actions";
+// 로그아웃은 여기서 나갔다 (`components/settings/settings-page.tsx` 계정 설정). `logoutOwner` 도 같이 갔다.
 import { focusRing, focusRingOnDark } from "./button";
 
-import { activeNavigationItem, matchNavigationItem, navigationItems } from "../lib/navigation";
+import { activeNavigationItem, childNavigationItems, matchNavigationItem, navigationItems, resolveSettingsSection, settingsSections } from "../lib/navigation";
 import type { JsonObject, JsonValue, SalonRecord } from "../lib/salon-domain";
 import { resolveVisualTokens } from "../lib/visual-tokens";
 import { floatingShadow } from "./surface";
@@ -51,8 +53,14 @@ export function AppShell({
   const resolvedSmsRemaining = typeof settings.smsRemaining === "number" ? settings.smsRemaining : smsRemaining;
   const hiddenMenus = new Set(Array.isArray(settings.hiddenMenus) ? settings.hiddenMenus.filter((value): value is string => typeof value === "string") : []);
   const visibleGroups = menuGroups.map(({ label, items }) => ({ label, items: items.filter((item) => !hiddenMenus.has(item.path)) })).filter(({ items }) => items.length > 0);
+  // 설정 하위 목록은 설정에 있을 때만 편다. 항상 펼쳐 두면 7줄이 늘 자리를 먹어 사이드바가
+  // 화면 높이를 넘긴다(1280×800 실측). `?section=` 이 유일한 상태 저장소라 클라이언트 상태는 없다.
+  // 훅은 조건 없이 부른다 — 삼항 안에 넣으면 경로가 바뀔 때 훅 순서가 달라진다.
+  const section = useSearchParams()?.get("section") ?? undefined;
+  const settingsOpen = activeHref === "/settings";
+  const activeSection = resolveSettingsSection(section);
   const customerTarget = settings.customerOpenMode === "new-window" ? "_blank" : undefined;
-  const ownerLabel = resolvedOwnerName === "원장" ? "원장님" : `${resolvedOwnerName} 원장님`;
+  const ownerLabel = resolvedOwnerName === "사용자" ? "사용자님" : `${resolvedOwnerName} 사용자님`;
   const dateLabel = new Intl.DateTimeFormat("ko-KR", { dateStyle: "full", timeZone: "Asia/Seoul" }).format(today);
   const resolvedVisualTokens = resolveVisualTokens(settings);
   const visualTokens = {
@@ -74,17 +82,23 @@ export function AppShell({
             <span className="mt-1.5 block text-[10px] font-medium tracking-[2.6px] text-[var(--accent-on-sidebar)]">SALON LEDGER</span>
           </div>
 
-          <nav aria-label="주요 메뉴" className="mt-[26px] space-y-1">
-            {/* 설정도 다른 메뉴와 같은 한 줄이다. 예전에는 여기서 7개 섹션을 펼쳤는데,
-                설정 화면 안에 같은 7개가 또 있어 같은 목록을 두 번 그리고 있었다.
-                섹션 선택은 그것이 바꾸는 내용 옆(본문 좌측 레일)에서만 한다. */}
-            {visibleGroups.map(({ label: groupLabel, items }) => <section className="mb-[18px] last:mb-0" key={groupLabel}><p className="px-3 pb-2 pt-0 font-mono text-[10px] font-medium tracking-[0.16em] text-white/55">{groupLabel}</p>{items.map(({ label, path }) => <Link aria-current={path === activeHref ? "page" : undefined} className={`flex items-center gap-2.5 rounded-[var(--radius-control)] px-3 py-[9px] text-[13px] transition-colors ${focusRingOnDark} ${path === activeHref ? "bg-[var(--surface)]/10 font-semibold text-white" : "text-white/60 hover:bg-[var(--surface)]/5 hover:text-white"}`} href={path} key={path}><span aria-hidden="true" className={`h-[13px] w-0.5 rounded-[1px] ${path === activeHref ? "bg-[var(--accent)]" : "bg-transparent"}`} />{label}</Link>)}</section>)}
+          {/* `-mx-1 px-1`: 스크롤 컨테이너가 되면 `overflow-x` 도 auto 로 굳는다. 포커스 링은
+              `outline-offset-2` 로 링크 바깥 4px 까지 나가므로 여백이 없으면 링이 잘리거나
+              가로 스크롤바가 생긴다. `min-h-0` 이 없으면 아래 매장 카드가 화면 밖으로 밀린다. */}
+          <nav aria-label="주요 메뉴" className="mt-[26px] -mx-1 min-h-0 space-y-1 overflow-y-auto px-1">
+            {/* 설정 구역은 여기서 펼친다. 예전에 이 자리를 비운 이유는 설정 화면 안 좌측 레일이 같은
+                목록을 또 그려 목록이 두 벌이었기 때문인데, 그 레일을 없앴으므로 목록은 다시 한 벌이다
+                (`components/settings/settings-page.tsx`). 목록의 원본은 `lib/navigation.ts` 한 곳이다.
+                `hiddenMenus` 는 `/settings` 를 숨길 수 없다 — 허용 목록(`lib/settings.ts:101`)에 없다.
+                그래서 설정 줄이 사라져 하위 항목만 떠 있는 상태는 만들어지지 않는다. */}
+            {visibleGroups.map(({ label: groupLabel, items }) => <section className="mb-[18px] last:mb-0" key={groupLabel}><p className="px-3 pb-2 pt-0 font-mono text-[10px] font-medium tracking-[0.16em] text-white/55">{groupLabel}</p>{items.map(({ id, label, path }) => <Fragment key={path}><Link aria-current={path === activeHref && !settingsOpen && pathname === path ? "page" : undefined} className={`flex items-center gap-2.5 rounded-[var(--radius-control)] px-3 py-[9px] text-[13px] transition-colors ${focusRingOnDark} ${path === activeHref ? "bg-[var(--surface)]/10 font-semibold text-white" : "text-white/60 hover:bg-[var(--surface)]/5 hover:text-white"}`} href={path}><span aria-hidden="true" className={`h-[13px] w-0.5 rounded-[1px] ${path === activeHref ? "bg-[var(--accent)]" : "bg-transparent"}`} />{label}</Link>{path === activeHref && childNavigationItems(id).length > 0 && <nav aria-label={`${label} 하위 메뉴`} className="mb-0.5 ml-[13px] mt-1 border-l border-white/10 pl-[9px]">{childNavigationItems(id).map((child) => <Link aria-current={pathname === child.path ? "page" : undefined} className={`block truncate rounded-[var(--radius-control)] px-2.5 py-1.5 text-[12px] transition-colors ${focusRingOnDark} ${pathname === child.path ? "bg-[var(--surface)]/10 font-medium text-white" : "text-white/50 hover:bg-[var(--surface)]/5 hover:text-white"}`} href={child.path} key={child.path}>{child.label}</Link>)}</nav>}{path === "/settings" && settingsOpen && <nav aria-label="설정 구역" className="mb-0.5 ml-[13px] mt-1 border-l border-white/10 pl-[9px]">{settingsSections.map(([key, sectionLabel]) => <Link aria-current={key === activeSection ? "page" : undefined} className={`block truncate rounded-[var(--radius-control)] px-2.5 py-1.5 text-[12px] transition-colors ${focusRingOnDark} ${key === activeSection ? "bg-[var(--surface)]/10 font-medium text-white" : "text-white/50 hover:bg-[var(--surface)]/5 hover:text-white"}`} href={`/settings?section=${key}`} key={key}>{sectionLabel}</Link>)}</nav>}</Fragment>)}</section>)}
           </nav>
 
+          {/* 로그아웃 버튼은 `/settings?section=owner` 로 옮겼다 — 계정을 여닫는 일은 계정 설정에 있다.
+              그만큼 이 카드가 낮아져(107px → 63px 실측) 사이드바가 구역 7줄을 펼쳐도 넘치지 않는다. */}
           <div className="mt-auto rounded-[var(--radius-card)] bg-[var(--surface)]/[0.06] px-[13px] py-3">
             <strong className="block text-[13px] font-medium">{resolvedShopName}</strong>
             <span className="mt-1 block font-mono text-[10px] text-white/50">● 영업중 {setting("bookingOpen", "09:30")}–{setting("bookingClose", "21:00")}</span>
-            <form action={logoutOwner} className="mt-3"><button className={`inline-flex h-8 items-center rounded-[var(--radius-control)] px-1 text-[11px] text-white/50 hover:text-white ${focusRingOnDark}`} type="submit">로그아웃</button></form>
           </div>
         </aside>
 

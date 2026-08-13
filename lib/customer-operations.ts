@@ -3,7 +3,7 @@ import { randomUUID } from "node:crypto";
 import type { CustomerValue, JsonObject, JsonValue, SalonRecord, SalonStore } from "./salon-domain";
 import { PAYMENT_METHODS } from "./settlement";
 
-const actor = "원장" as const;
+const actor = "사용자" as const;
 
 function text(formData: FormData, name: string) {
   const value = formData.get(name);

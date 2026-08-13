@@ -11,7 +11,7 @@ import { ModalHost } from "../modal-host";
 import { PageToolbar } from "../page-toolbar";
 import { NoticeBanner, SubmitButton } from "../submit-button";
 import { typeScale } from "../type";
-import { CustomerForm } from "./customer-form";
+import { CustomerForm, type DuplicateEntry } from "./customer-form";
 import { CustomerPaymentDialog } from "./customer-payment-dialog";
 
 const input = `${control} min-w-0`;
@@ -21,11 +21,15 @@ const sortModes = [["name", "이름"], ["joined", "등록일"], ["visit", "최�
 
 type Props = {
   customers: readonly SalonRecord<JsonValue>[]; settings: JsonObject; bookings: readonly SalonRecord<JsonValue>[]; messages: readonly SalonRecord<JsonValue>[]; ledger: readonly LedgerEntry[];
+  /** 시술 대분류 선택지의 원천. 결제 팝업이 `serviceMajorOptions()` 로 읽는다 (`operations.ts:65`). */
+  catalog?: readonly SalonRecord<JsonValue>[];
   /** 고객별 마지막 결제 시각. 정렬에만 쓰므로 원장 전량을 읽지 않는다. */
   lastVisits?: ReadonlyMap<string, string>;
   selectedCustomerId?: string; query?: string; sort?: string; tab?: string; page?: string;
   showNew?: boolean; editCustomerId?: string; payCustomerId?: string; showPrepaid?: boolean;
-  requestKey: string; today?: string;
+  requestKey: string;
+  /** 결제 팝업 기본 시각. 라우트가 요청당 1회 계산해 내린다 — 렌더 중 `new Date()` 는 재렌더마다 값이 달라진다. */
+  defaultDate?: string; defaultTime?: string;
   error?: string; notice?: string;
   /** 라우트가 받은 원본 쿼리. 닫기 경로를 여기서 파생시킨다. */
   searchParams?: Record<string, string | string[] | undefined>;
@@ -39,10 +43,22 @@ function Field({ children, label }: { children: React.ReactNode; label: string }
 function listItems(records: readonly SalonRecord<JsonValue>[], empty: string, render: (record: SalonRecord<JsonValue>) => React.ReactNode) { return records.length ? <ul className="mt-2 divide-y divide-[var(--border)]">{records.map((record) => <li className="py-2 text-sm" key={record.id}>{render(record)}</li>)}</ul> : <p className="mt-2 text-sm text-[var(--muted)]">{empty}</p>; }
 
 /**
+ * 첫 방문날짜는 **날짜까지만** 보여준다.
+ *
+ * 옮겨온 고객은 `2020-02-18T12:00:00.000Z` 처럼 시각까지 들고 있다. 그 시각은 가져오기가
+ * 만든 자리표시자(정오)라 아무 뜻이 없는데, 화면에 그대로 나오면 사용자는 그 손님이
+ * 낮 12시에 왔다고 읽는다. 없는 사실을 보여주느니 자른다.
+ */
+function joinedDate(record: SalonRecord<JsonValue>) {
+  const raw = text(record, "joinedAt", "").trim();
+  return /^\d{4}-\d{2}-\d{2}/.test(raw) ? raw.slice(0, 10) : "기록 없음";
+}
+
+/**
  * 목록 안 검색. **숫자면 번호 뒷자리, 아니면 이름.**
  *
  * 셸 헤더의 검색은 화면을 옮겨 다니는 검색이고, 이건 지금 보고 있는 목록을 좁히는 검색이다.
- * 모드 선택칸을 두지 않는 이유는 원장이 실제로 치는 게 둘뿐이기 때문이다 — "김서연" 아니면 "5678".
+ * 모드 선택칸을 두지 않는 이유는 사용자가 실제로 치는 게 둘뿐이기 때문이다 — "김서연" 아니면 "5678".
  */
 function matches(record: SalonRecord<JsonValue>, query: string) {
   if (!query) return true;
@@ -62,7 +78,7 @@ function matches(record: SalonRecord<JsonValue>, query: string) {
  */
 const pageSize = 9;
 
-export function CustomersPage({ customers, settings, bookings, messages, ledger, lastVisits, selectedCustomerId, error, notice, query = "", sort = "name", tab = "ledger", page = "1", showNew, editCustomerId, payCustomerId, showPrepaid, requestKey, today = "", searchParams }: Props) {
+export function CustomersPage({ catalog = [], customers, settings, bookings, messages, ledger, lastVisits, selectedCustomerId, error, notice, query = "", sort = "name", tab = "profile", page = "1", showNew, editCustomerId, payCustomerId, showPrepaid, requestKey, defaultDate = "", defaultTime = "", searchParams }: Props) {
   const filtered = customers.filter((record) => matches(record, query));
   const collator = new Intl.Collator("ko-KR");
   const sorted = [...filtered].sort((left, right) => {
@@ -100,20 +116,26 @@ export function CustomersPage({ customers, settings, bookings, messages, ledger,
   const paying = payCustomerId ? customers.find(({ id }) => id === payCustomerId) ?? null : null;
   const prepaidTarget = showPrepaid ? selected : null;
   const dialog = showNew || editing || paying || prepaidTarget
-    ? { label: paying ? "결제 등록" : prepaidTarget ? "선결제 충전" : editing ? "고객 정보 변경" : "고객 등록", wide: Boolean(paying) }
+    ? { label: paying ? "결제 등록" : prepaidTarget ? "선결제 충전" : editing ? "고객 정보 변경" : "고객 등록", wide: Boolean(paying), form: !paying && !prepaidTarget }
     : null;
+  // 중복 확인은 팝업이 열렸을 때만 필요하다. 858명 × 6칸은 목록 응답에 실리지 않는다.
+  const duplicateIndex: readonly DuplicateEntry[] = dialog?.form
+    ? customers.map((record) => [record.id, text(record, "name", ""), text(record, "gender", ""), text(record, "phone", ""), text(record, "joinedAt", ""), text(record, "memo", "")] as const)
+    : [];
 
   return <main className="flex h-full min-w-[1032px] flex-col px-7 pb-6 pt-5">
     {dialog && <ModalHost label={dialog.label}>
       {/* 전역 `[data-dialog-panel]` 은 `min(1120px,100%)` 다. 여기 폼들은 한 칸씩 세로로 서므로
-          그 폭을 쓰면 라벨과 입력칸 사이가 한 뼘씩 벌어진다. 결제는 금액 격자가 2열이라 조금 더 넓다. */}
-      <section aria-label={dialog.label} aria-modal="true" className={`dialog-scroll p-5 ${dialog.wide ? "!w-[560px]" : "!w-[420px]"} !max-w-full`} data-dialog-panel role="dialog">
+          그 폭을 쓰면 라벨과 입력칸 사이가 한 뼘씩 벌어진다. 결제는 금액 격자가 2열이라 조금 더 넓다.
+          고객 등록은 폭을 고정하지 않는다(`!w-auto`) — 중복 확인 패널이 옆으로 펴질 때
+          패널이 안쪽 폭을 따라가야 두 움직임이 한 몸으로 읽힌다. 접힌 폭은 40+380 = 420px 로 같다. */}
+      <section aria-label={dialog.label} aria-modal="true" className={`dialog-scroll p-5 ${dialog.wide ? "!w-[560px]" : dialog.form ? "!w-auto" : "!w-[420px]"} !max-w-full`} data-dialog-panel role="dialog">
         <div className="flex items-center justify-between gap-4">
           <h2 className={typeScale.title}>{dialog.label}</h2>
           <Link className={button("md")} data-dialog-close href={customerHref}>닫기</Link>
         </div>
         {paying
-          ? <div className="mt-5"><CustomerPaymentDialog cardFeeRate={typeof settings.cardFeeRate === "number" ? settings.cardFeeRate : 0} customer={{ id: paying.id, value: value(paying) }} error={error} pointEarnRate={typeof settings.pointEarnRate === "number" ? settings.pointEarnRate : 1} requestKey={requestKey} returnTo={customerHref} today={today} vatMode={settings.vatMode === "separate" ? "separate" : "included"} /></div>
+          ? <div className="mt-5"><CustomerPaymentDialog cardFeeRate={typeof settings.cardFeeRate === "number" ? settings.cardFeeRate : 0} catalog={catalog} customer={{ id: paying.id, value: value(paying) }} defaultDate={defaultDate} defaultTime={defaultTime} error={error} pointEarnRate={typeof settings.pointEarnRate === "number" ? settings.pointEarnRate : 1} requestKey={requestKey} returnTo={customerHref} vatMode={settings.vatMode === "separate" ? "separate" : "included"} /></div>
           : prepaidTarget
             ? <form action={chargePrepaid} aria-label="선결제 충전" className="mt-5 grid gap-4">
               <input name="customerId" type="hidden" value={prepaidTarget.id} />
@@ -124,7 +146,7 @@ export function CustomersPage({ customers, settings, bookings, messages, ledger,
               <Field label="받은 방법"><select className={`${input} w-full`} defaultValue="cash" name="method"><option value="cash">현금</option><option value="card">카드</option><option value="transfer">계좌이체</option></select></Field>
               <SubmitButton extra="w-full">선결제 충전</SubmitButton>
             </form>
-            : <CustomerForm customer={editing ?? undefined} returnTo={customerHref} settings={settings} />}
+            : <CustomerForm customer={editing ?? undefined} duplicateIndex={duplicateIndex} returnTo={customerHref} settings={settings} today={defaultDate} />}
       </section>
     </ModalHost>}
 
@@ -135,7 +157,9 @@ export function CustomersPage({ customers, settings, bookings, messages, ledger,
     {notice && <NoticeBanner className="mt-5 rounded-[var(--radius-card)] border border-[var(--success)] bg-[var(--success-soft)] px-4 py-3 text-sm text-[var(--success)]">{notice}</NoticeBanner>}
 
     {/* 두 칸은 같은 높이로 서고 **각자 안에서만** 스크롤한다. 페이지 전체가 늘어나면
-        오른쪽 이력을 보려고 내린 스크롤이 왼쪽 목록을 화면 밖으로 밀어낸다. */}
+        오른쪽 이력을 보려고 내린 스크롤이 왼쪽 목록을 화면 밖으로 밀어낸다.
+        상세가 짧은 탭(기본정보는 4행, 내용 409px)에서는 720px 칸 아래가 비지만, 높이를 내용에
+        맞춰 줄이면 탭을 옮길 때마다 칸이 409↔720px로 뛴다. 빈 자리를 두는 쪽을 고른다. */}
     <div className="mt-5 grid min-h-0 flex-1 grid-cols-[minmax(360px,0.85fr)_minmax(480px,1.15fr)] grid-rows-1 gap-5">
       <section aria-label="고객 목록" className="flex min-h-0 flex-col rounded-[var(--radius-card)] border border-[var(--border)] bg-[var(--surface)]">
         <div className="border-b border-[var(--border)] px-5 py-4">
@@ -175,8 +199,8 @@ export function CustomersPage({ customers, settings, bookings, messages, ledger,
 
       <aside aria-label="고객 상세" className="dialog-scroll min-h-0 overflow-auto rounded-[var(--radius-card)] border border-[var(--border)] bg-[var(--surface)] p-5">
         {selected ? <>
-          <p className="text-xs font-medium text-[var(--muted)]">선택 고객</p>
-          <h2 className={`mt-1 flex items-baseline gap-2 ${typeScale.title}`}>{text(selected, "name")}<span className="text-xs font-medium tabular-nums text-[var(--muted)]">{customerCode(selected.id)}</span></h2>
+          <p className="text-xs font-medium text-[var(--muted)]">선택 고객 · {customerCode(selected.id)}</p>
+          <h2 className={`mt-1 ${typeScale.title}`}>{text(selected, "name")}</h2>
           <p className="mt-1 text-sm tabular-nums text-[var(--muted)]">{formatPhone(text(selected, "phone", "")) || "휴대전화 없음"}</p>
           {/* 세 버튼은 한 줄이다. `고객 정보 변경` 만 아래 접힘 안에 숨어 있던 탓에
               "고쳐야 하는데 어디서?" 가 반복됐다. 같은 줄에 두면 찾을 곳이 하나다. */}
@@ -194,7 +218,7 @@ export function CustomersPage({ customers, settings, bookings, messages, ledger,
           </nav>
 
           <section className="mt-5">
-            {tab === "profile" && <><h3 className="font-bold">기본 정보</h3><dl className="mt-2 grid grid-cols-[auto_1fr] gap-x-4 gap-y-1 text-sm"><dt className="text-[var(--muted)]">성별</dt><dd>{{ female: "여성", male: "남성" }[text(selected, "gender", "")] ?? "미지정"}</dd><dt className="text-[var(--muted)]">첫 방문날짜</dt><dd className="tabular-nums">{text(selected, "joinedAt", "기록 없음")}</dd><dt className="text-[var(--muted)]">문자 수신</dt><dd>{value(selected).smsOptIn === false ? "거부" : "동의"}</dd><dt className="text-[var(--muted)]">메모</dt><dd className="whitespace-pre-wrap">{text(selected, "memo", "메모 없음")}</dd></dl></>}
+            {tab === "profile" && <><h3 className="font-bold">기본 정보</h3><dl className="mt-2 grid grid-cols-[auto_1fr] gap-x-4 gap-y-1 text-sm"><dt className="text-[var(--muted)]">성별</dt><dd>{{ female: "여성", male: "남성" }[text(selected, "gender", "")] ?? "미지정"}</dd><dt className="text-[var(--muted)]">첫 방문날짜</dt><dd className="tabular-nums">{joinedDate(selected)}</dd><dt className="text-[var(--muted)]">문자 수신</dt><dd>{value(selected).smsOptIn === false ? "거부" : "동의"}</dd><dt className="text-[var(--muted)]">메모</dt><dd className="whitespace-pre-wrap">{text(selected, "memo", "").trim() || "없음"}</dd></dl></>}
             {tab === "bookings" && <><h3 className="font-bold">예약 이력</h3>{listItems(selectedBookings, "예약 이력이 없습니다.", (record) => { const at = seoulClockOrEmpty(text(record, "startsAt")); return <>{at.date} {at.time} · {text(record, "service")} · {text(record, "status")}</>; })}</>}
             {tab === "ledger" && <><h3 className="font-bold">시술·결제 이력</h3>{paymentLedger.length ? <ul className="mt-2 divide-y divide-[var(--border)]">{paymentLedger.map((entry) => <li className="py-2 text-sm tabular-nums" key={entry.id}>{entry.occurredAt.slice(0, 10)} · {typeof entry.details.serviceMajor === "string" ? entry.details.serviceMajor : "결제"} · ₩{entry.amountWon.toLocaleString("ko-KR")}</li>)}</ul> : <p className="mt-2 text-sm text-[var(--muted)]">시술·결제 이력이 없습니다.</p>}</>}
             {tab === "points" && <><h3 className="font-bold">포인트 이력</h3>{pointLedger.length ? <ul className="mt-2">{pointLedger.map((entry) => <li className="text-sm tabular-nums" key={entry.id}>{entry.occurredAt.slice(0, 10)} · {entry.pointsWon.toLocaleString("ko-KR")}P{typeof entry.details.reason === "string" && entry.details.reason ? <span className="ml-2 text-xs text-[var(--muted)]">{entry.details.reason}</span> : null}</li>)}</ul> : <p className="mt-2 text-sm text-[var(--muted)]">포인트 변동 이력이 없습니다.</p>}

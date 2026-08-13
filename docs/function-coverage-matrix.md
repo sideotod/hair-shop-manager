@@ -2,6 +2,18 @@
 
 `FUNCTION.md` 원문 bullet 263개를 순서와 문구 그대로 보존한다. 구현 위치는 승인된 owner-operations 구현의 route/module/test를 가리킨다.
 
+## 인쇄 기능 제외 (2026-08-13, 사용자 지시)
+
+인쇄 관련 5개 bullet은 `사용자 승인 제외` 로 내린다. 코드에서도 전부 삭제했다 —
+`@media print` 규칙, `window.print()` 버튼, 인쇄용 화면(`?print=1`)과 그 라우트 파라미터,
+`no-print`/`print-only` 클래스, `PageToolbar` 의 `noPrint` 속성.
+
+bullet 문구는 원문 그대로 둔다. 레거시 목록은 무엇이 있었는지를 기록하는 문서이지
+무엇을 만들어야 하는지를 정하는 문서가 아니다 — 상태 칸이 그 판단을 담는다.
+
+`조정 내역 수정/인쇄 [추가확인]` 은 한 bullet에 두 기능이 묶여 있다. 정정(수정)은
+역분개 + 대체 2행으로 실제 동작하고 테스트도 있으므로 `구현` 으로 남긴다 — 인쇄 절반만 빠졌다.
+
 | 기능 | 상태 | 구현 위치 | 검증 |
 |---|---|---|---|
 | 로그인 세션 유지, 로그아웃 | 구현 | app/(shell)/page.tsx; components/app-shell.tsx | components/dashboard/dashboard-page.test.tsx |
@@ -9,7 +21,7 @@
 | 검색 기준: 핸드폰 뒷번호/고객명, 닉네임, 전화번호 뒷번호, 그룹명, 메모, 주소, 방문동기, 이메일, 포인트 카드, 패밀리번호 | 구현 | app/(shell)/page.tsx; components/app-shell.tsx | components/dashboard/dashboard-page.test.tsx |
 | 회원 검색 후 고객 정보·시술 결제 내역·상품 판매 내역을 관련 화면에 연동 | 사용자 승인 제외 | docs/function-coverage-matrix.md; components/settings/settings-page.tsx | lib/function-coverage.test.ts; components/settings/settings-page.test.tsx |
 | 이전 화면 이동 | 구현 | app/(shell)/page.tsx; components/app-shell.tsx | components/dashboard/dashboard-page.test.tsx |
-| 인쇄 기능 및 인쇄용 화면 | 구현 | app/(shell)/page.tsx; components/app-shell.tsx | components/dashboard/dashboard-page.test.tsx |
+| 인쇄 기능 및 인쇄용 화면 | 사용자 승인 제외 | docs/function-coverage-matrix.md | lib/function-coverage.test.ts |
 | 공지/가이드/FAQ 열기 | 구현 | app/(shell)/settings/page.tsx; components/settings/settings-page.tsx; components/dashboard/dashboard-page.tsx | components/settings/settings-page.test.tsx; components/dashboard/dashboard-page.test.tsx |
 | 금일 대기 고객, 금일~글피 예약 수, SMS 잔여 건수 요약 | 구현 | app/(shell)/page.tsx; components/app-shell.tsx | components/dashboard/dashboard-page.test.tsx |
 | 금일 대기 고객 입력: 고객명, 메모, 등록 | 구현 | app/(shell)/page.tsx; components/app-shell.tsx | components/dashboard/dashboard-page.test.tsx |
@@ -42,7 +54,7 @@
 | 생일 양력/음력 | 구현 | app/(shell)/customers/page.tsx; app/customer-actions.ts | components/customers/customers-page.test.tsx |
 | 포인트 | 사용자 승인 제외 | docs/function-coverage-matrix.md; components/settings/settings-page.tsx | lib/function-coverage.test.ts; components/settings/settings-page.test.tsx |
 | 패밀리번호 | 구현 | app/(shell)/customers/page.tsx; app/customer-actions.ts | components/customers/customers-page.test.tsx |
-| 담당 직원 | 원장 1인 대체 | app/(shell)/customers/page.tsx; app/customer-actions.ts | components/customers/customers-page.test.tsx |
+| 담당 직원 | 사용자 1인 대체 | app/(shell)/customers/page.tsx; app/customer-actions.ts | components/customers/customers-page.test.tsx |
 | 고객 등급: 일반, 특별1, 특별2 및 설정된 등급 | 구현 | app/(shell)/customers/page.tsx; app/customer-actions.ts | components/customers/customers-page.test.tsx |
 | 고객 그룹 | 구현 | app/(shell)/customers/page.tsx; app/customer-actions.ts | components/customers/customers-page.test.tsx |
 | 방문 동기 | 구현 | app/(shell)/customers/page.tsx; app/customer-actions.ts | components/customers/customers-page.test.tsx |
@@ -73,8 +85,8 @@
 | 최근 방문/미방문 기준 검색 `[추가확인]` | 구현 | app/(shell)/customers/page.tsx; app/customer-actions.ts | components/customers/customers-page.test.tsx |
 | 생일 대상 검색 `[추가확인]` | 구현 | app/(shell)/customers/page.tsx; app/customer-actions.ts | components/customers/customers-page.test.tsx |
 | 검색 결과 대상자 SMS 발송 | 구현 | app/(shell)/customers/page.tsx; app/customer-actions.ts | components/customers/customers-page.test.tsx |
-| 검색 결과 인쇄 | 구현 | app/(shell)/customers/page.tsx; app/customer-actions.ts | components/customers/customers-page.test.tsx |
-| 고객 목록 인쇄 형식 1~4 | 구현 | app/(shell)/customers/page.tsx; app/customer-actions.ts | components/customers/customers-page.test.tsx |
+| 검색 결과 인쇄 | 사용자 승인 제외 | docs/function-coverage-matrix.md | lib/function-coverage.test.ts |
+| 고객 목록 인쇄 형식 1~4 | 사용자 승인 제외 | docs/function-coverage-matrix.md | lib/function-coverage.test.ts |
 | 대기 고객 이름·메모 입력 | 구현 | app/(shell)/customers/page.tsx; app/customer-actions.ts | components/customers/customers-page.test.tsx |
 | 대기 고객 등록 | 구현 | app/(shell)/customers/page.tsx; app/customer-actions.ts | components/customers/customers-page.test.tsx |
 | 등록 대기 고객 목록 | 구현 | app/(shell)/customers/page.tsx; app/customer-actions.ts | components/customers/customers-page.test.tsx |
@@ -103,7 +115,7 @@
 | 기타 | 구현 | app/(shell)/sales/page.tsx; app/payment-actions.ts; components/sales/revenue-dashboard.tsx | lib/finance.test.ts; components/sales/revenue-dashboard.test.tsx |
 | 지역페이 | 구현 | app/(shell)/sales/page.tsx; app/payment-actions.ts; components/sales/revenue-dashboard.tsx | lib/finance.test.ts; components/sales/revenue-dashboard.test.tsx |
 | 포인트 적립 | 구현 | app/(shell)/sales/page.tsx; app/payment-actions.ts; components/sales/revenue-dashboard.tsx; components/sales/payment-amounts.tsx | lib/finance.test.ts; components/sales/revenue-dashboard.test.tsx; components/sales/payment-customer.test.tsx |
-| 담당 디자이너/시술자 | 원장 1인 대체 | app/(shell)/sales/page.tsx; app/payment-actions.ts; components/sales/revenue-dashboard.tsx | lib/finance.test.ts; components/sales/revenue-dashboard.test.tsx |
+| 담당 디자이너/시술자 | 사용자 1인 대체 | app/(shell)/sales/page.tsx; app/payment-actions.ts; components/sales/revenue-dashboard.tsx | lib/finance.test.ts; components/sales/revenue-dashboard.test.tsx |
 | 메모 150자 | 구현 | app/(shell)/sales/page.tsx; app/payment-actions.ts; components/sales/revenue-dashboard.tsx | lib/finance.test.ts; components/sales/revenue-dashboard.test.tsx |
 | 선택 메모/약품 메모 | 구현 | app/(shell)/sales/page.tsx; app/payment-actions.ts; components/sales/revenue-dashboard.tsx | lib/finance.test.ts; components/sales/revenue-dashboard.test.tsx |
 | 두피 상태·모발 특징 메모 `[추가확인]` | 구현 | app/(shell)/sales/page.tsx; app/payment-actions.ts; components/sales/revenue-dashboard.tsx | lib/finance.test.ts; components/sales/revenue-dashboard.test.tsx |
@@ -112,14 +124,14 @@
 | VAT 포함/별도 처리 | 구현 | app/(shell)/sales/page.tsx; app/payment-actions.ts; components/sales/revenue-dashboard.tsx | lib/finance.test.ts; components/sales/revenue-dashboard.test.tsx |
 | 할인율 적용 | 구현 | app/(shell)/sales/page.tsx; app/payment-actions.ts; components/sales/revenue-dashboard.tsx | lib/finance.test.ts; components/sales/revenue-dashboard.test.tsx |
 | 수수료 계산 | 구현 | app/(shell)/sales/page.tsx; app/payment-actions.ts; components/sales/revenue-dashboard.tsx | lib/finance.test.ts; components/sales/revenue-dashboard.test.tsx |
-| 디자이너 인센티브 계산 | 원장 1인 대체 | app/(shell)/sales/page.tsx; app/payment-actions.ts; components/sales/revenue-dashboard.tsx | lib/finance.test.ts; components/sales/revenue-dashboard.test.tsx |
+| 디자이너 인센티브 계산 | 사용자 1인 대체 | app/(shell)/sales/page.tsx; app/payment-actions.ts; components/sales/revenue-dashboard.tsx | lib/finance.test.ts; components/sales/revenue-dashboard.test.tsx |
 | 샵 수익 계산 | 구현 | app/(shell)/sales/page.tsx; app/payment-actions.ts; components/sales/revenue-dashboard.tsx | lib/finance.test.ts; components/sales/revenue-dashboard.test.tsx |
 | 결제 저장 | 구현 | app/(shell)/sales/page.tsx; app/payment-actions.ts; components/sales/revenue-dashboard.tsx | lib/finance.test.ts; components/sales/revenue-dashboard.test.tsx |
 | 일별 매출 | 구현 | app/(shell)/sales/page.tsx; app/payment-actions.ts; components/sales/revenue-day-chart.tsx | lib/finance.test.ts; components/sales/revenue-day-chart.test.tsx |
 | 월별 매출 | 구현 | app/(shell)/sales/page.tsx; app/payment-actions.ts; components/sales/revenue-bar-chart.tsx | lib/finance.test.ts; components/sales/revenue-bar-chart.test.tsx |
 | 기간별 매출 `[추가확인]` | 구현 | app/(shell)/sales/page.tsx; app/payment-actions.ts; components/sales/revenue-bar-chart.tsx | lib/finance.test.ts; components/sales/revenue-bar-chart.test.tsx |
 | 시술 유형별 매출 | 구현 | app/(shell)/sales/page.tsx; app/payment-actions.ts; components/sales/revenue-dashboard.tsx | lib/finance.test.ts; components/sales/revenue-dashboard.test.tsx |
-| 디자이너별 매출 | 원장 1인 대체 | app/(shell)/sales/page.tsx; app/payment-actions.ts; components/sales/revenue-dashboard.tsx | lib/finance.test.ts; components/sales/revenue-dashboard.test.tsx |
+| 디자이너별 매출 | 사용자 1인 대체 | app/(shell)/sales/page.tsx; app/payment-actions.ts; components/sales/revenue-dashboard.tsx | lib/finance.test.ts; components/sales/revenue-dashboard.test.tsx |
 | 결제 수단별 매출 | 구현 | app/(shell)/sales/page.tsx; app/payment-actions.ts; components/sales/revenue-dashboard.tsx | lib/finance.test.ts; components/sales/revenue-dashboard.test.tsx |
 | 현금영수증/카드/N페이 등 결제 구분 | 구현 | app/(shell)/sales/page.tsx; app/payment-actions.ts; components/sales/revenue-dashboard.tsx | lib/finance.test.ts; components/sales/revenue-dashboard.test.tsx |
 | VAT | 사용자 승인 제외 | docs/function-coverage-matrix.md; components/settings/settings-page.tsx | lib/function-coverage.test.ts; components/settings/settings-page.test.tsx |
@@ -127,7 +139,7 @@
 | 인센티브 | 사용자 승인 제외 | docs/function-coverage-matrix.md; components/settings/settings-page.tsx | lib/function-coverage.test.ts; components/settings/settings-page.test.tsx |
 | 샵 수익 | 사용자 승인 제외 | docs/function-coverage-matrix.md; components/settings/settings-page.tsx | lib/function-coverage.test.ts; components/settings/settings-page.test.tsx |
 | 매출 내역 수정 | 구현 | app/(shell)/sales/page.tsx; app/payment-actions.ts; components/sales/revenue-dashboard.tsx | lib/finance.test.ts; components/sales/revenue-dashboard.test.tsx |
-| 매출 내역 인쇄 | 구현 | app/(shell)/sales/page.tsx; app/payment-actions.ts; components/sales/revenue-dashboard.tsx | lib/finance.test.ts; components/sales/revenue-dashboard.test.tsx |
+| 매출 내역 인쇄 | 사용자 승인 제외 | docs/function-coverage-matrix.md | lib/function-coverage.test.ts |
 | 계정/매출 출력 | 구현 | app/(shell)/sales/page.tsx; app/payment-actions.ts; components/sales/revenue-dashboard.tsx | lib/finance.test.ts; components/sales/revenue-dashboard.test.tsx |
 | 상품 판매 등록 | 사용자 승인 제외 | docs/function-coverage-matrix.md; components/settings/settings-page.tsx | lib/function-coverage.test.ts; components/settings/settings-page.test.tsx |
 | 회원/비회원 연결 | 사용자 승인 제외 | docs/function-coverage-matrix.md; components/settings/settings-page.tsx | lib/function-coverage.test.ts; components/settings/settings-page.test.tsx |
@@ -152,11 +164,11 @@
 | 차감 시 간편 메모 | 사용자 승인 제외 | docs/function-coverage-matrix.md; components/settings/settings-page.tsx | lib/function-coverage.test.ts; components/settings/settings-page.test.tsx |
 | 쿠폰 발송 자동문자 설정 | 사용자 승인 제외 | docs/function-coverage-matrix.md; components/settings/settings-page.tsx | lib/function-coverage.test.ts; components/settings/settings-page.test.tsx |
 | 쿠폰 판매·차감 매출 반영 `[추가확인]` | 사용자 승인 제외 | docs/function-coverage-matrix.md; components/settings/settings-page.tsx | lib/function-coverage.test.ts; components/settings/settings-page.test.tsx |
-| 지출 내역 등록 | 구현 | app/(shell)/operations/page.tsx; app/operation-actions.ts; lib/operations.ts; components/operations/operations-page.tsx | lib/operations.test.ts; components/operations/operations-page.test.tsx |
-| 지출 항목 사전 등록 | 구현 | app/(shell)/operations/page.tsx; app/operation-actions.ts; lib/operations.ts; components/operations/operations-page.tsx | lib/operations.test.ts; components/operations/operations-page.test.tsx |
-| 기간별 지출 조회 `[추가확인]` | 구현 | app/(shell)/operations/page.tsx; app/operation-actions.ts; lib/operations.ts; components/operations/operations-page.tsx | lib/operations.test.ts; components/operations/operations-page.test.tsx |
-| 매출·지출 조정/정산 | 구현 | app/(shell)/operations/page.tsx; app/operation-actions.ts; lib/operations.ts; components/operations/operations-page.tsx | lib/operations.test.ts; components/operations/operations-page.test.tsx |
-| 조정 내역 수정/인쇄 `[추가확인]` | 구현 | app/(shell)/operations/page.tsx; app/operation-actions.ts; lib/operations.ts; components/operations/operations-page.tsx | lib/operations.test.ts; components/operations/operations-page.test.tsx |
+| 지출 내역 등록 | 구현 | app/(shell)/sales/page.tsx; app/operation-actions.ts; lib/operations.ts; components/operations/operations-page.tsx | lib/operations.test.ts; components/operations/operations-page.test.tsx |
+| 지출 항목 사전 등록 | 구현 | app/(shell)/sales/page.tsx; app/operation-actions.ts; lib/operations.ts; components/operations/operations-page.tsx | lib/operations.test.ts; components/operations/operations-page.test.tsx |
+| 기간별 지출 조회 `[추가확인]` | 구현 | app/(shell)/sales/page.tsx; app/operation-actions.ts; lib/operations.ts; components/operations/operations-page.tsx | lib/operations.test.ts; components/operations/operations-page.test.tsx |
+| 매출·지출 조정/정산 | 구현 | app/(shell)/sales/page.tsx; app/operation-actions.ts; lib/operations.ts; components/operations/operations-page.tsx | lib/operations.test.ts; components/operations/operations-page.test.tsx |
+| 조정 내역 수정/인쇄 `[추가확인]` | 구현 | app/(shell)/sales/page.tsx; app/operation-actions.ts; lib/operations.ts; components/operations/operations-page.tsx | lib/operations.test.ts; components/operations/operations-page.test.tsx |
 | 받는 사람 최대 3명 | 구현 | app/(shell)/messages/page.tsx; app/message-actions.ts; lib/messages.ts | lib/messages.test.ts; components/messages/messages-page.test.tsx |
 | 보내는 사람 | 구현 | app/(shell)/messages/page.tsx; app/message-actions.ts; lib/messages.ts | lib/messages.test.ts; components/messages/messages-page.test.tsx |
 | SMS 단문 / LMS 장문 | 구현 | app/(shell)/messages/page.tsx; app/message-actions.ts; lib/messages.ts | lib/messages.test.ts; components/messages/messages-page.test.tsx |
@@ -195,7 +207,7 @@
 | 예약 등록 | 구현 | app/(shell)/bookings/page.tsx; app/booking-actions.ts; lib/booking.ts | lib/booking.test.ts; components/bookings/bookings-page.test.tsx |
 | 고객 검색/신규 고객 연결 | 구현 | app/(shell)/bookings/page.tsx; app/booking-actions.ts; lib/booking.ts | lib/booking.test.ts; components/bookings/bookings-page.test.tsx |
 | 예약 시간 선택 | 구현 | app/(shell)/bookings/page.tsx; app/booking-actions.ts; lib/booking.ts | lib/booking.test.ts; components/bookings/bookings-page.test.tsx |
-| 담당 디자이너 선택 | 원장 1인 대체 | app/(shell)/bookings/page.tsx; app/booking-actions.ts; lib/booking.ts | lib/booking.test.ts; components/bookings/bookings-page.test.tsx |
+| 담당 디자이너 선택 | 사용자 1인 대체 | app/(shell)/bookings/page.tsx; app/booking-actions.ts; lib/booking.ts | lib/booking.test.ts; components/bookings/bookings-page.test.tsx |
 | 시술 메뉴 선택 | 구현 | app/(shell)/bookings/page.tsx; app/booking-actions.ts; lib/booking.ts | lib/booking.test.ts; components/bookings/bookings-page.test.tsx |
 | 예약 메모 | 구현 | app/(shell)/bookings/page.tsx; app/booking-actions.ts; lib/booking.ts | lib/booking.test.ts; components/bookings/bookings-page.test.tsx |
 | 예약 상태 변경 `[추가확인]` | 구현 | app/(shell)/bookings/page.tsx; app/booking-actions.ts; lib/booking.ts | lib/booking.test.ts; components/bookings/bookings-page.test.tsx |
@@ -214,28 +226,28 @@
 | 네이버 페이센터 연결 | 사용자 승인 메일 대체 | components/settings/settings-page.tsx; components/bookings/naver-mail-connection.tsx | components/settings/settings-page.test.tsx; components/bookings/naver-mail-connection.test.tsx |
 | 네이버 예약 설정 참고 자료 | 사용자 승인 메일 대체 | components/settings/settings-page.tsx; components/bookings/naver-mail-connection.tsx | components/settings/settings-page.test.tsx; components/bookings/naver-mail-connection.test.tsx |
 | 네이버 예약 데이터 동기화 `[추가확인: 실제 API/동기화 주기/충돌 규칙]` | 사용자 승인 메일 대체 | components/bookings/naver-mail-connection.tsx; lib/naver-mail.ts; app/naver-mail-actions.ts; app/(shell)/bookings/page.tsx | components/bookings/naver-mail-connection.test.tsx; lib/naver-mail.test.ts; app/naver-mail-actions.test.ts |
-| 직원 목록 | 원장 1인 대체 | lib/auth.ts; components/app-shell.tsx; docs/superpowers/specs/2026-07-31-hairhaeyo-owner-operations-design.md | lib/auth.test.ts; components/dashboard/dashboard-page.test.tsx |
-| 직원 등록/수정/삭제 `[추가확인]` | 원장 1인 대체 | lib/auth.ts; components/app-shell.tsx; docs/superpowers/specs/2026-07-31-hairhaeyo-owner-operations-design.md | lib/auth.test.ts; components/dashboard/dashboard-page.test.tsx |
-| 직원 로그인/비밀번호 | 원장 1인 대체 | lib/auth.ts; components/app-shell.tsx; docs/superpowers/specs/2026-07-31-hairhaeyo-owner-operations-design.md | lib/auth.test.ts; components/dashboard/dashboard-page.test.tsx |
-| 직원별 담당 고객 | 원장 1인 대체 | lib/auth.ts; components/app-shell.tsx; docs/superpowers/specs/2026-07-31-hairhaeyo-owner-operations-design.md | lib/auth.test.ts; components/dashboard/dashboard-page.test.tsx |
-| 직원별 시술 매출 | 원장 1인 대체 | lib/auth.ts; components/app-shell.tsx; docs/superpowers/specs/2026-07-31-hairhaeyo-owner-operations-design.md | lib/auth.test.ts; components/dashboard/dashboard-page.test.tsx |
+| 직원 목록 | 사용자 1인 대체 | lib/auth.ts; components/app-shell.tsx; docs/superpowers/specs/2026-07-31-hairhaeyo-owner-operations-design.md | lib/auth.test.ts; components/dashboard/dashboard-page.test.tsx |
+| 직원 등록/수정/삭제 `[추가확인]` | 사용자 1인 대체 | lib/auth.ts; components/app-shell.tsx; docs/superpowers/specs/2026-07-31-hairhaeyo-owner-operations-design.md | lib/auth.test.ts; components/dashboard/dashboard-page.test.tsx |
+| 직원 로그인/비밀번호 | 사용자 1인 대체 | lib/auth.ts; components/app-shell.tsx; docs/superpowers/specs/2026-07-31-hairhaeyo-owner-operations-design.md | lib/auth.test.ts; components/dashboard/dashboard-page.test.tsx |
+| 직원별 담당 고객 | 사용자 1인 대체 | lib/auth.ts; components/app-shell.tsx; docs/superpowers/specs/2026-07-31-hairhaeyo-owner-operations-design.md | lib/auth.test.ts; components/dashboard/dashboard-page.test.tsx |
+| 직원별 시술 매출 | 사용자 1인 대체 | lib/auth.ts; components/app-shell.tsx; docs/superpowers/specs/2026-07-31-hairhaeyo-owner-operations-design.md | lib/auth.test.ts; components/dashboard/dashboard-page.test.tsx |
 | 직원별 상품 매출 | 사용자 승인 제외 | docs/function-coverage-matrix.md; components/settings/settings-page.tsx | lib/function-coverage.test.ts; components/settings/settings-page.test.tsx |
-| 직원별 인센티브율 | 원장 1인 대체 | lib/auth.ts; components/app-shell.tsx; docs/superpowers/specs/2026-07-31-hairhaeyo-owner-operations-design.md | lib/auth.test.ts; components/dashboard/dashboard-page.test.tsx |
-| 직원별 수수료율 | 원장 1인 대체 | lib/auth.ts; components/app-shell.tsx; docs/superpowers/specs/2026-07-31-hairhaeyo-owner-operations-design.md | lib/auth.test.ts; components/dashboard/dashboard-page.test.tsx |
-| 직원별 화면 접근/메뉴 노출 | 원장 1인 대체 | lib/auth.ts; components/app-shell.tsx; docs/superpowers/specs/2026-07-31-hairhaeyo-owner-operations-design.md | lib/auth.test.ts; components/dashboard/dashboard-page.test.tsx |
-| 직원/샵 운영 권한 `[추가확인]` | 원장 1인 대체 | lib/auth.ts; components/app-shell.tsx; docs/superpowers/specs/2026-07-31-hairhaeyo-owner-operations-design.md | lib/auth.test.ts; components/dashboard/dashboard-page.test.tsx |
-| 디자이너별 예약 가능 여부 `[추가확인]` | 원장 1인 대체 | lib/auth.ts; components/app-shell.tsx; docs/superpowers/specs/2026-07-31-hairhaeyo-owner-operations-design.md | lib/auth.test.ts; components/dashboard/dashboard-page.test.tsx |
-| 시술 대분류명 수정 | 구현 | app/(shell)/operations/page.tsx; app/operation-actions.ts; lib/operations.ts; components/operations/operations-page.tsx | lib/operations.test.ts; components/operations/operations-page.test.tsx |
-| 시술 상세 메뉴 등록 | 구현 | app/(shell)/operations/page.tsx; app/operation-actions.ts; lib/operations.ts; components/operations/operations-page.tsx | lib/operations.test.ts; components/operations/operations-page.test.tsx |
-| 시술 가격 등록/수정 | 구현 | app/(shell)/operations/page.tsx; app/operation-actions.ts; lib/operations.ts; components/operations/operations-page.tsx | lib/operations.test.ts; components/operations/operations-page.test.tsx |
+| 직원별 인센티브율 | 사용자 1인 대체 | lib/auth.ts; components/app-shell.tsx; docs/superpowers/specs/2026-07-31-hairhaeyo-owner-operations-design.md | lib/auth.test.ts; components/dashboard/dashboard-page.test.tsx |
+| 직원별 수수료율 | 사용자 1인 대체 | lib/auth.ts; components/app-shell.tsx; docs/superpowers/specs/2026-07-31-hairhaeyo-owner-operations-design.md | lib/auth.test.ts; components/dashboard/dashboard-page.test.tsx |
+| 직원별 화면 접근/메뉴 노출 | 사용자 1인 대체 | lib/auth.ts; components/app-shell.tsx; docs/superpowers/specs/2026-07-31-hairhaeyo-owner-operations-design.md | lib/auth.test.ts; components/dashboard/dashboard-page.test.tsx |
+| 직원/샵 운영 권한 `[추가확인]` | 사용자 1인 대체 | lib/auth.ts; components/app-shell.tsx; docs/superpowers/specs/2026-07-31-hairhaeyo-owner-operations-design.md | lib/auth.test.ts; components/dashboard/dashboard-page.test.tsx |
+| 디자이너별 예약 가능 여부 `[추가확인]` | 사용자 1인 대체 | lib/auth.ts; components/app-shell.tsx; docs/superpowers/specs/2026-07-31-hairhaeyo-owner-operations-design.md | lib/auth.test.ts; components/dashboard/dashboard-page.test.tsx |
+| 시술 대분류명 수정 | 구현 | app/(shell)/settings/page.tsx; app/operation-actions.ts; lib/operations.ts; components/settings/catalog-sections.tsx | lib/operations.test.ts; components/settings/settings-page.test.tsx |
+| 시술 상세 메뉴 등록 | 구현 | app/(shell)/settings/page.tsx; app/operation-actions.ts; lib/operations.ts; components/settings/catalog-sections.tsx | lib/operations.test.ts; components/settings/settings-page.test.tsx |
+| 시술 가격 등록/수정 | 구현 | app/(shell)/settings/page.tsx; app/operation-actions.ts; lib/operations.ts; components/settings/catalog-sections.tsx | lib/operations.test.ts; components/settings/settings-page.test.tsx |
 | 상품 대분류/상품명/가격 `[추가확인]` | 사용자 승인 제외 | docs/function-coverage-matrix.md; components/settings/settings-page.tsx | lib/function-coverage.test.ts; components/settings/settings-page.test.tsx |
 | 판매 직원 연결 | 사용자 승인 제외 | docs/function-coverage-matrix.md; components/settings/settings-page.tsx | lib/function-coverage.test.ts; components/settings/settings-page.test.tsx |
-| 두피 상태 사전 등록 | 구현 | app/(shell)/operations/page.tsx; app/operation-actions.ts; lib/operations.ts; components/operations/operations-page.tsx | lib/operations.test.ts; components/operations/operations-page.test.tsx |
-| 모발 특징 사전 등록 | 구현 | app/(shell)/operations/page.tsx; app/operation-actions.ts; lib/operations.ts; components/operations/operations-page.tsx | lib/operations.test.ts; components/operations/operations-page.test.tsx |
-| 선택 메모 사전 등록 | 구현 | app/(shell)/operations/page.tsx; app/operation-actions.ts; lib/operations.ts; components/operations/operations-page.tsx | lib/operations.test.ts; components/operations/operations-page.test.tsx |
+| 두피 상태 사전 등록 | 구현 | app/(shell)/settings/page.tsx; app/operation-actions.ts; lib/operations.ts; components/settings/catalog-sections.tsx | lib/operations.test.ts; components/settings/settings-page.test.tsx |
+| 모발 특징 사전 등록 | 구현 | app/(shell)/settings/page.tsx; app/operation-actions.ts; lib/operations.ts; components/settings/catalog-sections.tsx | lib/operations.test.ts; components/settings/settings-page.test.tsx |
+| 선택 메모 사전 등록 | 구현 | app/(shell)/settings/page.tsx; app/operation-actions.ts; lib/operations.ts; components/settings/catalog-sections.tsx | lib/operations.test.ts; components/settings/settings-page.test.tsx |
 | 사은품 등록 | 사용자 승인 제외 | docs/function-coverage-matrix.md; components/settings/settings-page.tsx | lib/function-coverage.test.ts; components/settings/settings-page.test.tsx |
-| 편리한 메모 선택값 | 구현 | app/(shell)/operations/page.tsx; app/operation-actions.ts; lib/operations.ts; components/operations/operations-page.tsx | lib/operations.test.ts; components/operations/operations-page.test.tsx |
-| 가격표/시술 분류 팝업 | 구현 | app/(shell)/operations/page.tsx; app/operation-actions.ts; lib/operations.ts; components/operations/operations-page.tsx | lib/operations.test.ts; components/operations/operations-page.test.tsx |
+| 편리한 메모 선택값 | 구현 | app/(shell)/settings/page.tsx; app/operation-actions.ts; lib/operations.ts; components/settings/catalog-sections.tsx | lib/operations.test.ts; components/settings/settings-page.test.tsx |
+| 가격표/시술 분류 팝업 | 구현 | app/(shell)/settings/page.tsx; app/operation-actions.ts; lib/operations.ts; components/settings/catalog-sections.tsx | lib/operations.test.ts; components/settings/settings-page.test.tsx |
 | 매장명 | 구현 | app/(shell)/settings/page.tsx; app/settings-actions.ts; components/settings/settings-page.tsx; lib/settings.ts | components/settings/settings-page.test.tsx; lib/function-coverage.test.ts |
 | 매장 전화번호 | 구현 | app/(shell)/settings/page.tsx; app/settings-actions.ts; components/settings/settings-page.tsx; lib/settings.ts | components/settings/settings-page.test.tsx; lib/function-coverage.test.ts |
 | 비밀번호 변경/확인 | 구현 | app/(shell)/settings/page.tsx; app/settings-actions.ts; components/settings/settings-page.tsx; lib/settings.ts | components/settings/settings-page.test.tsx; lib/function-coverage.test.ts |
@@ -248,7 +260,7 @@
 | 기본 성별/기본 SMS 수신값 | 구현 | app/(shell)/settings/page.tsx; app/settings-actions.ts; components/settings/settings-page.tsx; components/customers/customers-page.tsx; lib/settings.ts | components/settings/settings-page.test.tsx; components/customers/customers-page.test.tsx; lib/function-coverage.test.ts |
 | 고객 등급·그룹·방문 동기 | 구현 | app/(shell)/settings/page.tsx; app/settings-actions.ts; components/settings/settings-page.tsx; lib/settings.ts | components/settings/settings-page.test.tsx; lib/function-coverage.test.ts |
 | 포인트 시작값/한도/적립 방식 | 구현 | app/(shell)/settings/page.tsx; app/settings-actions.ts; components/settings/settings-page.tsx; lib/settings.ts | components/settings/settings-page.test.tsx; lib/function-coverage.test.ts |
-| 직원별 수수료·인센티브 기준 | 원장 1인 대체 | app/(shell)/settings/page.tsx; app/settings-actions.ts; components/settings/settings-page.tsx; lib/settings.ts | components/settings/settings-page.test.tsx; lib/function-coverage.test.ts |
+| 직원별 수수료·인센티브 기준 | 사용자 1인 대체 | app/(shell)/settings/page.tsx; app/settings-actions.ts; components/settings/settings-page.tsx; lib/settings.ts | components/settings/settings-page.test.tsx; lib/function-coverage.test.ts |
 | VAT 설정 | 구현 | app/(shell)/settings/page.tsx; app/settings-actions.ts; components/settings/settings-page.tsx; lib/settings.ts | components/settings/settings-page.test.tsx; lib/function-coverage.test.ts |
 | 카드 수수료율 | 구현 | app/(shell)/settings/page.tsx; app/settings-actions.ts; components/settings/settings-page.tsx; lib/settings.ts | components/settings/settings-page.test.tsx; lib/function-coverage.test.ts |
 | 쿠폰 VAT 설정 | 사용자 승인 제외 | docs/function-coverage-matrix.md; components/settings/settings-page.tsx | lib/function-coverage.test.ts; components/settings/settings-page.test.tsx |

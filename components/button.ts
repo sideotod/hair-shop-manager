@@ -25,7 +25,7 @@ export type ButtonTone = "primary" | "secondary" | "quiet" | "warning";
  * 키보드 포커스 링 단일 정의.
  *
  * 실측: 포커스 표시가 있는 곳은 설정 화면과 차트뿐이었고, 셸 검색창은 아예 `outline-none` 이었다.
- * 마우스 없이 화면을 도는 원장은 지금 자기가 어디 있는지 볼 수 없다.
+ * 마우스 없이 화면을 도는 사용자는 지금 자기가 어디 있는지 볼 수 없다.
  * `focus-visible` 만 쓴다 — 마우스 클릭에는 링이 뜨지 않는다.
  */
 export const focusRing = "focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--brand)]";
@@ -56,7 +56,7 @@ export const statusPill = "inline-flex h-[26px] items-center rounded-full border
  *
  * 여덟 파일이 같은 한 줄을 각자 적어 두었고 세 갈래로 갈라져 있었다 —
  * 포커스 링을 import 한 곳 / 손으로 펴 적은 곳 / **아예 없는 곳**(결제 3파일).
- * 결제 화면은 키보드만 쓰는 원장이 지금 어느 칸에 있는지 볼 수 없었다.
+ * 결제 화면은 키보드만 쓰는 사용자가 지금 어느 칸에 있는지 볼 수 없었다.
  * 글자도 `text-sm` 과 `text-[13px]` 로 갈라져 같은 폼 안에서 칸마다 크기가 달랐다.
  *
  * 폭·바깥 여백처럼 칸마다 다른 것만 뒤에 덧붙인다 (`${control} w-full`).

@@ -17,7 +17,7 @@ import { surface as card } from "../surface";
 export function navChip(active: boolean) {
   return button("md", active ? "primary" : "secondary");
 }
-const arrow = button("md", "secondary", "no-print aria-disabled:pointer-events-none aria-disabled:opacity-40");
+const arrow = button("md", "secondary", "aria-disabled:pointer-events-none aria-disabled:opacity-40");
 
 
 /** 매출 워크스페이스 전체가 쓰는 단일 기간 목록. 탭마다 다르게 재구현하지 않는다. */
@@ -42,30 +42,29 @@ function PeriodArrow({ disabled, href, label, children }: { disabled: boolean; h
 }
 
 /**
- * `tab` 은 탭 줄의 현재 위치이자 기간 줄을 그릴지 말지를 정한다.
+ * `tab` 은 기간 줄을 그릴지 말지를 정한다.
  *
- * 결제 등록 탭에는 기간이 없다. 일별/주별/월별/연도/누적 다섯 칸과 ←/→ 두 칸은 누르면
- * URL 만 바뀌고 결제 폼은 한 글자도 달라지지 않는다 — 폼은 `today={seoulDate()}` 만 본다.
+ * 결제 등록에는 기간이 없다. 일별/주별/월별/연도/누적 다섯 칸과 ←/→ 두 칸은 누르면
+ * URL 만 바뀌고 결제 폼은 한 글자도 달라지지 않는다 — 폼은 자기 기본 날짜만 본다.
  * 아무 일도 안 하는 컨트롤 7개가 폼보다 먼저 Tab 순서에 서 있었다.
  * 매출 분석·지출/정산은 실제로 기간으로 잘라 보는 화면이라 그대로 둔다.
+ *
+ * 탭 줄(매출 분석 · 결제 등록 · 지출/정산)은 없앴다. 셋은 성격이 다르다 —
+ * 분석은 읽는 화면, 결제는 쓰는 작업, 지출은 이 매장이 쓰지 않는 기능이다(지출 원장 0건).
+ * 한 줄에 나란히 두면 "이 셋이 한 묶음"으로 배우게 된다. 결제는 업무 문맥에서
+ * (예약 행·고객 상세·오늘 화면) 열리고, 거래 기록은 사이드바가 맡는다.
+ * 라우트(`?tab=payment`, `?tab=expenses`)는 그대로 살아 있다 — 링크만 내렸다.
  */
 export function SalesControls({ query, label, tab }: { query: RevenueQuery; label: string; tab?: "payment" | "expenses" }) {
-  return <>
-    {/* 탭 줄은 언제나 본문 첫 줄이다. 설명문 툴바가 앞뒤로 오가면 탭마다 줄이 위아래로 튄다. */}
-    <nav aria-label="매출 기능" className="no-print flex gap-2">
-      <Link aria-current={!tab ? "page" : undefined} className={navChip(!tab)} href={href(query)}>매출 분석</Link>
-      <Link aria-current={tab === "payment" ? "page" : undefined} className={navChip(tab === "payment")} href={href(query, "payment")}>결제 등록</Link>
-      <Link aria-current={tab === "expenses" ? "page" : undefined} className={navChip(tab === "expenses")} href={href(query, "expenses")}>지출/정산</Link>
-    </nav>
-    {tab !== "payment" && <nav aria-label="매출 조회" className={`${card} mt-5 flex items-center justify-between p-5`}>
-      <div className="no-print flex gap-2">
-        {viewOptions.map(([view, viewLabel]) => <Link aria-current={query.view === view ? "page" : undefined} className={navChip(query.view === view)} data-sales-period={view} href={href({ ...query, view }, tab)} key={view}>{viewLabel}</Link>)}
-      </div>
-      <div className="flex items-center gap-3">
-        <PeriodArrow disabled={query.view === "total"} href={href(previousRevenueQuery(query), tab)} label="이전 기간">←</PeriodArrow>
-        <strong className="font-mono text-[12px] font-medium tabular-nums text-[var(--muted)]">{label}</strong>
-        <PeriodArrow disabled={query.view === "total"} href={href(nextRevenueQuery(query), tab)} label="다음 기간">→</PeriodArrow>
-      </div>
-    </nav>}
-  </>;
+  if (tab === "payment") return null;
+  return <nav aria-label="매출 조회" className={`${card} flex items-center justify-between p-5`}>
+    <div className="flex gap-2">
+      {viewOptions.map(([view, viewLabel]) => <Link aria-current={query.view === view ? "page" : undefined} className={navChip(query.view === view)} data-sales-period={view} href={href({ ...query, view }, tab)} key={view}>{viewLabel}</Link>)}
+    </div>
+    <div className="flex items-center gap-3">
+      <PeriodArrow disabled={query.view === "total"} href={href(previousRevenueQuery(query), tab)} label="이전 기간">←</PeriodArrow>
+      <strong className="font-mono text-[12px] font-medium tabular-nums text-[var(--muted)]">{label}</strong>
+      <PeriodArrow disabled={query.view === "total"} href={href(nextRevenueQuery(query), tab)} label="다음 기간">→</PeriodArrow>
+    </div>
+  </nav>;
 }

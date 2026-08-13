@@ -66,9 +66,9 @@ export function queueMessage(store: SalonStore, input: QueueMessageInput) {
   if (remaining < recipients.length) throw new Error("SMS 잔여 건수가 부족합니다.");
 
   const message = store.save("messages", randomUUID(), {
-    requestKey: input.requestKey, recipientIds: recipients.map(({ id }) => id), recipientCount: recipients.length, text, bytes: messageBytes(text), channel: messageType(text), status: "dry-run", scheduledAt: input.scheduledAt ?? null, operator: "원장",
-  }, "원장");
-  store.saveSettings({ ...settings, smsRemaining: remaining - recipients.length }, "원장");
+    requestKey: input.requestKey, recipientIds: recipients.map(({ id }) => id), recipientCount: recipients.length, text, bytes: messageBytes(text), channel: messageType(text), status: "dry-run", scheduledAt: input.scheduledAt ?? null, operator: "사용자",
+  }, "사용자");
+  store.saveSettings({ ...settings, smsRemaining: remaining - recipients.length }, "사용자");
   return message;
 }
 
@@ -77,5 +77,5 @@ export function saveAutomationRule(store: SalonStore, input: { id?: string; labe
   const label = input.label.trim();
   const schedule = input.schedule.trim();
   if (!label || !text || !schedule) throw new Error("자동 문자 정보를 입력하세요.");
-  return store.save("automations", input.id || randomUUID(), { label, status: input.enabled ? "사용" : "중지", text, schedule, channel: messageType(text), bytes: messageBytes(text), statusLabel: "dry-run", operator: "원장" }, "원장");
+  return store.save("automations", input.id || randomUUID(), { label, status: input.enabled ? "사용" : "중지", text, schedule, channel: messageType(text), bytes: messageBytes(text), statusLabel: "dry-run", operator: "사용자" }, "사용자");
 }

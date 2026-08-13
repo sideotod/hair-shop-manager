@@ -1,11 +1,12 @@
 import { correctPayment, savePayment } from "../../app/payment-actions";
+import { serviceMajorOptions } from "../../lib/operations";
 import { control, focusRing } from "../button";
 import { PageToolbar } from "../page-toolbar";
 import { SubmitButton, ActionForm, NoticeBanner } from "../submit-button";
 import { typeScale } from "../type";
 import { PaymentAmounts } from "./payment-amounts";
 import { PaymentCustomer, PaymentMemberScope } from "./payment-customer";
-import type { JsonObject, JsonValue } from "../../lib/salon-domain";
+import type { JsonObject, JsonValue, SalonRecord } from "../../lib/salon-domain";
 
 type Customer = { id: string; value: JsonValue };
 const field = control;
@@ -25,7 +26,7 @@ const record = (customer: Customer) => customer.value && typeof customer.value =
  * 렌더 중 `crypto.randomUUID()` 를 부르면 같은 요청의 재렌더마다 값이 달라져
  * 마크업이 매번 새 바이트가 되고(캐시 무효) 멱등성 키의 의미도 사라진다.
  */
-export function PaymentForm({ customers, customerId, correctionTargetId, error, notice, requestKey, returnTo = "/sales?tab=payment", settings = {}, today }: { customers: readonly Customer[]; customerId?: string; correctionTargetId?: string; error?: string; notice?: string; requestKey: string; returnTo?: string; settings?: JsonObject; today: string }) {
+export function PaymentForm({ booking, catalog = [], customers, customerId, correctionTargetId, defaultDate, defaultTime, error, notice, requestKey, returnTo = "/sales?tab=payment", serviceDetail, serviceMajor, settings = {} }: { booking?: { id: string; date: string; time: string; customerName: string }; catalog?: readonly SalonRecord<JsonValue>[]; customers: readonly Customer[]; customerId?: string; correctionTargetId?: string; defaultDate: string; defaultTime: string; error?: string; notice?: string; requestKey: string; returnTo?: string; serviceDetail?: string; serviceMajor?: string; settings?: JsonObject }) {
   const vatMode = settings.vatMode === "separate" ? "separate" : "included";
   const cardFeeRate = typeof settings.cardFeeRate === "number" ? settings.cardFeeRate : 0;
   // 설정 화면의 기본값도 1% 다(`settings-page.tsx`). 두 곳이 갈리면 "설정에는 1인데 결제칸은 0" 이 된다.
@@ -35,24 +36,31 @@ export function PaymentForm({ customers, customerId, correctionTargetId, error, 
   const selected = customerId ? customers.find(({ id }) => id === customerId) : undefined;
   const points = selected && record(selected)?.points;
   const availablePoints = typeof points === "number" && Number.isSafeInteger(points) ? points : null;
+  // 정정이면 기존 결제의 대분류를 `current` 로 넘긴다 — 그 값이 카탈로그에서 빠졌어도 목록에 남아야
+  // 정정하려다 대분류가 조용히 바뀌지 않는다 (`operations.ts:65`).
+  const majors = serviceMajorOptions(catalog, serviceMajor);
   return <div>
     {/* `매출 분석` 복귀 링크는 바로 위 `매출 기능` 탭바(`sales-controls.tsx`)가 같은 href 로 이미 제공한다. */}
-    <PageToolbar description="원장 계정으로 불변 거래 기록을 추가합니다." title="결제 등록" />
+    <PageToolbar description="사용자 계정으로 불변 거래 기록을 추가합니다." title="결제 등록" />
     {/* 오류 배너는 폼 안으로 들어갔다(`ActionForm`). 실패가 리다이렉트가 아니라 반환이 되면서
         문구가 폼과 같은 렌더에 실려야 입력값이 살아 있는 채로 오류만 갱신된다. */}
     {notice && <NoticeBanner className="mt-5 rounded-[var(--radius-card)] border border-[var(--success)] bg-[var(--success-soft)] px-4 py-3 text-sm text-[var(--success)]">{notice}</NoticeBanner>}
     {/* `구분`(고객 섹션)과 포인트 두 칸(금액 섹션)이 서로를 알아야 한다. 섹션은 그대로 두고
         스코프만 씌운다 — 아래 마크업은 전부 서버에서 그려져 children 으로 통과한다. */}
-    <PaymentMemberScope><ActionForm action={correctionTargetId ? correctPayment : savePayment} aria-label="결제 등록 양식" className="mt-8 grid w-full max-w-none grid-cols-2 gap-5" error={error} errorClassName="col-span-2 rounded-[var(--radius-card)] border border-[var(--danger)] bg-[var(--danger-soft)] px-4 py-3 text-sm text-[var(--danger)]"><input name="requestKey" type="hidden" value={requestKey} /><input name="returnTo" type="hidden" value={returnTo} />{correctionTargetId && <><input name="targetId" type="hidden" value={correctionTargetId} /><input name="reason" type="hidden" value="결제 정정" /></>}
-      <section className="rounded-[var(--radius-card)] border border-[var(--border)] bg-[var(--surface)] p-5"><h2 className={typeScale.section}>고객 · 시술</h2><div className="mt-4 grid grid-cols-2 gap-4">
+    <PaymentMemberScope><ActionForm action={correctionTargetId ? correctPayment : savePayment} aria-label="결제 등록 양식" className="mt-8 grid w-full max-w-none grid-cols-2 gap-5" error={error} errorClassName="col-span-2 rounded-[var(--radius-card)] border border-[var(--danger)] bg-[var(--danger-soft)] px-4 py-3 text-sm text-[var(--danger)]"><input name="requestKey" type="hidden" value={requestKey} /><input name="returnTo" type="hidden" value={returnTo} />{booking && <input name="bookingId" type="hidden" value={booking.id} />}{correctionTargetId && <><input name="targetId" type="hidden" value={correctionTargetId} /><input name="reason" type="hidden" value="결제 정정" /></>}
+      <section className="rounded-[var(--radius-card)] border border-[var(--border)] bg-[var(--surface)] p-5"><h2 className={typeScale.section}>고객 · 시술</h2>
+        {/* 예약에서 넘어온 결제라는 사실을 폼이 스스로 밝힌다. 없으면 사용자는 이 결제가 어느 예약에
+            붙는지(`finance.ts:147` `details.bookingId`) 저장 뒤에야 알 수 있다. */}
+        {booking && <p className={`mt-2 ${typeScale.meta} text-[var(--muted)]`}>예약 연결 · <span className="tabular-nums">{booking.date} {booking.time}</span> {booking.customerName}</p>}
+        <div className="mt-4 grid grid-cols-2 gap-4">
         <PaymentCustomer customerId={customerId} customers={customers} />
         <label className="grid gap-1 text-xs font-medium text-[var(--muted)]">비회원 이름<input className={field} name="nonMemberName" /></label>
         <label className="grid gap-1 text-xs font-medium text-[var(--muted)]">성별<select className={field} defaultValue="female" name="gender"><option value="female">여성</option><option value="male">남성</option></select></label>
-        <label className="grid gap-1 text-xs font-medium text-[var(--muted)]">시술 대분류<select className={field} defaultValue="커트" name="serviceMajor"><option>커트</option><option>펌</option><option>매직</option><option>드라이</option><option>클리닉</option><option>컬러</option><option>업스타일</option><option>매니큐어</option><option>세트메뉴</option><option>기타</option></select></label>
-        <label className="grid gap-1 text-xs font-medium text-[var(--muted)]">시술 상세<input className={field} name="serviceDetail" /></label><label className="grid gap-1 text-xs font-medium text-[var(--muted)]">스타일명<input className={field} name="styleName" /></label><label className="grid gap-1 text-xs font-medium text-[var(--muted)]">방문<select className={field} defaultValue="first" name="visitType"><option value="first">신규</option><option value="repeat">재방문</option></select></label>
+        <label className="grid gap-1 text-xs font-medium text-[var(--muted)]">시술 대분류<select className={field} defaultValue={serviceMajor || majors[0]} name="serviceMajor">{majors.map((major) => <option key={major}>{major}</option>)}</select></label>
+        <label className="grid gap-1 text-xs font-medium text-[var(--muted)]">시술 상세<input className={field} defaultValue={serviceDetail} name="serviceDetail" /></label><label className="grid gap-1 text-xs font-medium text-[var(--muted)]">스타일명<input className={field} name="styleName" /></label><label className="grid gap-1 text-xs font-medium text-[var(--muted)]">방문<select className={field} defaultValue="first" name="visitType"><option value="first">신규</option><option value="repeat">재방문</option></select></label>
       </div></section>
       <PaymentAmounts availablePoints={availablePoints} cardFeeRate={cardFeeRate} pointEarnRate={pointEarnRate} vatMode={vatMode} />
-      <details className="col-span-2 rounded-[var(--radius-card)] border border-[var(--border)] bg-[var(--surface)] p-5"><summary className={summary}>기록 · {today} 10:00 — 날짜·시간·메모 수정</summary><div className="mt-4 grid grid-cols-4 gap-4"><label className="grid gap-1 text-xs font-medium text-[var(--muted)]">결제일<input className={field} defaultValue={today} name="occurredDate" type="date" /></label><label className="grid gap-1 text-xs font-medium text-[var(--muted)]">시간<input className={field} defaultValue="10:00" name="occurredTime" type="time" /></label><label className="grid gap-1 text-xs font-medium text-[var(--muted)]">일반 메모<input className={field} name="generalNote" /></label><label className="grid gap-1 text-xs font-medium text-[var(--muted)]">의약품 메모<input className={field} name="medicineNote" /></label><label className="grid gap-1 text-xs font-medium text-[var(--muted)]">두피 메모<input className={field} name="scalpNote" /></label><label className="grid gap-1 text-xs font-medium text-[var(--muted)]">모발 메모<input className={field} name="hairNote" /></label><label className="flex items-center gap-2 pt-5 text-sm font-medium"><input name="smsRequested" type="checkbox" />결제 SMS 발송</label></div></details>
+      <details className="col-span-2 rounded-[var(--radius-card)] border border-[var(--border)] bg-[var(--surface)] p-5"><summary className={summary}>기록 · {defaultDate} {defaultTime} — 날짜·시간·메모 수정</summary><div className="mt-4 grid grid-cols-4 gap-4"><label className="grid gap-1 text-xs font-medium text-[var(--muted)]">결제일<input className={field} defaultValue={defaultDate} name="occurredDate" type="date" /></label><label className="grid gap-1 text-xs font-medium text-[var(--muted)]">시간<input className={field} defaultValue={defaultTime} name="occurredTime" type="time" /></label><label className="grid gap-1 text-xs font-medium text-[var(--muted)]">일반 메모<input className={field} name="generalNote" /></label><label className="grid gap-1 text-xs font-medium text-[var(--muted)]">의약품 메모<input className={field} name="medicineNote" /></label><label className="grid gap-1 text-xs font-medium text-[var(--muted)]">두피 메모<input className={field} name="scalpNote" /></label><label className="grid gap-1 text-xs font-medium text-[var(--muted)]">모발 메모<input className={field} name="hairNote" /></label><label className="flex items-center gap-2 pt-5 text-sm font-medium"><input name="smsRequested" type="checkbox" />결제 SMS 발송</label></div></details>
       <SubmitButton extra="col-span-2">{correctionTargetId ? "정정 결제 저장" : "결제 저장"}</SubmitButton>
     </ActionForm></PaymentMemberScope>
   </div>;

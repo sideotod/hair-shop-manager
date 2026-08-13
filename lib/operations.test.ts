@@ -29,7 +29,7 @@ describe("expense ledger", () => {
   it("uses an expense preset's server-owned default amount", () => {
     const store = createSalonStore(":memory:");
     try {
-      store.save("expense-presets", "rent", { name: "임대료", defaultWon: 500000 }, "원장");
+      store.save("expense-presets", "rent", { name: "임대료", defaultWon: 500000 }, "사용자");
       expect(recordExpense(store, form({ requestKey: "expense-preset", presetId: "rent", occurredDate: "2026-07-31", occurredTime: "09:30" }))).toMatchObject({ amountWon: -500000, expenseWon: 500000, details: { expenseName: "임대료" } });
     } finally { store.close(); }
   });

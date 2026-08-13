@@ -3,7 +3,7 @@
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 
-import { cancelBookingRecord, changeBookingStatusRecord, saveBookingRecord, saveBookingSettingsRecord } from "../lib/booking";
+import { cancelBookingRecord, changeBookingStatusRecord, saveBookingRecord } from "../lib/booking";
 import { createSalonStore } from "../lib/salon-store";
 
 function withStore<T>(operation: (store: ReturnType<typeof createSalonStore>) => T) { const store = createSalonStore(); try { return operation(store); } finally { store.close(); } }
@@ -17,7 +17,7 @@ function mutate(formData: FormData, notice: string, operation: (store: ReturnTyp
  * 실패를 **반환**한다. 성공만 이동한다.
  *
  * 리다이렉트는 화면을 처음부터 다시 그린다 — 등록 창이 통째로 닫히면서 입력한 예약이
- * 사라졌다. 원장은 시간 한 칸을 고치는 게 아니라 창을 다시 열고 처음부터 쳐야 했다.
+ * 사라졌다. 사용자는 시간 한 칸을 고치는 게 아니라 창을 다시 열고 처음부터 쳐야 했다.
  * 오류를 돌려주면 창이 그 자리에 남아 브라우저가 들고 있는 입력값이 그대로 살아남는다.
  * `reportNotice()` 의 성공 이동은 `redirect()` 라 예외로 빠져나간다 — `catch` 밖에 두어야 삼키지 않는다.
  */
@@ -28,4 +28,4 @@ export async function saveBooking(_state: string | undefined, formData: FormData
 }
 export async function changeBookingStatus(formData: FormData) { mutate(formData, "예약 상태를 변경했습니다.", (store) => changeBookingStatusRecord(store, formData)); }
 export async function cancelBooking(formData: FormData) { mutate(formData, "예약을 취소했습니다.", (store) => cancelBookingRecord(store, formData)); }
-export async function saveBookingSettings(formData: FormData) { mutate(formData, "예약 설정을 저장했습니다.", (store) => saveBookingSettingsRecord(store, formData)); }
+// 예약 정책 writer 는 `saveShopSettings` 하나다 (설계 §5.3). 폼이 두 곳이면 어느 쪽이 마지막인지로 정책이 갈린다.

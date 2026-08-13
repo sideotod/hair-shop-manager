@@ -2,7 +2,7 @@ import type { LedgerCustomerMix, LedgerHourRow, LedgerWeekdayRow } from "./salon
 import type { RevenueSummary } from "./revenue-aggregate";
 
 /**
- * 원장이 읽는 것은 숫자가 아니라 문장이다 (브리핑형).
+ * 사용자가 읽는 것은 숫자가 아니라 문장이다 (브리핑형).
  * 여기서 만드는 값은 전부 서버 집계에서 나온 것만 쓴다 — 화면은 다시 합산하지 않는다 (§14).
  */
 
@@ -69,9 +69,20 @@ export function hourPattern(rows: readonly LedgerHourRow[]): readonly VisitPatte
   return pattern(rows, (row) => `${row.hour}시`, (row) => row.count, (row) => row.gross);
 }
 
-/** 이관 과정에서 모든 행에 넣은 같은 시각은 실제 방문 분포가 아니다. */
+/**
+ * 시간대 분석을 보여도 되는가. **칸이 몇 개인지로는 알 수 없다.**
+ *
+ * 이관 자료는 원본에 시각이 없어 날짜만 읽고 정오로 채운다
+ * (`scripts/import-hairnury-details.mjs:9`). 그런데도 시간대 분포는 생긴다 —
+ * 실측하니 아홉 칸이 전부 279의 배수였고, 5,578행 중 5,577행의 분이 `:00` 이었다.
+ * 손님이 온 시각이 아니라 가져오기가 만든 모양이다.
+ *
+ * 사람이 찍은 시각은 분이 흩어진다. 그것을 근거로 삼는다.
+ * 실제 결제가 쌓이면 이 조건이 저절로 참이 되어 분석이 되살아난다.
+ */
 export function isUsableHourPattern(rows: readonly LedgerHourRow[]) {
-  return rows.filter((row) => row.count > 0).length > 1;
+  const live = rows.filter((row) => row.count > 0);
+  return live.length > 1 && live.some((row) => row.minutes > 1);
 }
 
 export function customerBriefing(mix: LedgerCustomerMix): CustomerBriefing {

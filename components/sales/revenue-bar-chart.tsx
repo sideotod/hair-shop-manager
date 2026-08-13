@@ -6,7 +6,7 @@ import { typeScale } from "../type";
 
 const won = (value: number) => `₩${value.toLocaleString("ko-KR")}`;
 
-/** 축 눈금은 원장이 읽는 단위로. 억 · 만 · 원 순서로 내려간다. */
+/** 축 눈금은 사용자가 읽는 단위로. 억 · 만 · 원 순서로 내려간다. */
 function tick(value: number) {
   if (value === 0) return "0";
   if (value >= 100_000_000) return `${Math.round(value / 10_000_000) / 10}억`;

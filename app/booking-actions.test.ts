@@ -1,7 +1,9 @@
 import { describe, expect, it } from "vitest";
 
-import { cancelBookingRecord, changeBookingStatusRecord, saveBookingRecord, saveBookingSettingsRecord } from "../lib/booking";
+import { cancelBookingRecord, changeBookingStatusRecord, saveBookingRecord } from "../lib/booking";
 import { createSalonStore } from "../lib/salon-store";
+// 예약 정책 writer 는 `saveShopSettings` 하나가 됐다 (설계 §5.3). 정책을 세우는 테스트는 그 경로를 쓴다.
+import { parseShopSettings } from "../lib/settings";
 
 function form(values: Record<string, string>) {
   const data = new FormData();
@@ -14,18 +16,18 @@ describe("booking actions", () => {
     const store = createSalonStore(":memory:");
     const saved = saveBookingRecord(store, form({ bookingId: "booking-test", customerId: "customer-seed-1", service: "커트", date: "2026-08-03", startTime: "10:00", endTime: "11:00", status: "confirmed", reminderDayBefore: "on" }));
 
-    expect(saved.value).toMatchObject({ customerId: "customer-seed-1", status: "confirmed", reminderDayBefore: true, reminderDayOf: false, operator: "원장" });
+    expect(saved.value).toMatchObject({ customerId: "customer-seed-1", status: "confirmed", reminderDayBefore: true, reminderDayOf: false, operator: "사용자" });
     const changed = changeBookingStatusRecord(store, form({ bookingId: "booking-test", status: "completed" }));
-    expect(changed.value).toMatchObject({ status: "completed", operator: "원장" });
+    expect(changed.value).toMatchObject({ status: "completed", operator: "사용자" });
     expect(cancelBookingRecord(store, form({ bookingId: "booking-test", cancelReason: "고객 요청" })).archivedAt).toBeTruthy();
     expect(store.list("bookings").some(({ id }) => id === "booking-test")).toBe(false);
-    expect(store.snapshot().auditEvents.filter((event) => event.recordId === "booking-test").every((event) => event.actor === "원장")).toBe(true);
+    expect(store.snapshot().auditEvents.filter((event) => event.recordId === "booking-test").every((event) => event.actor === "사용자")).toBe(true);
   });
 
   it("changes the status of legacy bookings that only store a start time", () => {
     const store = createSalonStore(":memory:");
 
-    expect(changeBookingStatusRecord(store, form({ bookingId: "booking-seed-1", status: "completed" })).value).toMatchObject({ status: "completed", operator: "원장" });
+    expect(changeBookingStatusRecord(store, form({ bookingId: "booking-seed-1", status: "completed" })).value).toMatchObject({ status: "completed", operator: "사용자" });
   });
 
   it("blocks overlapping bookings until the owner explicitly enables overlaps", () => {
@@ -35,8 +37,8 @@ describe("booking actions", () => {
     saveBookingRecord(store, form(first));
     expect(() => saveBookingRecord(store, form({ ...first, bookingId: "overlap", startTime: "10:30", endTime: "11:30" }))).toThrow("겹칩니다");
 
-    saveBookingSettingsRecord(store, form({ bookingOpen: "09:30", bookingClose: "21:00", bookingSlotMinutes: "30", bookingAllowOverlap: "on" }));
-    expect(saveBookingRecord(store, form({ ...first, bookingId: "overlap", startTime: "10:30", endTime: "11:30" })).value).toMatchObject({ status: "confirmed", operator: "원장" });
+    store.saveSettings(parseShopSettings(form({ section: "booking", bookingOpen: "09:30", bookingClose: "21:00", bookingSlotMinutes: "30", bookingAllowOverlap: "on" }), store.getSettings()), "사용자");
+    expect(saveBookingRecord(store, form({ ...first, bookingId: "overlap", startTime: "10:30", endTime: "11:30" })).value).toMatchObject({ status: "confirmed", operator: "사용자" });
   });
 
   it("rejects invalid slots before persisting a crafted new customer", () => {
@@ -63,7 +65,7 @@ describe("booking actions", () => {
     const store = createSalonStore(":memory:");
     const before = store.getSettings();
 
-    expect(() => saveBookingSettingsRecord(store, form({ bookingOpen: "09:45", bookingClose: "21:00", bookingSlotMinutes: "30" }))).toThrow("영업 시간");
+    expect(() => parseShopSettings(form({ bookingOpen: "09:45", bookingClose: "21:00", bookingSlotMinutes: "30" }), before)).toThrow("영업 시간");
 
     expect(store.getSettings()).toEqual(before);
   });
@@ -82,7 +84,7 @@ describe("booking actions", () => {
   it("validates reminders without persisting retired Naver credential fields", () => {
     const store = createSalonStore(":memory:");
     expect(() => saveBookingRecord(store, form({ customerId: "customer-seed-1", service: "커트", date: "2026-08-03", startTime: "10:15", endTime: "11:00", status: "confirmed", reminderDayBefore: "not-a-flag" }))).toThrow("예약 알림 설정");
-    const settings = saveBookingSettingsRecord(store, form({ bookingOpen: "09:30", bookingClose: "21:00", bookingSlotMinutes: "30", reminderDayBefore: "on", naverAccount: "owner@example.com", naverShopName: "수원 본점" }));
+    const settings = parseShopSettings(form({ section: "booking", bookingOpen: "09:30", bookingClose: "21:00", bookingSlotMinutes: "30", reminderDayBefore: "on", naverAccount: "owner@example.com", naverShopName: "수원 본점" }), store.getSettings());
     expect(settings).toMatchObject({ bookingOpen: "09:30", reminderDayBefore: true });
     expect(settings).not.toHaveProperty("naverAccount");
   });

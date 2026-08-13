@@ -51,7 +51,7 @@ describe("Naver mail actions", () => {
     const store = createSalonStore(":memory:");
     const prior = { email: "owner@naver.com", provider: "naver" as const, connected: true, lastSyncUid: 12, lastSyncAt: "2026-08-03T10:00:00" };
     store.close = () => undefined;
-    store.saveSettings({ naverMail: prior }, "원장");
+    store.saveSettings({ naverMail: prior }, "사용자");
     vi.mocked(createSalonStore).mockReturnValueOnce(store);
 
     const redirectError = await connectNaverMail(connectionForm()).catch((error: Error) => error);
@@ -68,7 +68,7 @@ describe("Naver mail actions", () => {
   it("tests auth, stores the credential, imports initial mail, then persists the highest UID", async () => {
     const store = createSalonStore(":memory:");
     store.close = () => undefined;
-    store.saveSettings({ naverMail: { email: "old@naver.com", provider: "naver", connected: false, lastSyncUid: 7, lastSyncAt: "2026-08-01T10:00:00" } }, "원장");
+    store.saveSettings({ naverMail: { email: "old@naver.com", provider: "naver", connected: false, lastSyncUid: 7, lastSyncAt: "2026-08-01T10:00:00" } }, "사용자");
     vi.mocked(createSalonStore).mockReturnValueOnce(store);
     vi.mocked(testInboxConnection).mockResolvedValueOnce({ connected: true });
     vi.mocked(discoverNaverBookingMails).mockResolvedValueOnce([discoveredMail]);
@@ -94,7 +94,7 @@ describe("Naver mail actions", () => {
     const prior = { email: "old@naver.com", provider: "naver" as const, connected: false, lastSyncUid: 7, lastSyncAt: "2026-08-01T10:00:00" };
     const secret = "naver-application-password";
     store.close = () => undefined;
-    store.saveSettings({ naverMail: prior }, "원장");
+    store.saveSettings({ naverMail: prior }, "사용자");
     vi.mocked(createSalonStore).mockReturnValueOnce(store);
     vi.mocked(testInboxConnection).mockResolvedValueOnce({ connected: true });
     vi.mocked(writeWindowsCredential).mockResolvedValueOnce(undefined);
@@ -116,7 +116,7 @@ describe("Naver mail actions", () => {
     const store = createSalonStore(":memory:");
     const secret = "naver-application-password";
     store.close = () => undefined;
-    store.saveSettings({ naverMail: { email: "owner@naver.com", provider: "naver", connected: true, lastSyncUid: 7, lastSyncAt: "2026-08-03T10:00:00" } }, "원장");
+    store.saveSettings({ naverMail: { email: "owner@naver.com", provider: "naver", connected: true, lastSyncUid: 7, lastSyncAt: "2026-08-03T10:00:00" } }, "사용자");
 
     const syncError = await synchronizeNaverBookings(false, {
       createStore: () => store,

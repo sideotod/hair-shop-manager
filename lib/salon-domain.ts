@@ -11,7 +11,7 @@ export type CustomerValue = JsonObject & {
   points: number;
   /** 남은 선결제 잔액. 충전은 원장 한 줄로 남고, 이 값은 그 결과다. */
   prepaidWon: number;
-  operator: "원장";
+  operator: "사용자";
 };
 
 export type SalonRecord<T extends JsonValue = JsonValue> = {
@@ -118,6 +118,11 @@ export type LedgerHourRow = {
   readonly hour: number;
   readonly gross: number;
   readonly count: number;
+  /**
+   * 이 시간대에 등장한 서로 다른 '분'의 개수. 시각이 실제로 기록됐는지 판정한다 —
+   * 이관 자료는 날짜만 있어 분이 전부 `:00` 이다 (`salon-briefing.ts:isUsableHourPattern`).
+   */
+  readonly minutes: number;
 };
 
 /**

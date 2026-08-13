@@ -37,9 +37,9 @@ describe("RevenueDashboard", () => {
     expect(Object.values(revenueChartMotions(true)).every((item) => !item.isAnimationActive && item.animationDuration === 0)).toBe(true);
   });
 
-  it("renders owner-only KPIs, simplified navigation, CSV, print, permanent bar labels, and accessible chart values", () => {
+  it("renders owner-only KPIs, simplified navigation, CSV, permanent bar labels, and accessible chart values", () => {
     const html = renderToStaticMarkup(<RevenueDashboard analytics={analytics()} chart={dayChart()} query={{ view: "month", cursor: "2026-07-31" }} />);
-    for (const text of ["총 매출", "실결제", "VAT", "지출", "샵 수익", "일별", "주별", "월별", "연도", "누적", "결제 등록", "CSV 내보내기", "인쇄", "시술 카테고리", "정산"]) expect(html).toContain(text);
+    for (const text of ["총 매출", "실결제", "VAT", "지출", "수수료 차감 후", "일별", "주별", "월별", "연도", "누적", "CSV 내보내기", "시술 카테고리", "정산"]) expect(html).toContain(text);
     for (const text of ["담당자", "성별 매출", "신규 · 재방문"]) expect(html).not.toContain(text);
     expect(html.match(/data-revenue-chart=/g)).toHaveLength(2);
     expect(html.match(/<table/g)).toHaveLength(4);
@@ -91,7 +91,7 @@ describe("RevenueDashboard", () => {
       weekdayHeadline: "금요일이 가장 붐빕니다 — 23건.",
       hourHeadline: "14시가 가장 붐빕니다 — 20건.",
       weekday: weekdayPattern([{ weekday: 5, gross: 804000, count: 23 }]),
-      hour: hourPattern([{ hour: 14, gross: 700000, count: 20 }]),
+      hour: hourPattern([{ hour: 14, gross: 700000, count: 20, minutes: 6 }]),
       customers: customerBriefing({ visits: 89, customers: 72, newCustomers: 4 }),
       averageTicket: 36652,
     };
@@ -111,7 +111,7 @@ describe("RevenueDashboard", () => {
     const briefing = {
       revenue: { headline: "₩362,000 벌었습니다.", evidence: "결제 11건", tone: "flat" as const }, comparisonLabel: "지난달", inProgress: false,
       weekdayHeadline: "금요일이 가장 붐빕니다 — 3건.", hourHeadline: "21시가 가장 붐빕니다 — 11건.",
-      weekday: weekdayPattern([{ weekday: 5, gross: 362000, count: 3 }]), hour: hourPattern([{ hour: 21, gross: 362000, count: 11 }]),
+      weekday: weekdayPattern([{ weekday: 5, gross: 362000, count: 3 }]), hour: hourPattern([{ hour: 21, gross: 362000, count: 11, minutes: 1 }]),
       customers: customerBriefing({ visits: 11, customers: 10, newCustomers: 1 }), averageTicket: 32909,
       availability: { hour: false },
     };

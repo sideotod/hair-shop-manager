@@ -19,7 +19,7 @@ export function revenueDrawerFocusTarget(key: string, shiftKey: boolean, activeE
 export function dismissRevenueDrawer(key: string | null, onClose: () => void) { if (key === null || key === "Escape") onClose(); }
 
 function detailFor(selection: RevenueSelection, analytics: RevenueAnalyticsView) {
-  if (selection.kind === "date") { const row = analytics.trend.find((item) => item.date === selection.key); return { label: "매출", rows: [["총매출", row?.gross], ["샵 수익", row?.profit]] as const }; }
+  if (selection.kind === "date") { const row = analytics.trend.find((item) => item.date === selection.key); return { label: "매출", rows: [["총매출", row?.gross], ["수수료 차감 후", row?.profit]] as const }; }
   if (selection.kind === "payment") { const row = analytics.payments.find((item) => item.name === selection.key); return { label: "결제수단", rows: [["금액", row?.amount], ["비중", row ? `${row.value}%` : undefined]] as const }; }
   const row = analytics.services.find((item) => item.name === selection.key);
   return { label: "시술", rows: [["매출", row?.sales], ["건수", row ? `${row.count}건` : undefined]] as const };

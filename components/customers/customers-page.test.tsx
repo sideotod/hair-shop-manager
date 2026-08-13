@@ -17,7 +17,8 @@ function page(store = createSalonStore(":memory:"), props: Partial<React.Compone
     messages={snapshot.records.messages ?? []}
     requestKey="test-request-key"
     settings={snapshot.settings}
-    today="2026-08-13"
+    defaultDate="2026-08-13"
+    defaultTime="14:37"
     {...props}
   />);
 }
@@ -45,10 +46,10 @@ describe("CustomersPage", () => {
     expect(styles).toContain("height: calc(100dvh - 72px)");
   });
 
-  it("drops the deleted waiting, print, segment, and bulk surfaces", () => {
+  it("drops the deleted waiting, segment, and bulk surfaces", () => {
     const html = page(undefined, { selectedCustomerId: "customer-seed-1" });
 
-    for (const gone of ["대기 고객", "대기 등록", "인쇄", "고객 정책", "파워 고객", "방문동기", "고객 보관", 'name="customerIds"', 'name="bulkGrade"']) {
+    for (const gone of ["대기 고객", "대기 등록", "고객 정책", "파워 고객", "방문동기", "고객 보관", 'name="customerIds"', 'name="bulkGrade"']) {
       expect(html).not.toContain(gone);
     }
   });
@@ -56,11 +57,11 @@ describe("CustomersPage", () => {
   it("shows the display-only customer code, hyphenated phone, and one action row", () => {
     const store = createSalonStore(":memory:");
     const seed = store.get("customers", "customer-seed-1")!;
-    store.save("customers", seed.id, { ...(seed.value as Record<string, JsonValue>), phone: "01012345678" }, "원장");
+    store.save("customers", seed.id, { ...(seed.value as Record<string, JsonValue>), phone: "01012345678" }, "사용자");
     const html = page(store, { selectedCustomerId: "customer-seed-1" });
 
     expect(html).toContain(customerCode("customer-seed-1"));
-    // 저장은 숫자만, 표시는 하이픈이다. 원장이 그대로 읽어 전화를 건다.
+    // 저장은 숫자만, 표시는 하이픈이다. 사용자가 그대로 읽어 전화를 건다.
     expect(html).toContain("010-1234-5678");
     expect(html).toContain('data-selected-customer-payment="customer-seed-1"');
     expect(html).toContain("선결제 충전");
@@ -68,10 +69,14 @@ describe("CustomersPage", () => {
   });
 
   // 다섯 구역을 전부 펼치면 상세 칸이 목록보다 세 배 길어져 두 칸 높이가 어긋난다.
-  it("renders only the selected detail tab", () => {
-    const ledger = page(undefined, { selectedCustomerId: "customer-seed-1" });
+  // 고객을 고르면 먼저 나오는 것은 그 사람이 누구인가(기본 정보)다 — 돈 이야기는 그다음이다.
+  it("renders only the selected detail tab, starting at the profile", () => {
+    const profile = page(undefined, { selectedCustomerId: "customer-seed-1" });
+    const ledger = page(undefined, { selectedCustomerId: "customer-seed-1", tab: "ledger" });
     const bookings = page(undefined, { selectedCustomerId: "customer-seed-1", tab: "bookings" });
 
+    expect(profile).toContain("기본 정보");
+    expect(profile).not.toContain("시술·결제 이력");
     expect(ledger).toContain("2026-07-24 · 컬러 · ₩10,480,000");
     expect(ledger).not.toContain("예약 이력이");
     expect(bookings).toContain("2026-07-31 10:00 · 커트 · confirmed");
@@ -80,11 +85,31 @@ describe("CustomersPage", () => {
     expect(page(undefined, { selectedCustomerId: "customer-seed-1", tab: "messages" })).toContain("SMS · dry-run");
   });
 
-  /** 원장이 실제로 치는 건 둘뿐이다 — "김하늘" 아니면 "5678". 모드 선택칸을 두지 않는다. */
+  /**
+   * 옮겨온 고객은 `2020-02-18T12:00:00.000Z` 처럼 시각까지 들고 있다. 그 정오는 가져오기가
+   * 만든 자리표시자라 아무 뜻이 없다 — 화면에 두면 사용자가 방문 시각으로 읽는다.
+   */
+  it("shows the first visit as a date only and names an empty memo", () => {
+    const store = createSalonStore(":memory:");
+    const seed = store.get("customers", "customer-seed-1")!;
+    store.save("customers", seed.id, { ...(seed.value as Record<string, JsonValue>), joinedAt: "2020-02-18T12:00:00.000Z", memo: "  " }, "사용자");
+    const html = page(store, { selectedCustomerId: "customer-seed-1" });
+
+    expect(html).toContain("2020-02-18");
+    expect(html).not.toContain("12:00:00");
+    expect(html).toContain(">없음<");
+  });
+
+  // 식별자는 이름보다 작고 늦게 읽힌다. 제목 줄에 끼면 이름과 같은 무게로 보인다.
+  it("puts the customer code on the eyebrow line", () => {
+    expect(page(undefined, { selectedCustomerId: "customer-seed-1" })).toContain(`선택 고객 · ${customerCode("customer-seed-1")}`);
+  });
+
+  /** 사용자가 실제로 치는 건 둘뿐이다 — "김하늘" 아니면 "5678". 모드 선택칸을 두지 않는다. */
   it("searches by name for text and by trailing phone digits for numbers", () => {
     const store = createSalonStore(":memory:");
     const seed = store.get("customers", "customer-seed-1")!;
-    store.save("customers", seed.id, { ...(seed.value as Record<string, JsonValue>), phone: "01012345678" }, "원장");
+    store.save("customers", seed.id, { ...(seed.value as Record<string, JsonValue>), phone: "01012345678" }, "사용자");
 
     expect(listRows(page(store, { query: "김하늘" }))).toEqual(["customer-seed-1"]);
     expect(listRows(page(store, { query: "5678" }))).toEqual(["customer-seed-1"]);
@@ -147,8 +172,9 @@ describe("CustomersPage", () => {
   });
 
   // 전역 패널 폭은 `min(1120px,100%)` 다. 세로로 선 폼을 그 폭에 두면 라벨과 입력칸이 한 뼘씩 벌어진다.
+  // 고객 등록만 `!w-auto` 다 — 중복 확인 패널이 옆으로 펴질 때 패널이 안쪽 폭을 따라가야 하기 때문이다.
   it("narrows both popups, giving the payment form a little more room", () => {
-    expect(page(undefined, { showNew: true })).toContain("!w-[420px]");
+    expect(page(undefined, { showNew: true })).toContain("!w-auto");
     expect(page(undefined, { payCustomerId: "customer-seed-1" })).toContain("!w-[560px]");
   });
 
@@ -166,7 +192,7 @@ describe("CustomersPage", () => {
 
   it("applies the default gender only to new customers", () => {
     const store = createSalonStore(":memory:");
-    store.saveSettings({ defaultGender: "male" }, "원장");
+    store.saveSettings({ defaultGender: "male" }, "사용자");
 
     expect(page(store, { showNew: true })).toContain('<option value="male" selected="">남성</option>');
     expect(page(store, { editCustomerId: "customer-seed-1" })).toContain('<option value="female" selected="">여성</option>');

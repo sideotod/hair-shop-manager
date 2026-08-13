@@ -109,8 +109,8 @@
 ### 3.7 개인 매장 기준
 
 - 디자이너 등록, 담당 디자이너 선택, 디자이너별 매출·수익, 인센티브·수수료율은 제공하지 않는다.
-- 과거 담당자 필드는 `원장` 단일 귀속으로 대체하고 현재 업무 화면에는 담당자 선택을 노출하지 않는다.
-- 직원 권한 화면은 원장 단일 관리자 계정과 비밀번호·로그아웃 흐름으로 대체한다. 로그아웃은 모든 화면의 사이드바 하단에 상시 노출한다.
+- 과거 담당자 필드는 `사용자` 단일 귀속으로 대체하고 현재 업무 화면에는 담당자 선택을 노출하지 않는다.
+- 직원 권한 화면은 사용자 단일 관리자 계정과 비밀번호·로그아웃 흐름으로 대체한다. 로그아웃은 모든 화면의 사이드바 하단에 상시 노출한다.
 
 ## 3.8 상세 설계 산출물
 
@@ -132,7 +132,7 @@ Figma: [Hairhaeyo — 살롱 운영 콘솔 (Proposal B)](https://www.figma.com/d
 | 12 설정 · 시술·가격 | `22:210` | 대분류·항목·가격·소요시간 |
 | 13 설정 · 정산·계정 | `22:567` | 이번 달 정산, 정정 내역, 계정과 보안 |
 
-- 기능 커버리지 계약: [`docs/function-coverage-matrix.md`](docs/function-coverage-matrix.md) — 263행(구현 192 / 사용자 승인 제외 44 / 원장 1인 대체 16 / 사용자 승인 메일 대체 11). 검증은 `lib/function-coverage.test.ts`가 자동으로 수행한다.
+- 기능 커버리지 계약: [`docs/function-coverage-matrix.md`](docs/function-coverage-matrix.md) — 263행(구현 192 / 사용자 승인 제외 44 / 사용자 1인 대체 16 / 사용자 승인 메일 대체 11). 검증은 `lib/function-coverage.test.ts`가 자동으로 수행한다.
 - 기존 참고본 [7A6bEGubfakhvXLpOPmk1o](https://www.figma.com/design/7A6bEGubfakhvXLpOPmk1o)는 수정하지 않고 보존한다.
 - 위험 작업은 별도 확인과 변경 이력 제공
 
@@ -239,7 +239,7 @@ Figma: [Hairhaeyo — 살롱 운영 콘솔 (Proposal B)](https://www.figma.com/d
 - 브라우저 웹앱을 유지하고 Windows Tauri 셸을 함께 제공한다.
 - 개발 Tauri는 Next dev server를 열고, 배포 Tauri는 Next standalone server를 Node sidecar로 실행한다.
 - 기본 창 1440px, 최소 창 너비 1280px. 모바일 navigation은 만들지 않는다.
-- 신규 DB의 기본 매장명은 `헤어해요`, 원장 표시 이름은 `서원`이며 두 값 모두 설정에서 변경할 수 있다. 기존 DB 값은 자동으로 덮어쓰지 않는다.
+- 신규 DB의 기본 매장명은 `헤어해요`, 사용자 표시 이름은 `서원`이며 두 값 모두 설정에서 변경할 수 있다. 기존 DB 값은 자동으로 덮어쓰지 않는다.
 - 한글 UI는 로컬 번들한 `IBM Plex Sans KR`을 사용하고 시스템 산세리프를 fallback으로 둔다. 워드마크용 `Marcellus`와 숫자용 `IBM Plex Mono`도 함께 번들한다.
 - 폰트는 본문·입력·표·차트·인쇄에 동일 적용하며, 금액과 시간은 tabular 숫자를 유지한다.
 - 새 UI 라이브러리 도입은 코드베이스와 기존 의존성 확인 후 결정

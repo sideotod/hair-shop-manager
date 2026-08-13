@@ -24,10 +24,10 @@ describe("SalonStore", () => {
     const customerCount = store.list("customers").length;
     const auditCount = store.snapshot().auditEvents.length;
 
-    store.save("customers", "customer-1", { name: "김하늘", gender: "female", visitType: "first" }, "원장");
-    const updated = store.save("customers", "customer-1", { name: "김하늘", gender: "female", visitType: "repeat" }, "원장");
-    store.save("notices", "notice-1", { title: "휴무 안내" }, "원장");
-    const archived = store.archive("notices", "notice-1", "원장");
+    store.save("customers", "customer-1", { name: "김하늘", gender: "female", visitType: "first" }, "사용자");
+    const updated = store.save("customers", "customer-1", { name: "김하늘", gender: "female", visitType: "repeat" }, "사용자");
+    store.save("notices", "notice-1", { title: "휴무 안내" }, "사용자");
+    const archived = store.archive("notices", "notice-1", "사용자");
 
     expect(updated).toMatchObject({ id: "customer-1", value: { visitType: "repeat" } });
     expect(store.list("customers")).toHaveLength(customerCount + 1);
@@ -37,8 +37,8 @@ describe("SalonStore", () => {
     const events = store.snapshot().auditEvents.slice(auditCount);
     expect(events).toHaveLength(4);
     expect(events).toEqual(expect.arrayContaining([
-      expect.objectContaining({ action: "save", kind: "customers", recordId: "customer-1", actor: "원장" }),
-      expect.objectContaining({ action: "archive", kind: "notices", recordId: "notice-1", actor: "원장" }),
+      expect.objectContaining({ action: "save", kind: "customers", recordId: "customer-1", actor: "사용자" }),
+      expect.objectContaining({ action: "archive", kind: "notices", recordId: "notice-1", actor: "사용자" }),
     ]));
   });
 
@@ -60,9 +60,9 @@ describe("SalonStore", () => {
       profitWon: 9800,
     } as const;
 
-    const saved = store.appendLedger(payment, "원장");
-    expect(() => store.appendLedger(payment, "원장")).toThrow(/requestKey/i);
-    expect(() => store.appendLedger({ ...payment, id: "orphan", requestKey: "orphan", correctionOf: "missing" }, "원장")).toThrow(/correctionOf/i);
+    const saved = store.appendLedger(payment, "사용자");
+    expect(() => store.appendLedger(payment, "사용자")).toThrow(/requestKey/i);
+    expect(() => store.appendLedger({ ...payment, id: "orphan", requestKey: "orphan", correctionOf: "missing" }, "사용자")).toThrow(/correctionOf/i);
     const correction = store.appendLedger({
       ...payment,
       id: "ledger-correction-1",
@@ -72,7 +72,7 @@ describe("SalonStore", () => {
       vatWon: -1000,
       feeWon: -200,
       profitWon: -9800,
-    }, "원장");
+    }, "사용자");
 
     expect(store.listLedger()).toEqual(expect.arrayContaining([
       expect.objectContaining({ id: saved.id, customerId: "customer-seed-1", amountWon: 11000 }),
@@ -86,9 +86,9 @@ describe("SalonStore", () => {
     const ledgerCount = store.listLedger().length;
 
     for (const kind of ["refund", "correction"]) {
-      expect(() => store.appendLedger({ requestKey: `${kind}-missing`, kind, amountWon: -1000 }, "원장")).toThrow(/correctionOf/i);
-      expect(() => store.appendLedger({ requestKey: `${kind}-empty`, kind, correctionOf: "   ", amountWon: -1000 }, "원장")).toThrow(/correctionOf/i);
-      expect(() => store.appendLedger({ requestKey: `${kind}-unknown`, kind, correctionOf: "missing", amountWon: -1000 }, "원장")).toThrow(/correctionOf/i);
+      expect(() => store.appendLedger({ requestKey: `${kind}-missing`, kind, amountWon: -1000 }, "사용자")).toThrow(/correctionOf/i);
+      expect(() => store.appendLedger({ requestKey: `${kind}-empty`, kind, correctionOf: "   ", amountWon: -1000 }, "사용자")).toThrow(/correctionOf/i);
+      expect(() => store.appendLedger({ requestKey: `${kind}-unknown`, kind, correctionOf: "missing", amountWon: -1000 }, "사용자")).toThrow(/correctionOf/i);
     }
 
     expect(store.listLedger()).toHaveLength(ledgerCount);
@@ -99,7 +99,7 @@ describe("SalonStore", () => {
     const ledgerCount = store.listLedger().length;
     const auditCount = store.snapshot().auditEvents.length;
 
-    expect(() => store.appendLedger({ requestKey: "fractional", kind: "payment", amountWon: 10.5 }, "원장")).toThrow(/integer won/i);
+    expect(() => store.appendLedger({ requestKey: "fractional", kind: "payment", amountWon: 10.5 }, "사용자")).toThrow(/integer won/i);
     expect(store.listLedger()).toHaveLength(ledgerCount);
     expect(store.snapshot().auditEvents).toHaveLength(auditCount);
   });
@@ -108,8 +108,8 @@ describe("SalonStore", () => {
     const store = createSalonStore(":memory:");
     const auditCount = store.snapshot().auditEvents.length;
 
-    expect(() => store.save("customers", "invalid-record", { nested: { omitted: undefined } } as unknown as JsonValue, "원장")).toThrow(/JSON round-trip/i);
-    expect(() => store.saveSettings({ callback: () => undefined } as unknown as Record<string, JsonValue>, "원장")).toThrow(/JSON round-trip/i);
+    expect(() => store.save("customers", "invalid-record", { nested: { omitted: undefined } } as unknown as JsonValue, "사용자")).toThrow(/JSON round-trip/i);
+    expect(() => store.saveSettings({ callback: () => undefined } as unknown as Record<string, JsonValue>, "사용자")).toThrow(/JSON round-trip/i);
 
     expect(store.get("customers", "invalid-record")).toBeNull();
     expect(store.snapshot().auditEvents).toHaveLength(auditCount);
@@ -123,7 +123,7 @@ describe("SalonStore", () => {
 
     expect(new Set(customers.map(({ value }) => value.gender))).toEqual(new Set(["female", "male"]));
     expect(new Set(customers.map(({ value }) => value.visitType))).toEqual(new Set(["first", "repeat"]));
-    expect(customers.every(({ value }) => value.operator === "원장")).toBe(true);
+    expect(customers.every(({ value }) => value.operator === "사용자")).toBe(true);
     for (const kind of ["bookings", "messages", "products", "coupons", "notices"]) {
       expect(store.list(kind), kind).not.toEqual([]);
     }
@@ -133,25 +133,25 @@ describe("SalonStore", () => {
       "2026-08-02",
       "2026-08-03",
     ]);
-    expect(bookings.every(({ value }) => value.operator === "원장")).toBe(true);
+    expect(bookings.every(({ value }) => value.operator === "사용자")).toBe(true);
     expect(automations.map(({ value }) => value.status)).toEqual(["사용", "사용", "중지"]);
-    expect(automations.every(({ value }) => value.operator === "원장")).toBe(true);
+    expect(automations.every(({ value }) => value.operator === "사용자")).toBe(true);
     expect(store.listLedger().reduce((total, entry) => total + entry.amountWon, 0)).toBe(29960000);
     expect(store.listLedger().reduce((total, entry) => total + entry.profitWon, 0)).toBe(17390000);
     expect(store.getSettings()).toMatchObject({ shopName: "헤어해요", ownerName: "서원", smsRemaining: 500 });
 
     const seedEvents = store.snapshot().auditEvents;
     expect(seedEvents.filter((event) => event.action === "seed-ledger")).toHaveLength(store.listLedger().length);
-    expect(seedEvents).toContainEqual(expect.objectContaining({ action: "seed-settings", kind: "settings", recordId: "1", actor: "원장" }));
-    expect(seedEvents.every((event) => event.actor === "원장")).toBe(true);
+    expect(seedEvents).toContainEqual(expect.objectContaining({ action: "seed-settings", kind: "settings", recordId: "1", actor: "사용자" }));
+    expect(seedEvents.every((event) => event.actor === "사용자")).toBe(true);
 
     const auditCount = store.snapshot().auditEvents.length;
-    const settings = store.saveSettings({ shopName: "광교점", ownerName: "이수진", smsRemaining: 480 }, "원장");
+    const settings = store.saveSettings({ shopName: "광교점", ownerName: "이수진", smsRemaining: 480 }, "사용자");
 
     expect(settings).toMatchObject({ shopName: "광교점", ownerName: "이수진", smsRemaining: 480 });
     expect(store.getSettings()).toEqual(settings);
     expect(store.snapshot().auditEvents.slice(auditCount)).toEqual([
-      expect.objectContaining({ action: "save-settings", kind: "settings", recordId: "1", actor: "원장" }),
+      expect.objectContaining({ action: "save-settings", kind: "settings", recordId: "1", actor: "사용자" }),
     ]);
   });
 });

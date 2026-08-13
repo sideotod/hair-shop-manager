@@ -62,20 +62,32 @@ function tsxFiles(dir: string, found: string[] = []) {
   return found;
 }
 
-describe("Sales workspace tab row", () => {
+describe("Sales workspace period row", () => {
   /**
-   * 문제 2 의 마지막 잔재. 탭 줄은 세 탭에서 **같은 세로 위치**에 있어야 한다.
-   * 설명문 툴바가 탭 줄 앞뒤로 왔다갔다 하면 탭을 누를 때마다 줄이 위아래로 튄다.
-   * 브라우저 실측: /sales y=156, ?tab=payment y=116, ?tab=expenses y=162.
+   * 탭 줄(매출 분석 · 결제 등록 · 지출/정산)은 없앴다 — 성격이 다른 셋을 한 줄에 두면
+   * 한 묶음으로 배우게 된다. 그 자리를 기간 줄이 물려받았고, 같은 규칙이 그대로 적용된다:
+   * **본문 첫 줄이어야 한다.** 설명문 툴바가 앞뒤로 오가면 화면마다 줄이 위아래로 튄다.
+   * 브라우저 실측(탭 시절): /sales y=156, ?tab=payment y=116, ?tab=expenses y=162.
    */
-  it("puts the tab row first in the main content on every sales tab", async () => {
-    const before = (html: string) => html.slice(0, html.indexOf('aria-label="매출 기능"'));
+  it("puts the period row first in the main content, and never on the payment form", async () => {
+    const before = (html: string) => html.slice(0, html.indexOf('aria-label="매출 조회"'));
 
     const { OperationsPage } = await import("./operations/operations-page");
     const expenses = renderToStaticMarkup(
-      <OperationsPage activeTab="expenses" catalog={[]} expenses={[]} ledger={[]} requestKey="k" salesContext salesQuery={{ view: "month", cursor: "2026-07-31" }} settings={{}} />,
+      <OperationsPage expenses={[]} ledger={[]} requestKey="k" salesQuery={{ view: "month", cursor: "2026-07-31" }} />,
     );
 
+    expect(expenses).toContain('aria-label="매출 조회"');
     expect(before(expenses)).not.toContain("justify-between gap-6");
+
+    // 결제 등록에는 기간이 없다. 눌러도 폼이 달라지지 않는 컨트롤 7개를 Tab 순서에서 뺀다.
+    const { SalesControls } = await import("./sales/sales-controls");
+    const payment = renderToStaticMarkup(
+      <SalesControls label="2026년 8월" query={{ view: "month", cursor: "2026-07-31" }} tab="payment" />,
+    );
+    expect(payment).toBe("");
+
+    // 성격이 다른 세 화면을 한 줄에 묶던 탭 줄은 돌아오지 않는다.
+    expect(expenses).not.toContain('aria-label="매출 기능"');
   });
 });

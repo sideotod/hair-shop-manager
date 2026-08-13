@@ -139,7 +139,7 @@ function paymentLedgerInput(store: SalonStore, formData: FormData, correction?: 
   const gender = customer && typeof customer.gender === "string" ? customer.gender : text(formData, "gender") || "unspecified";
   const visitType = customer && typeof customer.visitType === "string" ? customer.visitType : text(formData, "visitType") || "first";
   const details = {
-    operator: "원장",
+    operator: "사용자",
     memberType,
     customerName: customer && typeof customer.name === "string" ? customer.name : text(formData, "nonMemberName") || "비회원",
     serviceMajor,
@@ -180,7 +180,7 @@ function paymentLedgerInput(store: SalonStore, formData: FormData, correction?: 
 }
 
 export function recordPayment(store: SalonStore, formData: FormData) {
-  return store.appendLedger(paymentLedgerInput(store, formData), "원장");
+  return store.appendLedger(paymentLedgerInput(store, formData), "사용자");
 }
 
 function reversedPaymentMethods(details: JsonObject) {
@@ -223,7 +223,7 @@ function reversalLedgerInput(target: LedgerEntry, requestKey: string, reason: st
     couponWon: negate(target.couponWon),
     profitWon: negate(target.profitWon),
     details: {
-      ...(target.details ?? {}), paymentMethods: reversedPaymentMethods(target.details ?? {}), pointsUsedWon: negate(pointsUsedWon), pointsEarnedWon: negate(pointsEarnedWon), correctionRole: "reversal", correctionReason: reason, operator: "원장",
+      ...(target.details ?? {}), paymentMethods: reversedPaymentMethods(target.details ?? {}), pointsUsedWon: negate(pointsUsedWon), pointsEarnedWon: negate(pointsEarnedWon), correctionRole: "reversal", correctionReason: reason, operator: "사용자",
     },
   };
 }
@@ -232,7 +232,7 @@ export function refundPaymentRecord(store: SalonStore, formData: FormData): Ledg
   const target = originalPayment(store, formData);
   const requestKey = text(formData, "requestKey");
   if (!requestKey) throw new Error("결제 요청 키를 확인하세요.");
-  return store.appendLedger(reversalLedgerInput(target, requestKey, note(formData, "reason"), "refund"), "원장");
+  return store.appendLedger(reversalLedgerInput(target, requestKey, note(formData, "reason"), "refund"), "사용자");
 }
 
 export function correctPaymentRecord(store: SalonStore, formData: FormData): readonly [LedgerEntry, LedgerEntry] {
@@ -245,6 +245,6 @@ export function correctPaymentRecord(store: SalonStore, formData: FormData): rea
   const entries = store.appendLedgerBatch([
     reversalLedgerInput(target, `${requestKey}:reversal`, reason, "correction", reversalEntryId, replacement.occurredAt),
     replacement,
-  ], "원장");
+  ], "사용자");
   return entries as readonly [LedgerEntry, LedgerEntry];
 }

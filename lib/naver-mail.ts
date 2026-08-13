@@ -28,7 +28,7 @@ export type ParsedNaverBookingMail = {
 export type NaverMailConnectionInput = { email: string; password: string };
 export type NaverMailMetadata = { email: string; provider: "naver"; connected: boolean; lastSyncUid: number; lastSyncAt: string };
 
-const actor = "원장" as const;
+const actor = "사용자" as const;
 
 function plain(message: NaverMailMessage) {
   if (message.text) return message.text;

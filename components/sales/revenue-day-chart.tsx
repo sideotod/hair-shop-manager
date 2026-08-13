@@ -6,7 +6,7 @@ import { typeScale } from "../type";
 
 const won = (value: number) => `₩${value.toLocaleString("ko-KR")}`;
 
-/** 축 눈금은 만원 단위가 원장이 읽는 단위다. 1만원 미만이면 원 그대로. */
+/** 축 눈금은 만원 단위가 사용자가 읽는 단위다. 1만원 미만이면 원 그대로. */
 function tick(value: number) {
   if (value === 0) return "0";
   return value >= 10_000 ? `${Math.round(value / 10_000).toLocaleString("ko-KR")}만` : value.toLocaleString("ko-KR");

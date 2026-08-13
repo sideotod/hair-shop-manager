@@ -1,4 +1,5 @@
 import { connection } from "next/server";
+import { randomUUID } from "node:crypto";
 
 import { SettingsPage } from "../../../components/settings/settings-page";
 import { naverMailMetadata } from "../../../lib/naver-mail";
@@ -15,12 +16,17 @@ export default async function Page({ searchParams }: { searchParams: Promise<Rec
     // 이 화면에 필요한 건 설정 · 공지 · settings/notices 감사 로그뿐이다.
     const stored = store.getSettings();
     const settings = { ...stored, naverMail: naverMailMetadata(stored) };
+    // 시술 가격 구역만 `catalog-items` 를 읽는다. 다른 구역을 볼 때까지 끌고 오지 않는다.
+    const section = value(params.section);
     return <SettingsPage
       auditEvents={store.listAuditEvents(["settings", "notices"])}
+      catalog={section === "services" ? store.list("catalog-items") : []}
+      editCatalogId={value(params.edit)}
       error={value(params.error)}
       notice={value(params.notice)}
       notices={store.list("notices")}
-      section={value(params.section)}
+      requestKey={randomUUID()}
+      section={section}
       settings={settings}
     />;
   } finally {

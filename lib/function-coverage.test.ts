@@ -27,7 +27,7 @@ const rows = matrixText.split(/\r?\n/)
   .filter((line) => /^\|.+\|$/.test(line))
   .map(parseMarkdownRow)
   .filter(([feature]) => feature !== "기능" && !/^--+$/.test(feature ?? ""));
-const allowedStatuses = new Set(["구현", "원장 1인 대체", "연동 확인 필요", "사용자 승인 제외", "사용자 승인 메일 대체"]);
+const allowedStatuses = new Set(["구현", "사용자 1인 대체", "연동 확인 필요", "사용자 승인 제외", "사용자 승인 메일 대체"]);
 const evidencePath = /^(?:FUNCTION\.md|(?:app|components|lib|docs)\/[^\s;]+)$/;
 
 function evidencePaths(cell: string, feature: string) {
@@ -61,7 +61,7 @@ describe("FUNCTION.md coverage matrix", () => {
       expect(status, feature).not.toContain("계획");
       const implementationPaths = evidencePaths(location, feature);
       const verificationPaths = evidencePaths(verification, feature);
-      if (status === "구현" || status === "원장 1인 대체") {
+      if (status === "구현" || status === "사용자 1인 대체") {
         expect(implementationPaths.some((path) => /^(?:app|components|lib)\//.test(path)), `${feature}: implementation code path required`).toBe(true);
         expect(verificationPaths.some((path) => /\.test\.tsx?$/.test(path)), `${feature}: focused test path required`).toBe(true);
       }
@@ -74,7 +74,7 @@ describe("FUNCTION.md coverage matrix", () => {
 
   it("marks owner replacements and external SMS/Naver boundaries", () => {
     for (const [feature, status] of rows) {
-      if (/(직원|디자이너|판매자|시술자)/.test(feature ?? "") && status !== "사용자 승인 제외") expect(status, feature).toBe("원장 1인 대체");
+      if (/(직원|디자이너|판매자|시술자)/.test(feature ?? "") && status !== "사용자 승인 제외") expect(status, feature).toBe("사용자 1인 대체");
       if (/(SMS|문자|네이버)/.test(feature ?? "")) expect(["구현", "연동 확인 필요", "사용자 승인 제외", "사용자 승인 메일 대체"]).toContain(status);
     }
   });

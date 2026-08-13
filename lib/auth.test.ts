@@ -62,7 +62,7 @@ describe("owner authentication", () => {
       const firstRun = renderToStaticMarkup(await LoginPage({ searchParams: Promise.resolve({}) }));
 
       const store = createSalonStore(path);
-      try { store.saveSettings({ ownerPasswordHash: hashOwnerPassword("owner-password", "owner-salt") }, "원장"); } finally { store.close(); }
+      try { store.saveSettings({ ownerPasswordHash: hashOwnerPassword("owner-password", "owner-salt") }, "사용자"); } finally { store.close(); }
       const configured = renderToStaticMarkup(await LoginPage({ searchParams: Promise.resolve({}) }));
 
       expect(firstRun).toContain('name="newPassword"');

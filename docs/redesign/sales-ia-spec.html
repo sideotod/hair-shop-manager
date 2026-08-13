@@ -1,0 +1,344 @@
+<title>매출 화면 수정 명세</title>
+<style>
+  :root {
+    --bg: #f2f1ed; --surface: #fff; --fg: #191b19; --muted: #5e635c;
+    --brand: #0d3a33; --border: #e0ded7;
+    --danger: #9b3a33; --danger-soft: #f3e3e1;
+    --warning: #8a5a12; --warning-soft: #f4ecdd;
+    --success: #2f6b4f; --success-soft: #e6efe9;
+  }
+  body { margin: 0; background: var(--bg); color: var(--fg); font: 15px/1.75 "IBM Plex Sans KR", system-ui, -apple-system, "Segoe UI", sans-serif; }
+  main { max-width: 880px; margin: 0 auto; padding: 56px 24px 96px; }
+  h1 { font-size: 30px; line-height: 1.3; letter-spacing: -0.02em; margin: 0 0 8px; }
+  h2 { font-size: 21px; letter-spacing: -0.01em; margin: 56px 0 4px; padding-top: 24px; border-top: 1px solid var(--border); }
+  h3 { font-size: 16px; margin: 32px 0 4px; }
+  h4 { font-size: 13px; margin: 22px 0 4px; color: var(--muted); letter-spacing: 0.03em; text-transform: uppercase; }
+  p, li { margin: 8px 0; }
+  ul, ol { padding-left: 22px; }
+  li > ul, li > ol { margin: 4px 0; }
+  code { font-family: "IBM Plex Mono", Consolas, monospace; font-size: 0.87em; background: var(--bg); padding: 1px 5px; border-radius: 4px; }
+  pre { background: var(--surface); border: 1px solid var(--border); border-radius: 12px; padding: 15px 17px; overflow-x: auto; font-family: "IBM Plex Mono", Consolas, monospace; font-size: 12.5px; line-height: 1.65; }
+  pre code { background: none; padding: 0; font-size: inherit; }
+  table { width: 100%; border-collapse: collapse; margin: 16px 0; font-size: 14px; }
+  th, td { border-bottom: 1px solid var(--border); padding: 9px 10px; text-align: left; vertical-align: top; }
+  th { color: var(--muted); font-weight: 600; font-size: 12px; letter-spacing: 0.04em; }
+  .lede { font-size: 17px; color: var(--muted); margin-bottom: 32px; }
+  .box { border-radius: 12px; padding: 15px 18px; margin: 20px 0; border: 1px solid var(--border); background: var(--surface); }
+  .stop { border-color: var(--danger); background: var(--danger-soft); }
+  .warn { border-color: var(--warning); background: var(--warning-soft); }
+  .ok { border-color: var(--success); background: var(--success-soft); }
+  .box > :first-child { margin-top: 0; }
+  .box > :last-child { margin-bottom: 0; }
+  .num { font-family: "IBM Plex Mono", Consolas, monospace; font-variant-numeric: tabular-nums; }
+  .file { display: block; font-family: "IBM Plex Mono", Consolas, monospace; font-size: 12px; color: var(--brand); background: var(--bg); border-left: 3px solid var(--brand); padding: 5px 10px; margin: 14px 0 6px; border-radius: 0 4px 4px 0; }
+  .del { color: var(--danger); }
+  .add { color: var(--success); }
+</style>
+
+<main>
+
+<h1>매출 화면 수정 명세</h1>
+<p class="lede">인쇄·설정 제외. 파일과 줄 번호까지 지정한 실행 명세.</p>
+
+<div class="box">
+<p><strong>범위 밖</strong> — 인쇄(이미 제거됨), 설정 화면(다른 세션 작업 중), 문자 자동 규칙(별도 판단).</p>
+<p><strong>측정 기준</strong> — <code>.data/hairhaeyo.sqlite</code>, 원장 <span class="num">5,578</span>행. 브라우저 실측은 다른 세션이 Playwright를 점유해 코드·DB로만 확인했다.</p>
+</div>
+
+<h2>작업 1 · 정산표가 없는 것을 뺐다고 말한다</h2>
+
+<h4>측정</h4>
+<pre><code>SELECT SUM(gross_won), SUM(discount_won), SUM(points_won),
+       SUM(amount_won), SUM(vat_won), SUM(fee_won),
+       SUM(expense_won), SUM(profit_won)
+FROM ledger WHERE kind='payment';
+
+총 매출   291,865,150
+할인               0     ← 전부 0
+포인트 사용  1,450,792
+실결제    291,865,150     ← 총 매출과 완전히 같다
+VAT            2,727     ← 5,578건 중 1건
+결제 수수료  5,243,451     ← 유일하게 실재
+지출               0     ← 0건
+샵 수익   286,701,972</code></pre>
+
+<p>화면은 <code>샵 수익 = 실결제 − VAT − 결제 수수료 − 지출</code> 이라 적는다. 네 항목 중 실재하는 것은 수수료 하나다. 원장이 이 숫자를 자기가 번 돈으로 읽는다 — 임대료·재료비·인건비가 하나도 안 빠졌다.</p>
+
+<div class="box stop">
+<p><strong>덤으로 찾은 것:</strong> 화면 수식과 저장값이 <span class="num">₩83,000</span> 어긋난다. <code>amount_won = 0</code> 인데 <code>profit_won &gt; 0</code> 인 이관 행이 <span class="num">5</span>건 있다(예: <code>hairnury-detail-514328-3</code> — 결제 <span class="num">0</span>원, 수익 <span class="num">4,850</span>원). 이번 명세에서 고치지 않는다. 5,578건 중 5건이고 <strong>원본이 그런 것</strong>이라 화면이 만든 문제가 아니다. 별도로 다룬다.</p>
+</div>
+
+<h4>수정 1-1 · 정산 행 이름</h4>
+<span class="file">lib/revenue-data.ts:109-111</span>
+<pre><code>settlement: Object.freeze([
+  { name: "총 매출", value: gross },
+  { name: "할인", value: discount },
+  { name: "포인트 사용", value: points },
+  { name: "실결제", value: paid },
+  { name: "환불", value: refunds },
+  { name: "VAT", value: vat },
+  { name: "결제 수수료", value: fee },
+  { name: "지출", value: expense },
+<span class="del">  { name: "샵 수익", value: sum(transactions, (r) =&gt; r.profit) },</span>
+<span class="add">  { name: "수수료 차감 후", value: sum(transactions, (r) =&gt; r.profit) },</span>
+].map((row) =&gt; Object.freeze(row))),</code></pre>
+
+<p><strong>왜 "수수료 차감 후"인가.</strong> Codex는 "예상 정산액"을 제안했다. 그것도 낫지만 <em>정산액</em>은 여전히 최종 금액처럼 들린다. "수수료 차감 후"는 <strong>무엇을 뺐는지만 말하고 무엇을 안 뺐는지 주장하지 않는다.</strong> 지출을 실제로 쓰기 시작하면 이름을 다시 바꿔야 하지만, 그때는 그게 맞다.</p>
+
+<h4>수정 1-2 · 관계식</h4>
+<span class="file">components/sales/revenue-dashboard.tsx:613-618</span>
+<pre><code><span class="del">{/* 표에 아홉 줄이 있어도 "무엇에서 무엇을 뺐는지"는 보이지 않는다. 두 관계식을 적는다. */}</span>
+<span class="del">&lt;p className="..."&gt;</span>
+<span class="del">  총 매출 = 실결제 + 할인 + 포인트 사용&lt;br /&gt;</span>
+<span class="del">  샵 수익 = 실결제 − VAT − 결제 수수료 − 지출</span>
+<span class="del">&lt;/p&gt;</span>
+
+<span class="add">{/* 값이 0인 항목을 수식에 남기면 "이것도 반영됐다"로 읽힌다. 실재하는 것만 적고,</span>
+<span class="add">    빠진 비용은 이름을 대서 밝힌다 — 원장이 이 숫자를 순이익으로 읽는 것이 가장 비싼 오해다. */}</span>
+<span class="add">&lt;p className="..."&gt;</span>
+<span class="add">  수수료 차감 후 = 실결제 − VAT − 결제 수수료 − 지출&lt;br /&gt;</span>
+<span class="add">  &lt;span className="text-[var(--warning)]"&gt;임대료·재료비·인건비는 포함하지 않습니다.&lt;/span&gt;</span>
+<span class="add">&lt;/p&gt;</span></code></pre>
+
+<p>수식 자체는 남긴다 — 지출·VAT가 0이어도 <em>계산에는 들어간다</em>. 없는 것은 수식이 아니라 <strong>데이터</strong>다. 대신 표에서 그 사실을 말한다(수정 1-3).</p>
+
+<h4>수정 1-3 · 0원 줄에 근거 표시</h4>
+<span class="file">components/sales/revenue-dashboard.tsx:600-611</span>
+<pre><code>{analytics.settlement.map((row) =&gt; (
+  &lt;tr key={row.name}&gt;
+    &lt;th scope="row"&gt;{row.name}&lt;/th&gt;
+    &lt;td className="text-right tabular-nums"&gt;
+      {won(row.value)}
+<span class="add">      {/* 0원이 "정말 0원"인지 "기록이 없어서 0원"인지는 숫자만으로 구별되지 않는다. */}</span>
+<span class="add">      {row.value === 0 &amp;&amp; &lt;span className="ml-2 text-[11px] font-normal text-[var(--muted)]"&gt;기록 없음&lt;/span&gt;}</span>
+    &lt;/td&gt;
+  &lt;/tr&gt;
+))}</code></pre>
+
+<p>줄을 지우지 않는 이유: 지우면 "이 항목이 없는 프로그램"이 되고, 그냥 <span class="num">₩0</span>이면 "정말 0원"으로 읽힌다. 셋째 상태가 필요하다.</p>
+
+<h4>수정 1-4 · KPI 카드</h4>
+<span class="file">components/sales/revenue-dashboard.tsx:398-403</span>
+<pre><code>const kpis = [
+  { label: "총 매출", value: won(...), delta: summary?.deltaPrevious ?? null },
+  { label: "실결제", value: won(...), note: "할인·포인트를 뺀 금액" },
+<span class="del">  { label: "샵 수익", value: won(...), note: "VAT·수수료·지출을 뺀 금액" },</span>
+<span class="add">  { label: "수수료 차감 후", value: won(...), note: "VAT·수수료를 뺀 금액" },</span>
+  { label: "객단가", value: ticket === null ? "–" : won(ticket), note: "총 매출 ÷ 방문 수" },
+];</code></pre>
+
+<div class="box warn">
+<p><strong>총 매출과 실결제가 같은 숫자다.</strong> 할인 <span class="num">0</span>, 포인트 사용은 결제수단 합계에서 빠지므로(<code>finance.ts:57</code>) 두 카드가 나란히 <span class="num">₩291,865,150</span>을 보여준다.</p>
+<p>카드를 합치지 <strong>않는다</strong>. 실제 결제가 쌓이면 갈라지는 값이고, 지금 합치면 그때 다시 나눠야 한다. 대신 <code>실결제</code> 카드의 <code>note</code>가 이미 "할인·포인트를 뺀 금액"이라 <strong>왜 같은지 스스로 설명한다.</strong> 그대로 둔다.</p>
+</div>
+
+<h2>작업 2 · 시간대별 방문 분석이 가짜다</h2>
+
+<h4>측정</h4>
+<pre><code>SELECT substr(occurred_at,12,2) h, COUNT(*) c
+FROM ledger WHERE kind='payment' GROUP BY h;
+
+01Z → 서울 10시 : 558   = 279 × 2
+02Z → 서울 11시 : 837   = 279 × 3
+03Z → 서울 12시 : 557   = 279 × 2
+04Z → 서울 13시 : 838   = 279 × 3
+05Z → 서울 14시 : 837   = 279 × 3
+06Z → 서울 15시 : 836   = 279 × 3
+07Z → 서울 16시 : 558   = 279 × 2
+08Z → 서울 17시 : 279   = 279 × 1
+09Z → 서울 18시 : 278   = 279 × 1
+
+분이 :00 인 행: 5,577 / 5,578</code></pre>
+
+<p>아홉 칸뿐, 전부 <span class="num">279</span>의 배수, 분은 전부 <code>:00</code>. 실제 미용실 방문이 이런 모양일 수 없다.</p>
+
+<span class="file">scripts/import-hairnury-details.mjs:9</span>
+<pre><code>const dateIso = (s) =&gt; { const m = String(s).match(/(\d{4})-(\d{2})-(\d{2})/);
+  return m ? `${m[1]}-${m[2]}-${m[3]}T12:00:00.000Z` : new Date().toISOString(); };</code></pre>
+
+<p>원본 CSV에 <strong>시각이 없다.</strong> 날짜만 읽어 정오로 채운다. 지금 화면의 시간대 분포는 이관 과정의 부산물이다.</p>
+
+<h4>기존 가드가 왜 통과하는가</h4>
+<span class="file">lib/salon-briefing.ts:73-75</span>
+<pre><code>export function isUsableHourPattern(rows: readonly LedgerHourRow[]) {
+  return rows.filter((row) =&gt; row.count &gt; 0).length &gt; 1;
+}</code></pre>
+<p>"0이 아닌 칸이 2개 이상"만 본다. 아홉 칸이 있으니 통과한다. <strong>값이 있는지만 보고 말이 되는지는 보지 않는다.</strong></p>
+
+<h4>수정 2-1 · 분 단위 다양성을 근거로</h4>
+<span class="file">lib/salon-store.ts:503-515</span>
+<pre><code>hourLedger(start: string, endExclusive: string) {
+  return db.prepare(`
+    SELECT CAST(strftime('%H', firstAt, '+9 hours') AS INTEGER) AS hour,
+           COALESCE(SUM(gross), 0) AS gross,
+<span class="del">           COUNT(*) AS count</span>
+<span class="add">           COUNT(*) AS count,</span>
+<span class="add">           COUNT(DISTINCT strftime('%M', firstAt)) AS minutes</span>
+    FROM ( ... )
+    GROUP BY hour ORDER BY hour
+  `).all(start, endExclusive) as LedgerHourRow[];
+}</code></pre>
+
+<span class="file">lib/salon-domain.ts (LedgerHourRow)</span>
+<pre><code>export type LedgerHourRow = {
+  readonly hour: number;
+  readonly gross: number;
+  readonly count: number;
+<span class="add">  /** 이 시간대에 등장한 서로 다른 '분'의 개수. 시각이 진짜 기록됐는지 판정한다. */</span>
+<span class="add">  readonly minutes: number;</span>
+};</code></pre>
+
+<span class="file">lib/salon-briefing.ts:73-75</span>
+<pre><code><span class="add">/**</span>
+<span class="add"> * 시각이 진짜인지는 "칸이 몇 개인가"로 알 수 없다.</span>
+<span class="add"> *</span>
+<span class="add"> * 이관 자료는 원본에 시각이 없어 날짜만 읽고 정오로 채운다</span>
+<span class="add"> * (`scripts/import-hairnury-details.mjs:9`). 그러면 시간대 분포가 생기긴 하는데</span>
+<span class="add"> * 그건 손님이 온 시각이 아니라 가져오기가 만든 모양이다 — 실측으로 아홉 칸이</span>
+<span class="add"> * 전부 279의 배수였고 5,578행 중 5,577행의 분이 :00 이었다.</span>
+<span class="add"> *</span>
+<span class="add"> * 사람이 찍은 시각은 분이 흩어진다. 그것을 근거로 삼는다.</span>
+<span class="add"> */</span>
+export function isUsableHourPattern(rows: readonly LedgerHourRow[]) {
+<span class="del">  return rows.filter((row) =&gt; row.count &gt; 0).length &gt; 1;</span>
+<span class="add">  const live = rows.filter((row) =&gt; row.count &gt; 0);</span>
+<span class="add">  return live.length &gt; 1 &amp;&amp; live.some((row) =&gt; row.minutes &gt; 1);</span>
+}</code></pre>
+
+<div class="box ok">
+<p><strong>이게 기능 삭제가 아닌 이유.</strong> 실제 결제가 쌓이면 분이 흩어지고 시간대 분석이 <strong>저절로 되살아난다.</strong> 화면 코드는 한 줄도 바꾸지 않는다 — <code>revenue-dashboard.tsx:540</code>이 이미 <code>availability.hour === false</code>일 때 <code>UnavailableAnalysisCard</code>를 그린다. 그 카드가 "가져온 기록에 이 분석에 필요한 정보가 없습니다"라고 말한다. 정확히 지금 사실이다.</p>
+</div>
+
+<h4>요일별은 유지</h4>
+<pre><code>SELECT strftime('%w', occurred_at, '+9 hours') w, COUNT(*) FROM ledger ...
+일 922 · 월 780 · 화 68 · 수 947 · 목 852 · 금 917 · 토 1,092</code></pre>
+<p>요일은 <strong>날짜에서 파생</strong>되므로 원본 날짜가 맞으면 요일도 맞다. 화요일 <span class="num">68</span>건은 정기 휴무로 읽힌다 — 실제 영업 패턴이다. Codex는 요일·시간대를 묶어 접자고 했지만, <strong>둘은 신뢰도가 다르다.</strong> 하나는 진짜고 하나는 가짜다.</p>
+
+<h2>작업 3 · 탭 세 개를 분리</h2>
+
+<span class="file">components/sales/sales-controls.tsx:55-59</span>
+<pre><code>&lt;nav aria-label="매출 기능" className="flex gap-2"&gt;
+  &lt;Link ... href={href(query)}&gt;매출 분석&lt;/Link&gt;
+<span class="del">  &lt;Link ... href={href(query, "payment")}&gt;결제 등록&lt;/Link&gt;</span>
+<span class="del">  &lt;Link ... href={href(query, "expenses")}&gt;지출/정산&lt;/Link&gt;</span>
+&lt;/nav&gt;</code></pre>
+
+<p>셋의 성격이 다르다. <strong>매출 분석</strong>은 읽는 화면, <strong>결제 등록</strong>은 쓰는 작업, <strong>지출/정산</strong>은 쓰지 않는 기능이다. 같은 줄에 있으면 원장은 "이 셋이 한 묶음"으로 배운다.</p>
+
+<h4>수정 3-1 · 탭 줄 제거, 기간 줄만 남김</h4>
+<pre><code>export function SalesControls({ query, label, tab }: {...}) {
+  return &lt;&gt;
+<span class="del">    &lt;nav aria-label="매출 기능" className="flex gap-2"&gt;...3개 링크...&lt;/nav&gt;</span>
+    {tab !== "payment" &amp;&amp; &lt;nav aria-label="매출 조회" ...&gt;
+      ...기간 5칸 + ←/→...
+    &lt;/nav&gt;}
+  &lt;/&gt;;
+}</code></pre>
+
+<p><code>tab</code> prop은 <strong>남긴다.</strong> 결제 화면에서 기간 줄을 숨기는 판단(<code>:46-51</code>의 주석 참조)이 여전히 필요하다.</p>
+
+<h4>수정 3-2 · 결제·지출 라우트는 살려 둔다</h4>
+<p><code>/sales?tab=payment</code>와 <code>/sales?tab=expenses</code>는 <strong>그대로 동작한다.</strong> 지우는 것은 탭 <em>링크</em>뿐이다. 이유:</p>
+<ul>
+<li><code>payment-actions.ts:12</code>의 <code>returnTo</code> 허용 목록이 이미 이 경로를 받는다</li>
+<li>예약·고객 화면이 <code>/sales?tab=payment&amp;booking=…</code>로 진입한다(<code>sales/page.tsx:149-164</code>)</li>
+<li>주소를 알면 지출 화면에 들어갈 수 있다 — 기능을 없애는 게 아니라 <strong>메뉴에서 내리는</strong> 것이다</li>
+</ul>
+
+<h4>수정 3-3 · 지출은 데이터가 판단한다</h4>
+<span class="file">app/(shell)/sales/page.tsx (분석 분기)</span>
+<pre><code><span class="add">// 지출을 한 번이라도 기록했다면 그 화면으로 가는 길이 필요하다. 설정 스위치를 만들지 않는다 —</span>
+<span class="add">// 첫 지출을 등록할 방법이 없으면 스위치도 못 켠다. 데이터가 있으면 길이 생긴다.</span>
+<span class="add">const hasExpenses = store.summarizeLedger(period.start, period.endExclusive).expense &gt; 0;</span></code></pre>
+
+<p><code>hasExpenses</code>가 참일 때만 매출 분석 화면 하단에 <code>지출·정산</code> 링크를 그린다. Codex의 "설정 &gt; 고급 기능 토글"보다 나은 이유는 <strong>원장이 아무것도 설정하지 않아도 맞기 때문</strong>이다.</p>
+
+<h2>작업 4 · 사이드바에 거래 기록 노출</h2>
+
+<span class="file">lib/navigation.ts:13-22</span>
+<p>이미 <code>sales-transactions</code> 항목이 <code>parentId: "sales"</code>로 존재한다. <strong>데이터는 다 있고 사이드바가 안 그릴 뿐이다.</strong></p>
+
+<pre><code>{ id: "sales", path: "/sales", <span class="del">label: "매출·결제"</span><span class="add">label: "매출"</span>, <span class="del">title: "매출·결제"</span><span class="add">title: "매출 분석"</span>, group: "정산" },
+{ id: "sales-transactions", path: "/sales/transactions", label: "거래 기록", title: "거래 기록", parentId: "sales" },</code></pre>
+
+<p><strong>이름을 바꾸는 이유:</strong> 결제 탭이 빠지면 <code>매출·결제</code>는 거짓말이 된다.</p>
+
+<span class="file">components/app-shell.tsx:81 (menuGroups 렌더)</span>
+<pre><code><span class="add">{/* 하위 항목은 그 갈래에 있을 때만 펼친다. 늘 펼쳐 두면 사이드바가 8줄이 되고,</span>
+<span class="add">    자주 가지 않는 곳이 매일 가는 곳과 같은 무게로 서 있게 된다. */}</span>
+{items.map(({ label, path, id }) =&gt; &lt;&gt;
+  &lt;Link ...&gt;{label}&lt;/Link&gt;
+  {activeHref === path &amp;&amp; children(id).map((child) =&gt;
+    &lt;Link className="... pl-8 text-[12px]" href={child.path} key={child.path}&gt;{child.label}&lt;/Link&gt;)}
+&lt;/&gt;)}</code></pre>
+
+<p>펼침 조건을 <code>activeHref === path</code>로 둔다. <code>/sales/transactions</code>에 있을 때도 <code>activeNavigationItem()</code>이 <code>parentId</code>를 따라 <code>sales</code>를 돌려주므로(<code>navigation.ts:43-46</code>) 하위 메뉴가 계속 보인다.</p>
+
+<h2>작업 5 · 운영 현황의 결제 진입</h2>
+
+<p>Codex 안에 동의한다. 다만 "완료됐지만 결제 없으면 <code>결제 필요</code>"는 <strong>과거 데이터에 적용하면 안 된다.</strong></p>
+
+<div class="box warn">
+<p><code>booking.ts:7</code>의 상태는 <code>confirmed | waiting | completed</code>. "완료인데 결제 없음"을 판정하려면 예약↔원장을 이어야 하는데, 원장 행에 <code>bookingId</code>가 붙는 것은 <code>payment-form.tsx</code>에 <code>booking</code> prop이 생긴 <strong>최근 변경 이후</strong>다. 과거 <span class="num">5,578</span>행에는 없다.</p>
+<p>과거 예약까지 훑으면 <strong>모든 옛 예약이 빨갛게 물든다.</strong></p>
+</div>
+
+<h4>수정 5-1 · 오늘 예약에만</h4>
+<pre><code><span class="add">// 결제 없는 완료 예약을 표시한다. **오늘 것만** 본다 —</span>
+<span class="add">// 원장 행에 `bookingId` 가 붙기 시작한 것은 최근이라, 과거까지 훑으면</span>
+<span class="add">// 이관된 옛 예약이 전부 "결제 필요"가 된다.</span>
+const needsPayment = (booking) =&gt;
+  booking.date === businessToday &amp;&amp;
+  booking.status === "completed" &amp;&amp;
+  !todayLedger.some((entry) =&gt; entry.details.bookingId === booking.id);</code></pre>
+
+<h4>수정 5-2 · 예약 행에서 결제로</h4>
+<p>이미 있다(<code>sales/page.tsx:152</code>가 <code>?booking=</code>를 읽는다). 대시보드가 그 링크를 <strong>더 눈에 띄게</strong> 만들면 된다 — 새 코드가 아니라 강조 단계 조정이다.</p>
+
+<h2>작업 6 · FUNCTION.md 표시</h2>
+
+<p>인쇄는 이미 제거됐다. 문서에 <strong>제거 사실만 남긴다</strong> — 지우지 않는 이유는 원본 프로그램의 기능 목록이 추적 가능해야 하기 때문이다.</p>
+
+<table>
+<thead><tr><th style="width:16%">위치</th><th>항목</th><th style="width:34%">표시</th></tr></thead>
+<tbody>
+<tr><td>§1.1</td><td>인쇄 기능 및 인쇄용 화면</td><td rowspan="4"><code>~~취소선~~ `[제거됨 2026-08-13]`</code></td></tr>
+<tr><td>§2.3</td><td>검색 결과 인쇄 / 고객 목록 인쇄 형식 1~4</td></tr>
+<tr><td>§3.2</td><td>매출 내역 인쇄</td></tr>
+<tr><td>§3.5</td><td>조정 내역 수정/인쇄</td></tr>
+</tbody>
+</table>
+
+<p>§3.5의 <code>조정 내역 수정/인쇄</code>는 <strong>수정</strong>과 <strong>인쇄</strong>가 한 줄에 묶여 있다. 인쇄만 제거 표시하고 수정은 남긴다.</p>
+
+<h2>작업 순서와 검증</h2>
+
+<ol>
+<li><strong>정산표</strong>(작업 1) — 거짓 정보를 먼저 없앤다. <code>revenue-data.ts</code> + <code>revenue-dashboard.tsx</code></li>
+<li><strong>시간대 가드</strong>(작업 2) — <code>salon-store.ts</code> SQL + <code>salon-domain.ts</code> 타입 + <code>salon-briefing.ts</code></li>
+<li><strong>탭 분리</strong>(작업 3) — <code>sales-controls.tsx</code>, 라우트는 건드리지 않음</li>
+<li><strong>사이드바</strong>(작업 4) — <code>navigation.ts</code> + <code>app-shell.tsx</code></li>
+<li><strong>대시보드 진입</strong>(작업 5) — 오늘 한정</li>
+<li><strong>FUNCTION.md</strong>(작업 6)</li>
+</ol>
+
+<h4>검증</h4>
+<ul>
+<li><code>npx tsc --noEmit</code> — <code>LedgerHourRow</code>에 필드가 늘어 호출부가 전부 걸린다</li>
+<li><code>npx vitest run</code> — <code>salon-briefing.test.ts:77-78</code>이 <code>isUsableHourPattern</code>을 직접 검사한다. 인자가 바뀌므로 <strong>반드시 수정 대상</strong></li>
+<li>Playwright 1440×900 / 1280×800 — 시간대 카드가 <code>UnavailableAnalysisCard</code>로 바뀌었는지, 정산표 "기록 없음"이 보이는지, 사이드바 하위 메뉴가 <code>/sales</code>에서만 펼쳐지는지</li>
+<li>DB 재측정 — <code>hourLedger()</code>가 <code>minutes</code>를 실제로 돌려주는지</li>
+</ul>
+
+<h2>하지 않는 것</h2>
+<ul>
+<li>SQL <strong>스키마</strong> 변경 (SELECT 절만 늘린다)</li>
+<li><code>.codegraph</code> 수정 · 더미 DB 커밋</li>
+<li>지출 서버 액션·<code>OperationsPage</code>·테스트 삭제 — <code>FUNCTION.md §3.5</code> 추적성</li>
+<li>가져오기 스크립트의 <code>T12:00:00.000Z</code> 수정 — 원본에 시각이 없으므로 고칠 값이 없다. 화면이 그 사실을 말하게 한다</li>
+<li><code>amount=0 / profit&gt;0</code> 5행 정정 — 원본 문제라 별도 판단</li>
+<li>총 매출·실결제 카드 통합 — 실제 결제가 쌓이면 갈라진다</li>
+<li>설정 화면 · 문자 자동 규칙 — 범위 밖</li>
+</ul>
+
+</main>

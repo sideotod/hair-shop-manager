@@ -17,7 +17,7 @@ import {
 import { createSalonStore } from "../lib/salon-store";
 import { deleteWindowsCredential, readWindowsCredential, writeWindowsCredential } from "../lib/windows-credential";
 
-const actor = "원장" as const;
+const actor = "사용자" as const;
 const credentialTarget = "Hairhaeyo:NaverBookingMail";
 type NaverMailSyncDependencies = {
   createStore: typeof createSalonStore;

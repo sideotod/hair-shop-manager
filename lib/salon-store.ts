@@ -199,10 +199,10 @@ function createSchema(db: DatabaseSync) {
   if (!ledgerColumns.has("details")) db.exec("ALTER TABLE ledger ADD COLUMN details TEXT NOT NULL DEFAULT '{}'");
   db.exec("UPDATE ledger SET gross_won = amount_won WHERE gross_won = 0");
   db.exec(`UPDATE ledger SET details = CASE id
-    WHEN 'ledger-seed-1' THEN '{"operator":"원장","serviceMajor":"컬러","gender":"female","visitType":"repeat","paymentMethods":{"card":10480000}}'
-    WHEN 'ledger-seed-2' THEN '{"operator":"원장","serviceMajor":"펌","gender":"male","visitType":"first","paymentMethods":{"cash":8640000}}'
-    WHEN 'ledger-seed-3' THEN '{"operator":"원장","serviceMajor":"클리닉","gender":"female","visitType":"repeat","paymentMethods":{"prepaid":6120000}}'
-    WHEN 'ledger-seed-4' THEN '{"operator":"원장","serviceMajor":"커트","gender":"male","visitType":"repeat","paymentMethods":{"other":4720000}}'
+    WHEN 'ledger-seed-1' THEN '{"operator":"사용자","serviceMajor":"컬러","gender":"female","visitType":"repeat","paymentMethods":{"card":10480000}}'
+    WHEN 'ledger-seed-2' THEN '{"operator":"사용자","serviceMajor":"펌","gender":"male","visitType":"first","paymentMethods":{"cash":8640000}}'
+    WHEN 'ledger-seed-3' THEN '{"operator":"사용자","serviceMajor":"클리닉","gender":"female","visitType":"repeat","paymentMethods":{"prepaid":6120000}}'
+    WHEN 'ledger-seed-4' THEN '{"operator":"사용자","serviceMajor":"커트","gender":"male","visitType":"repeat","paymentMethods":{"other":4720000}}'
     ELSE details END WHERE details = '{}'`);
   db.exec(`UPDATE ledger SET
     customer_id = CASE id WHEN 'ledger-seed-1' THEN 'customer-seed-1' WHEN 'ledger-seed-2' THEN 'customer-seed-2' WHEN 'ledger-seed-3' THEN 'customer-seed-1' WHEN 'ledger-seed-4' THEN 'customer-seed-2' ELSE customer_id END,
@@ -223,27 +223,27 @@ function seed(db: DatabaseSync) {
   transaction(db, () => {
     const seededAt = "2026-07-31T00:00:00.000Z";
     const records: ReadonlyArray<readonly [string, string, Record<string, unknown>]> = [
-      ["customers", "customer-seed-1", { name: "김하늘", gender: "female", visitType: "repeat", operator: "원장" }],
-      ["customers", "customer-seed-2", { name: "이도윤", gender: "male", visitType: "first", operator: "원장" }],
+      ["customers", "customer-seed-1", { name: "김하늘", gender: "female", visitType: "repeat", operator: "사용자" }],
+      ["customers", "customer-seed-2", { name: "이도윤", gender: "male", visitType: "first", operator: "사용자" }],
       // 저장은 참 시각 ISO 다. 아래는 서울 10:00 / 11:00 / 12:00 / 13:00 (`lib/seoul-date.ts`).
-      ["bookings", "booking-seed-1", { customerId: "customer-seed-1", startsAt: "2026-07-31T01:00:00.000Z", service: "커트", status: "confirmed", operator: "원장" }],
-      ["bookings", "booking-seed-2", { customerId: "customer-seed-2", startsAt: "2026-08-01T02:00:00.000Z", service: "남성 펌", status: "confirmed", operator: "원장" }],
-      ["bookings", "booking-seed-3", { customerId: "customer-seed-1", startsAt: "2026-08-02T03:00:00.000Z", service: "클리닉", status: "confirmed", operator: "원장" }],
-      ["bookings", "booking-seed-4", { customerId: "customer-seed-2", startsAt: "2026-08-03T04:00:00.000Z", service: "커트", status: "confirmed", operator: "원장" }],
-      ["messages", "message-seed-1", { recipientId: "customer-seed-1", channel: "SMS", status: "dry-run", operator: "원장" }],
-      ["automations", "automation-seed-1", { label: "신규 고객 등록 문자", status: "사용", schedule: "등록 10분 후", operator: "원장" }],
-      ["automations", "automation-seed-2", { label: "예약 당일 안내 문자", status: "사용", schedule: "예약 3시간 전", operator: "원장" }],
-      ["automations", "automation-seed-3", { label: "생일 자동 문자", status: "중지", schedule: "생일 당일 09:00", operator: "원장" }],
-      ["products", "product-seed-1", { name: "헤어 오일", priceWon: 28000, operator: "원장" }],
-      ["coupons", "coupon-seed-1", { name: "클리닉 5회", balanceWon: 250000, operator: "원장" }],
-      ["product-sales", "product-sale-seed-1", { customerId: "customer-seed-1", name: "헤어 오일", priceWon: 28000, operator: "원장" }],
-      ["customer-coupons", "customer-coupon-seed-1", { customerId: "customer-seed-1", name: "클리닉 5회", balanceWon: 250000, operator: "원장" }],
-      ["notices", "notice-seed-1", { title: "운영 안내", body: "원장 전용 운영 데이터", operator: "원장" }],
+      ["bookings", "booking-seed-1", { customerId: "customer-seed-1", startsAt: "2026-07-31T01:00:00.000Z", service: "커트", status: "confirmed", operator: "사용자" }],
+      ["bookings", "booking-seed-2", { customerId: "customer-seed-2", startsAt: "2026-08-01T02:00:00.000Z", service: "남성 펌", status: "confirmed", operator: "사용자" }],
+      ["bookings", "booking-seed-3", { customerId: "customer-seed-1", startsAt: "2026-08-02T03:00:00.000Z", service: "클리닉", status: "confirmed", operator: "사용자" }],
+      ["bookings", "booking-seed-4", { customerId: "customer-seed-2", startsAt: "2026-08-03T04:00:00.000Z", service: "커트", status: "confirmed", operator: "사용자" }],
+      ["messages", "message-seed-1", { recipientId: "customer-seed-1", channel: "SMS", status: "dry-run", operator: "사용자" }],
+      ["automations", "automation-seed-1", { label: "신규 고객 등록 문자", status: "사용", schedule: "등록 10분 후", operator: "사용자" }],
+      ["automations", "automation-seed-2", { label: "예약 당일 안내 문자", status: "사용", schedule: "예약 3시간 전", operator: "사용자" }],
+      ["automations", "automation-seed-3", { label: "생일 자동 문자", status: "중지", schedule: "생일 당일 09:00", operator: "사용자" }],
+      ["products", "product-seed-1", { name: "헤어 오일", priceWon: 28000, operator: "사용자" }],
+      ["coupons", "coupon-seed-1", { name: "클리닉 5회", balanceWon: 250000, operator: "사용자" }],
+      ["product-sales", "product-sale-seed-1", { customerId: "customer-seed-1", name: "헤어 오일", priceWon: 28000, operator: "사용자" }],
+      ["customer-coupons", "customer-coupon-seed-1", { customerId: "customer-seed-1", name: "클리닉 5회", balanceWon: 250000, operator: "사용자" }],
+      ["notices", "notice-seed-1", { title: "운영 안내", body: "사용자 전용 운영 데이터", operator: "사용자" }],
     ];
     const insertRecord = db.prepare("INSERT INTO records (kind, id, payload, created_at, updated_at, archived_at) VALUES (?, ?, ?, ?, ?, NULL)");
     for (const [kind, id, value] of records) {
       insertRecord.run(kind, id, stringifyJson(value, `${kind}:${id}`), seededAt, seededAt);
-      addAudit(db, "seed-record", kind, id, "원장", { before: null, after: { id, kind, value, createdAt: seededAt, updatedAt: seededAt, archivedAt: null } }, seededAt);
+      addAudit(db, "seed-record", kind, id, "사용자", { before: null, after: { id, kind, value, createdAt: seededAt, updatedAt: seededAt, archivedAt: null } }, seededAt);
     }
 
     db.prepare("INSERT INTO settings (id, payload, updated_at) VALUES (1, ?, ?)").run(
@@ -252,19 +252,19 @@ function seed(db: DatabaseSync) {
     );
 
     const seedSettings = db.prepare("SELECT payload FROM settings WHERE id = 1").get() as { payload: string };
-    addAudit(db, "seed-settings", "settings", "1", "원장", { before: null, after: parseJson<JsonObject>(seedSettings.payload) }, seededAt);
+    addAudit(db, "seed-settings", "settings", "1", "사용자", { before: null, after: parseJson<JsonObject>(seedSettings.payload) }, seededAt);
 
     const ledger = [
-      ["ledger-seed-1", "seed-revenue-20260724", "2026-07-24T12:00:00.000Z", 10480000, 1000000, 300000, 3100000, 2200000, 1000, 6080000, "customer-seed-1", { operator: "원장", serviceMajor: "컬러", serviceDetail: "전체 염색", styleName: "브라운", gender: "female", visitType: "repeat", paymentMethods: { card: 10480000 } }],
-      ["ledger-seed-2", "seed-revenue-20260725", "2026-07-25T12:00:00.000Z", 8640000, 800000, 250000, 2580000, 1800000, 0, 5010000, "customer-seed-2", { operator: "원장", serviceMajor: "펌", serviceDetail: "디지털 펌", styleName: "웨이브", gender: "male", visitType: "first", paymentMethods: { cash: 8640000 } }],
-      ["ledger-seed-3", "seed-revenue-20260726", "2026-07-26T12:00:00.000Z", 6120000, 550000, 200000, 1820000, 1250000, 0, 3550000, "customer-seed-1", { operator: "원장", serviceMajor: "클리닉", serviceDetail: "집중 클리닉", styleName: "손상 케어", gender: "female", visitType: "repeat", paymentMethods: { prepaid: 6120000 } }],
-      ["ledger-seed-4", "seed-revenue-20260727", "2026-07-27T12:00:00.000Z", 4720000, 370000, 160000, 1440000, 830000, 0, 2750000, "customer-seed-2", { operator: "원장", serviceMajor: "커트", serviceDetail: "남성 커트", styleName: "댄디", gender: "male", visitType: "repeat", paymentMethods: { other: 4720000 } }],
+      ["ledger-seed-1", "seed-revenue-20260724", "2026-07-24T12:00:00.000Z", 10480000, 1000000, 300000, 3100000, 2200000, 1000, 6080000, "customer-seed-1", { operator: "사용자", serviceMajor: "컬러", serviceDetail: "전체 염색", styleName: "브라운", gender: "female", visitType: "repeat", paymentMethods: { card: 10480000 } }],
+      ["ledger-seed-2", "seed-revenue-20260725", "2026-07-25T12:00:00.000Z", 8640000, 800000, 250000, 2580000, 1800000, 0, 5010000, "customer-seed-2", { operator: "사용자", serviceMajor: "펌", serviceDetail: "디지털 펌", styleName: "웨이브", gender: "male", visitType: "first", paymentMethods: { cash: 8640000 } }],
+      ["ledger-seed-3", "seed-revenue-20260726", "2026-07-26T12:00:00.000Z", 6120000, 550000, 200000, 1820000, 1250000, 0, 3550000, "customer-seed-1", { operator: "사용자", serviceMajor: "클리닉", serviceDetail: "집중 클리닉", styleName: "손상 케어", gender: "female", visitType: "repeat", paymentMethods: { prepaid: 6120000 } }],
+      ["ledger-seed-4", "seed-revenue-20260727", "2026-07-27T12:00:00.000Z", 4720000, 370000, 160000, 1440000, 830000, 0, 2750000, "customer-seed-2", { operator: "사용자", serviceMajor: "커트", serviceDetail: "남성 커트", styleName: "댄디", gender: "male", visitType: "repeat", paymentMethods: { other: 4720000 } }],
     ] as const;
     const insertLedger = db.prepare("INSERT INTO ledger (id, request_key, kind, occurred_at, correction_of, customer_id, gross_won, amount_won, discount_won, vat_won, fee_won, expense_won, incentive_won, points_won, coupon_won, profit_won, details) VALUES (?, ?, 'payment', ?, NULL, ?, ?, ?, 0, ?, ?, ?, ?, ?, 0, ?, ?)");
     for (const [id, requestKey, occurredAt, amountWon, vatWon, feeWon, expenseWon, incentiveWon, pointsWon, profitWon, customerId, details] of ledger) {
       const detailsJson = stringifyJson(details, `ledger details:${id}`);
       insertLedger.run(id, requestKey, occurredAt, customerId, amountWon, amountWon, vatWon, feeWon, expenseWon, incentiveWon, pointsWon, profitWon, detailsJson);
-      addAudit(db, "seed-ledger", "ledger", id, "원장", { before: null, after: { id, requestKey, kind: "payment", occurredAt, correctionOf: null, customerId, grossWon: amountWon, amountWon, discountWon: 0, vatWon, feeWon, expenseWon, incentiveWon, pointsWon, couponWon: 0, profitWon, details } }, occurredAt);
+      addAudit(db, "seed-ledger", "ledger", id, "사용자", { before: null, after: { id, requestKey, kind: "payment", occurredAt, correctionOf: null, customerId, grossWon: amountWon, amountWon, discountWon: 0, vatWon, feeWon, expenseWon, incentiveWon, pointsWon, couponWon: 0, profitWon, details } }, occurredAt);
     }
   });
 }
@@ -504,7 +504,8 @@ export function createSalonStore(filename = process.env.HAIRHAEYO_DB_PATH || joi
       return db.prepare(`
         SELECT CAST(strftime('%H', firstAt, '+9 hours') AS INTEGER) AS hour,
                COALESCE(SUM(gross), 0) AS gross,
-               COUNT(*) AS count
+               COUNT(*) AS count,
+               COUNT(DISTINCT strftime('%M', firstAt)) AS minutes
         FROM (
           SELECT MIN(occurred_at) AS firstAt, SUM(gross_won) AS gross
           FROM ledger WHERE occurred_at >= ? AND occurred_at < ? AND kind != 'expense'

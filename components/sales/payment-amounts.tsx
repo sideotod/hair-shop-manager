@@ -17,7 +17,7 @@ const won = (value: number) => `${value.toLocaleString("ko-KR")}원`;
  * 금액 · 결제수단 — 이 폼에서 유일한 클라이언트 섹션.
  *
  * 서버는 `finance.ts:51,56,57,58` 네 줄로 **화면에 없던 숫자**와의 일치를 요구했다.
- * 원장은 `총액−할인−포인트`(+VAT별도)를 머릿속으로 풀어 결제수단 칸에 옮겨 적어야 했고,
+ * 사용자는 `총액−할인−포인트`(+VAT별도)를 머릿속으로 풀어 결제수단 칸에 옮겨 적어야 했고,
  * 틀리면 33칸이 통째로 날아갔다. 검증식은 한 글자도 바꾸지 않는다 — 대신 화면이 **미리 만족시킨다.**
  *
  * 그래서 계산은 `settleAmounts()` **하나**만 쓴다. 서버가 부르는 것과 같은 함수다.
@@ -50,7 +50,7 @@ export function PaymentAmounts({ availablePoints, cardFeeRate: initialCardFeeRat
   const pointsLock = member ? "" : " bg-[var(--background)] text-[var(--muted)]";
 
   const { taxable, netPaid, vat } = settleAmounts(num(gross), num(discount), num(pointsUsed), vatMode);
-  // 적립은 설정의 적립률로 **미리 채운다**. 원장이 그 칸을 한 번이라도 만지면(`null` 이 아니게 되면)
+  // 적립은 설정의 적립률로 **미리 채운다**. 사용자가 그 칸을 한 번이라도 만지면(`null` 이 아니게 되면)
   // 그 뒤로는 총액을 고쳐도 손으로 적은 값을 덮지 않는다 — 고친 숫자가 조용히 사라지는 게 더 나쁘다.
   const pointsEarned = !member ? "0" : pointsEarnedInput ?? String(Math.floor(netPaid * pointEarnRate / 100));
   // 포인트는 결제수단 합계에서 빠진다 (`finance.ts:57`). 기본 수단은 나머지를 받는 칸이다.

@@ -20,14 +20,14 @@ function mutate(formData: FormData, notice: string, operation: (store: ReturnTyp
     url.searchParams.set("error", settingsErrorMessage(error));
     redirect(`${url.pathname}${url.search}`);
   }
-  for (const path of ["/", "/customers", "/bookings", "/sales", "/messages", "/operations", "/settings"]) revalidatePath(path);
+  for (const path of ["/", "/customers", "/bookings", "/sales", "/messages", "/settings"]) revalidatePath(path);
   url.searchParams.delete("error");
   url.searchParams.set("notice", notice);
   redirect(`${url.pathname}${url.search}`);
 }
 
 export async function saveShopSettings(formData: FormData) {
-  mutate(formData, "설정을 저장했습니다.", (store) => store.saveSettings(parseShopSettings(formData, store.getSettings()), "원장"));
+  mutate(formData, "설정을 저장했습니다.", (store) => store.saveSettings(parseShopSettings(formData, store.getSettings()), "사용자"));
 }
 
 export async function changeOwnerPassword(formData: FormData) {

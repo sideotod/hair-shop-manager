@@ -158,7 +158,7 @@ describe("Naver booking mail", () => {
   it("matches an incoming phone only by normalized phone", () => {
     const store = createSalonStore(":memory:");
     try {
-      store.save("customers", "customer-phone", { name: "다른 이름", phone: "010-1234-5678" }, "원장");
+      store.save("customers", "customer-phone", { name: "다른 이름", phone: "010-1234-5678" }, "사용자");
       applyNaverBookingMails(store, [parseNaverBookingMail(mail())!]);
 
       expect((store.get("bookings", "naver-booking:NVR-20260804-001")?.value as { customerId: string }).customerId).toBe("customer-phone");
@@ -170,8 +170,8 @@ describe("Naver booking mail", () => {
   it("never name-matches a conflicting incoming phone", () => {
     const store = createSalonStore(":memory:");
     try {
-      store.save("customers", "customer-a", { name: "김하나", phone: "010-1111-1111" }, "원장");
-      store.save("customers", "customer-b", { name: "김하나", phone: "010-2222-2222" }, "원장");
+      store.save("customers", "customer-a", { name: "김하나", phone: "010-1111-1111" }, "사용자");
+      store.save("customers", "customer-b", { name: "김하나", phone: "010-2222-2222" }, "사용자");
       applyNaverBookingMails(store, [parseNaverBookingMail(mail())!]);
 
       expect((store.get("bookings", "naver-booking:NVR-20260804-001")?.value as { customerId: string }).customerId).toBe("naver-customer:01012345678");
@@ -183,9 +183,9 @@ describe("Naver booking mail", () => {
   it("reuses a no-phone customer only for one unambiguous active name", () => {
     const store = createSalonStore(":memory:");
     try {
-      store.save("customers", "customer-active", { name: "김하나", phone: "" }, "원장");
-      store.save("customers", "customer-archived", { name: "김하나", phone: "" }, "원장");
-      store.archive("customers", "customer-archived", "원장");
+      store.save("customers", "customer-active", { name: "김하나", phone: "" }, "사용자");
+      store.save("customers", "customer-archived", { name: "김하나", phone: "" }, "사용자");
+      store.archive("customers", "customer-archived", "사용자");
       applyNaverBookingMails(store, [parseNaverBookingMail(mail({ text: mail().text?.replace("연락처: 010-1234-5678\n", "") }))!]);
 
       expect((store.get("bookings", "naver-booking:NVR-20260804-001")?.value as { customerId: string }).customerId).toBe("customer-active");
@@ -197,8 +197,8 @@ describe("Naver booking mail", () => {
   it("does not guess between duplicate active names when the mail has no phone", () => {
     const store = createSalonStore(":memory:");
     try {
-      store.save("customers", "customer-a", { name: "김하나", phone: "" }, "원장");
-      store.save("customers", "customer-b", { name: "김하나", phone: "" }, "원장");
+      store.save("customers", "customer-a", { name: "김하나", phone: "" }, "사용자");
+      store.save("customers", "customer-b", { name: "김하나", phone: "" }, "사용자");
       applyNaverBookingMails(store, [parseNaverBookingMail(mail({ text: mail().text?.replace("연락처: 010-1234-5678\n", "") }))!]);
 
       expect((store.get("bookings", "naver-booking:NVR-20260804-001")?.value as { customerId: string }).customerId).toBe("naver-customer:NVR-20260804-001");

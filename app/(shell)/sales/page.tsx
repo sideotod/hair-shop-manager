@@ -1,17 +1,25 @@
 import { randomUUID } from "node:crypto";
 
 import { OperationsPage } from "../../../components/operations/operations-page";
+import { isCalendarDate } from "../../../lib/operations";
 import { PaymentForm } from "../../../components/sales/payment-form";
 import { RevenueDashboard } from "../../../components/sales/revenue-dashboard";
 import { parseRevenueSearchParams, previousRevenuePeriod, revenueRange, revenueRangeExclusive, serializeRevenueQuery, type RevenueQuery } from "../../../components/sales/revenue-query";
 import { SalesControls } from "../../../components/sales/sales-controls";
 import { buildPoints, buildSummary, dayAxis, delta, monthlyAxis, yearlyAxis } from "../../../lib/revenue-aggregate";
 import { buildRevenueAnalytics, buildRevenueTransactions } from "../../../lib/revenue-data";
+import { paymentReturnTo } from "../../../lib/navigation";
 import { averageTicket, customerBriefing, hourPattern, isUsableHourPattern, patternHeadline, revenueBriefing, weekdayPattern } from "../../../lib/salon-briefing";
 import { createSalonStore, type SalonStore } from "../../../lib/salon-store";
-import { seoulBusinessDate, seoulDate } from "../../../lib/seoul-date";
+import type { JsonObject, JsonValue } from "../../../lib/salon-domain";
+import { seoulBusinessDate, seoulClock, seoulClockOrEmpty } from "../../../lib/seoul-date";
 
 function value(input: string | string[] | undefined) { return typeof input === "string" ? input : ""; }
+/** 레코드 값에서 문자열 한 칸. `booking.ts:91` 과 같은 규약 — 없으면 빈 문자열이다. */
+function field(record: { value: JsonValue } | null | undefined, key: string) {
+  const record_value = record && typeof record.value === "object" && record.value !== null && !Array.isArray(record.value) ? record.value as JsonObject : {};
+  return typeof record_value[key] === "string" ? record_value[key] : "";
+}
 
 const firstOfMonth = (monthKey: string, offset: number) => {
   const [year, month] = monthKey.split("-").map(Number);
@@ -32,7 +40,7 @@ const minDate = (a: string, b: string) => (a < b ? a : b);
  *
  * 아직 끝나지 않은 기간이면 **지난 기간도 같은 날짜까지 잘라** 견준다.
  * 브리핑 문장과 같은 규칙이어야 한다 — 한 화면에서 두 숫자가 서로 다른 말을 하면
- * 원장은 어느 쪽을 믿을지 정할 방법이 없다.
+ * 사용자는 어느 쪽을 믿을지 정할 방법이 없다.
  */
 function daySeries(store: SalonStore, start: string, endExclusive: string, previousStart: string, label: string, span: "week" | "month", businessToday: string, contextNote?: string) {
   const summary = store.summarizeLedger(start, endExclusive);
@@ -129,15 +137,31 @@ export default async function SalesPage({ searchParams }: { searchParams: Promis
     if (value(params.tab) === "expenses") {
       // 지출 탭은 원장 전량을 쓰지만 감사 이력은 한 줄도 읽지 않는다. `snapshot()` 은 감사 6,435행까지
       // 끌고 와 13.00ms 를 더 쓰고, 화면이 안 보는 kind 도 전부 읽는다 (A4-4).
-      return <OperationsPage activeTab="expenses" catalog={store.list("catalog-items")} correctionId={value(params.correction)} customers={store.list("customers")} error={value(params.error) || undefined} expenses={store.list("expense-presets")} ledger={store.listLedger()} requestKey={randomUUID()} salesContext salesQuery={query} settings={store.getSettings()} />;
+      // 기간 파라미터는 `/operations` 에서 함께 옮겨왔다 (설계 §5.2). 여기서 안 읽으면
+      // 기간 정산 폼이 눌러도 아무 일도 하지 않는 컨트롤이 된다.
+      const start = isCalendarDate(value(params.start)) ? value(params.start) : "0000-01-01";
+      const end = isCalendarDate(value(params.end)) ? value(params.end) : "9999-12-31";
+      const period = start <= end ? { start, end } : { start: end, end: start };
+      return <OperationsPage correctionId={value(params.correction)} error={value(params.error) || undefined} expenses={store.list("expense-presets")} ledger={store.listLedger()} period={period} requestKey={randomUUID()} salesQuery={query} />;
     }
     const settings = store.getSettings();
     const customers = store.list("customers");
     if (value(params.tab) === "payment") {
       const correctionTarget = value(params.correction) ? store.listLedger().find(({ id, kind }) => id === value(params.correction) && kind === "payment") : undefined;
-      const customerId = value(params.customer) || correctionTarget?.customerId || undefined;
-      const returnTo = `/sales?tab=payment&${serializeRevenueQuery(query)}${customerId ? `&customer=${encodeURIComponent(customerId)}` : ""}${correctionTarget ? `&correction=${encodeURIComponent(correctionTarget.id)}` : ""}`;
-      return <main className="min-w-0 px-7 pb-6 pt-5"><SalesControls label={revenueRange(query).label} query={query} tab="payment" /><section className="mt-5"><PaymentForm correctionTargetId={correctionTarget?.id} customerId={customerId} customers={customers} error={value(params.error) || undefined} notice={value(params.notice) || undefined} requestKey={randomUUID()} returnTo={returnTo} settings={settings} today={seoulDate()} /></section></main>;
+      // 예약에서 넘어온 결제. 없는 id 를 줘도 `null` 이면 기존 동작 그대로다 — 던지지 않는다 (§4.3).
+      const booking = value(params.booking) ? store.get("bookings", value(params.booking)) : null;
+      const customerId = field(booking, "customerId") || value(params.customer) || correctionTarget?.customerId || undefined;
+      // 예약이 있으면 그 예약이 끝나는 서울 시각, 아니면 지금. 렌더 중이 아니라 여기서 한 번만 읽는다
+      // (`payment-form.tsx` 의 `requestKey` 주석과 같은 이유). 분은 반올림하지 않는다.
+      const endsAt = seoulClockOrEmpty(field(booking, "endsAt"));
+      const at = endsAt.date ? endsAt : seoulClock(new Date());
+      // 예약 행이 붙여 보낸 복귀 경로를 그대로 쓴다. 이 값을 무시하고 `/sales?tab=payment` 를
+      // 다시 조립하면 예약에서 출발한 사용자가 저장 후 빈 결제 폼으로 떨어진다 — 액션 쪽에서
+      // `/bookings` 를 허용해도(`payment-actions.ts:13`) 경로가 폼에 실리지 않으면 소용없다 (설계 §3.1).
+      const returnTo = paymentReturnTo(params.returnTo, `/sales?tab=payment&${serializeRevenueQuery(query)}${booking ? `&booking=${encodeURIComponent(booking.id)}` : ""}${customerId ? `&customer=${encodeURIComponent(customerId)}` : ""}${correctionTarget ? `&correction=${encodeURIComponent(correctionTarget.id)}` : ""}`);
+      // 예약의 `service` 는 자유 입력이라(`booking.ts:101`) 대분류로 매핑하지 않는다. 상세칸에만 넣는다.
+      const bookingContext = booking ? { id: booking.id, date: at.date, time: at.time, customerName: field(customers.find(({ id }) => id === customerId), "name") } : undefined;
+      return <main className="min-w-0 px-7 pb-6 pt-5"><section><PaymentForm booking={bookingContext} catalog={store.list("catalog-items")} correctionTargetId={correctionTarget?.id} customerId={customerId} customers={customers} defaultDate={at.date} defaultTime={at.time} error={value(params.error) || undefined} notice={value(params.notice) || undefined} requestKey={randomUUID()} returnTo={returnTo} serviceDetail={field(booking, "service")} serviceMajor={typeof correctionTarget?.details.serviceMajor === "string" ? correctionTarget.details.serviceMajor : undefined} settings={settings} /></section></main>;
     }
     const bounds = store.ledgerBounds();
     const period = revenueRangeExclusive(query, bounds);

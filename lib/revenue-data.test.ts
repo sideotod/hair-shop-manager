@@ -47,7 +47,7 @@ describe("server revenue aggregate", () => {
         { name: "VAT", value: 2720000 },
         { name: "결제 수수료", value: 910000 },
         { name: "지출", value: 8940000 },
-        { name: "샵 수익", value: 17390000 },
+        { name: "수수료 차감 후", value: 17390000 },
       ]);
       expect(analytics.transactions).toEqual(transactions);
       expect(analytics.trend.reduce((sum, row) => sum + row.gross, 0)).toBe(analytics.transactions.reduce((sum, row) => sum + row.gross, 0));
@@ -84,7 +84,7 @@ describe("server revenue aggregate", () => {
 
     expect(analytics.availability).toEqual({ service: false, payment: false });
     expect(analytics.settlement.find(({ name }) => name === "총 매출")?.value).toBe(362000);
-    expect(analytics.settlement.find(({ name }) => name === "샵 수익")?.value).toBe(352640);
+    expect(analytics.settlement.find(({ name }) => name === "수수료 차감 후")?.value).toBe(352640);
   });
 
   it("filters day, month, total, and accessible chart selections without staff filters", () => {
@@ -108,7 +108,7 @@ describe("server revenue aggregate", () => {
     const store = createSalonStore(":memory:");
     try {
       const customer = store.get<Record<string, string | number>>("customers", "customer-seed-1");
-      store.save("customers", "customer-seed-1", { ...customer?.value, points: 1000 }, "원장");
+      store.save("customers", "customer-seed-1", { ...customer?.value, points: 1000 }, "사용자");
       const payment = recordPayment(store, form({ ...splitPayment, pointsUsedWon: "1000", payment_cash: "5000", payment_card: "5000", payment_points: "1000" }));
       const beforeRefund = buildRevenueAnalytics(buildRevenueTransactions([payment]), { view: "month", cursor: "2026-07-31" }, "2026-07-31");
       expect(beforeRefund.payments).toEqual(expect.arrayContaining([

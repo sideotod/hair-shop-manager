@@ -93,7 +93,7 @@ describe("DashboardPage", () => {
     const malformedAudit: AuditEvent = {
       id: "audit-malformed",
       occurredAt: "not-a-date",
-      actor: "원장",
+      actor: "사용자",
       action: "malformed-audit",
       kind: "audit",
       recordId: null,
@@ -129,15 +129,41 @@ describe("DashboardPage", () => {
     expect(html).not.toContain("깨진 날짜 예약");
     expect(html).toContain("₩0");
     expect(html).not.toContain("₩999,999,999");
-    expect(html).toContain("원장 · malformed-audit");
+    expect(html).toContain("사용자 · malformed-audit");
     expect(html).toContain("audit · 날짜 확인 필요");
   });
 
-  it("keeps the token scope wrapping the shell background", () => {
-    const html = renderToStaticMarkup(
+  /** 예약 블록이 포커스를 받게 된 뒤로 DOM 순서가 곧 Tab 순서다 (설계 §4.2). */
+  describe("하루 축 예약 블록", () => {
+    const booking = (id: string, status: string, startHour: number) => ({
+      id, kind: "bookings", archivedAt: null, createdAt: "2026-07-31T00:00:00.000Z", updatedAt: "2026-07-31T00:00:00.000Z",
+      value: { customerId: "customer-seed-1", service: "커트", status, startsAt: `2026-07-31T${String(startHour - 9).padStart(2, "0")}:00:00.000Z`, endsAt: `2026-07-31T${String(startHour - 8).padStart(2, "0")}:00:00.000Z` },
+    });
+    const railHtml = (...list: ReturnType<typeof booking>[]) => { const seeded = seededData(); return renderToStaticMarkup(<DashboardPage data={{ ...seeded, records: { ...seeded.records, bookings: list } }} today={today} />); };
+
+    it("빈 시간과 예약이 시작 시각 순서로 한 목록에 섞인다", () => {
+      // 10시·14시 예약이면 09–10, 11–14, 15–영업종료 세 구간이 빈다. 두 배열을 따로 그리면
+      // "빈 시간 셋 → 예약 둘" 이 되어 Tab 이 하루를 두 번 훑는다.
+      const html = railHtml(booking("booking-a", "confirmed", 10), booking("booking-b", "confirmed", 14));
+      const order = [...html.matchAll(/분 비어 있음|data-booking-status="[a-z-]+"/g)].map((match) => match[0].startsWith("data") ? "예약" : "빈시간");
+
+      expect(order).toEqual(["빈시간", "예약", "빈시간", "예약", "빈시간"]);
+    });
+
+    it("상태가 정하는 목적지로 링크가 걸리고 완료는 링크가 없다", () => {
+      const html = railHtml(booking("booking-a", "confirmed", 10), booking("booking-b", "completed", 14));
+
+      expect(html).toContain(`href="/sales?tab=payment&amp;booking=booking-a&amp;returnTo=${encodeURIComponent("/bookings?date=2026-07-31")}"`);
+      expect(html).not.toContain("booking=booking-b");
+      // 완료 블록도 상태 텍스트·점·배지는 그대로 남는다 — 색만으로 상태를 말하지 않는다.
+      expect(html).toContain('data-booking-status="completed"');
+    });
+  });
+
+  it("keeps the token scope wrapping the shell background", () => {    const html = renderToStaticMarkup(
       <AppShell
         customers={[]}
-        ownerName="원장"
+        ownerName="사용자"
         pathname="/"
         settings={{ brandColor: "#123456" }}
         shopName="헤어해요"

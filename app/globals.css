@@ -33,6 +33,9 @@
   --danger-soft: #f3e3e1;
   --border: #e0ded7;
   --sidebar: #0d1512;
+  /* 스크롤바는 내용이 아니라 안내다. 쉬고 있을 때는 테두리만큼만 보이고, 손이 닿으면 진해진다. */
+  --scrollbar-thumb: #d6d3cb;
+  --scrollbar-thumb-hover: var(--muted);
   /* Figma Proposal B radius scale. Nothing outside these four. */
   --radius-chip: 4px;
   --radius-control: 9px;
@@ -217,79 +220,62 @@ time {
   font-variant-numeric: tabular-nums;
 }
 
-.wordmark {
-  font-family: var(--font-marcellus), Georgia, serif;
-}
-
-/* 다이얼로그 안에서 스크롤하는 영역. 기본 스크롤바는 패널 위에서 자리를 너무 많이 먹는다. */
-.dialog-scroll {
+/*
+ * 스크롤바는 **전역**이다. 예전에는 `.dialog-scroll` 을 붙인 곳만 스타일이 먹었는데,
+ * 실제 스크롤 상자는 12곳인데 그 클래스는 한 곳에만 붙어 있었다 — 나머지 열한 곳은
+ * 윈도우 기본 스크롤바(위아래 화살표 버튼이 달린 흰 띠)가 그대로 나왔다.
+ * 어두운 사이드바 위에서는 특히 이질적이었다.
+ *
+ * 옵트인은 붙이는 것을 잊으면 조용히 회귀한다. 기본값을 바꾸고, 예외를 두지 않는다.
+ */
+* {
   scrollbar-width: thin;
-  scrollbar-color: var(--border) transparent;
+  scrollbar-color: var(--scrollbar-thumb) transparent;
 }
 
-.dialog-scroll::-webkit-scrollbar {
+::-webkit-scrollbar {
   width: 8px;
   height: 8px;
 }
 
-.dialog-scroll::-webkit-scrollbar-track {
+::-webkit-scrollbar-track {
   background: transparent;
 }
 
-.dialog-scroll::-webkit-scrollbar-thumb {
+::-webkit-scrollbar-thumb {
   border-radius: 999px;
-  background: var(--border);
+  background: var(--scrollbar-thumb);
 }
 
-.dialog-scroll::-webkit-scrollbar-thumb:hover {
-  background: var(--muted);
+::-webkit-scrollbar-thumb:hover {
+  background: var(--scrollbar-thumb-hover);
 }
 
-.print-only {
+/* 화살표 버튼은 8px 폭에서 누를 수 없는 크기이면서 트랙 위아래를 16px 씩 먹는다. */
+::-webkit-scrollbar-button {
   display: none;
 }
 
-@media print {
-  .no-print {
-    display: none !important;
-  }
+/* 가로·세로가 만나는 구석. 기본값은 회색 사각형이라 카드 모서리에 얼룩으로 남는다. */
+::-webkit-scrollbar-corner {
+  background: transparent;
+}
 
-  /*
-   * 셸은 화면용 그리드(고정 높이 + overflow hidden)라 종이에서 첫 장만 나온다.
-   * 셸 자체를 숨기면 본문까지 같이 사라져 인쇄본이 백지가 됐다(고객 목록·지출 원장).
-   * 셸은 펼치고 화면 전용 크롬(사이드바·헤더)만 걷어낸다.
-   */
-  [data-app-shell-background] {
-    display: block;
-    height: auto;
-    overflow: visible;
-  }
+/*
+ * 사이드바는 `--sidebar`(어두움) 위에 흰 글자다. 밝은 배경 기준인 `--border` 를 그대로 쓰면
+ * 거의 흰 띠가 되어 가장 눈에 띄는 요소가 된다. 사이드바 색은 사용자 설정으로 바뀌므로
+ * (`lib/visual-tokens.ts`) 특정 색이 아니라 흰색 알파로 잡아 어떤 배경에서도 같은 세기로 보이게 한다.
+ */
+[data-app-sidebar] {
+  --scrollbar-thumb: rgb(255 255 255 / 0.16);
+  --scrollbar-thumb-hover: rgb(255 255 255 / 0.3);
+}
 
-  [data-app-shell-background] > aside,
-  [data-app-shell-background] header {
-    display: none;
-  }
+.wordmark {
+  font-family: var(--font-marcellus), Georgia, serif;
+}
 
-  [data-revenue-print] {
-    padding: 0;
-  }
-
-  /* 막대 색이 곧 데이터다. 브라우저 기본 배경 제거를 막는다. */
-  [data-revenue-print] * {
-    print-color-adjust: exact;
-    -webkit-print-color-adjust: exact;
-  }
-
-  [data-revenue-print] section,
-  [data-revenue-print] article {
-    break-inside: avoid;
-  }
-
-  .print-only {
-    display: block;
-  }
-
-  body {
-    font-family: var(--font-pretendard), system-ui, sans-serif;
-  }
+/* 남은 이름. 스크롤바는 이제 전역이라 이 클래스는 스크롤 상자라는 표시로만 쓴다. */
+.dialog-scroll {
+  overflow: auto;
 }

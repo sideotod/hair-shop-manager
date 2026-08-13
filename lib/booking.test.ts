@@ -7,8 +7,8 @@ const settings = { bookingOpen: "09:30", bookingClose: "21:00", bookingSlotMinut
 
 // 서울 10:00-11:00. 저장 값은 참 시각 ISO 라 UTC 로는 01:00-02:00 이다.
 function seedBooking(store: ReturnType<typeof createSalonStore>, status: string) {
-  store.save("customers", "customer-1", { name: "김손님", phone: "", smsOptIn: false, points: 0 }, "원장");
-  return store.save("bookings", "booking-1", { customerId: "customer-1", service: "커트", startsAt: "2026-08-03T01:00:00.000Z", endsAt: "2026-08-03T02:00:00.000Z", status, memo: "", reminderDayBefore: false, reminderDayOf: false, reminderText: "", statusHistory: [{ status, at: "2026-08-01T00:00:00.000Z", actor: "원장" }] }, "원장");
+  store.save("customers", "customer-1", { name: "김손님", phone: "", smsOptIn: false, points: 0 }, "사용자");
+  return store.save("bookings", "booking-1", { customerId: "customer-1", service: "커트", startsAt: "2026-08-03T01:00:00.000Z", endsAt: "2026-08-03T02:00:00.000Z", status, memo: "", reminderDayBefore: false, reminderDayOf: false, reminderText: "", statusHistory: [{ status, at: "2026-08-01T00:00:00.000Z", actor: "사용자" }] }, "사용자");
 }
 
 describe("booking rules", () => {
@@ -36,7 +36,7 @@ describe("markBookingCompleted", () => {
       const saved = markBookingCompleted(store, "booking-1");
       expect(saved?.value).toMatchObject({ status: "completed", service: "커트", startsAt: "2026-08-03T01:00:00.000Z" });
       expect((saved?.value as { statusHistory: readonly unknown[] }).statusHistory).toHaveLength(2);
-      expect((saved?.value as { statusHistory: readonly { status: string }[] }).statusHistory[1]).toMatchObject({ status: "completed", actor: "원장" });
+      expect((saved?.value as { statusHistory: readonly { status: string }[] }).statusHistory[1]).toMatchObject({ status: "completed", actor: "사용자" });
     } finally { store.close(); }
   });
 
@@ -52,7 +52,7 @@ describe("markBookingCompleted", () => {
       expect(markBookingCompleted(store, "booking-1")).toBeNull();
 
       seedBooking(store, "confirmed");
-      store.archive("bookings", "booking-1", "원장");
+      store.archive("bookings", "booking-1", "사용자");
       expect(markBookingCompleted(store, "booking-1")).toBeNull();
     } finally { store.close(); }
   });
@@ -62,7 +62,7 @@ describe("markBookingCompleted", () => {
     const store = createSalonStore(":memory:");
     try {
       seedBooking(store, "confirmed");
-      store.saveSettings({ bookingOpen: "13:00", bookingClose: "18:00", bookingSlotMinutes: 30 }, "원장");
+      store.saveSettings({ bookingOpen: "13:00", bookingClose: "18:00", bookingSlotMinutes: 30 }, "사용자");
 
       const status = new FormData(); status.set("bookingId", "booking-1"); status.set("status", "completed");
       expect(() => changeBookingStatusRecord(store, status)).toThrow("영업 시간");
