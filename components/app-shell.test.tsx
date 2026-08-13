@@ -58,8 +58,10 @@ describe("AppShell", () => {
     expect(html).not.toContain("원장 원장님");
     for (const label of ["운영 현황", "고객", "예약", "매출·결제", "문자", "운영 설정", "설정"]) expect(html).toContain(`>${label}<`);
     expect(html).not.toContain(">상품·쿠폰<");
-    for (const mode of ["핸드폰 뒷번호/고객명", "닉네임", "전화번호 뒷번호", "그룹명", "메모", "주소", "방문동기", "이메일", "포인트 카드", "패밀리번호"]) expect(html).toContain(`>${mode}<`);
-    expect(html.match(/<option value=/g)).toHaveLength(10);
+    // 검색 기준 드롭다운은 없다. 남은 것은 검색어 한 칸뿐 — `/customers` 가 입력만 보고 이름/번호를 가른다.
+    expect(html).toContain('placeholder="고객명 또는 휴대전화 뒷자리"');
+    expect(html).not.toContain('name="mode"');
+    expect(html.match(/<option value=/g)).toBeNull();
     expect(html).toContain("SMS 500");
     expect(html).toContain("도움말");
     expect(html).toContain("로그아웃");

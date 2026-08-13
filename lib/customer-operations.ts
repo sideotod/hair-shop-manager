@@ -1,6 +1,7 @@
 import { randomUUID } from "node:crypto";
 
 import type { CustomerValue, JsonObject, JsonValue, SalonRecord, SalonStore } from "./salon-domain";
+import { PAYMENT_METHODS } from "./settlement";
 
 const actor = "원장" as const;
 
@@ -27,10 +28,6 @@ function validDate(value: string) {
   return !Number.isNaN(date.getTime()) && date.toISOString().slice(0, 10) === value;
 }
 
-function validDateTime(date: string, time: string) {
-  return validDate(date) && /^(?:[01]\d|2[0-3]):[0-5]\d$/.test(time);
-}
-
 /**
  * 폼은 포인트를 만들지 않는다.
  *
@@ -39,86 +36,103 @@ function validDateTime(date: string, time: string) {
  * 적립이 폼이 렌더될 때의 숫자로 되돌아간다. 그래서 여기서 아예 빼고,
  * 저장 직전 `saveCustomerRecord()` 가 기존 레코드의 값을 그대로 이어붙인다.
  * 잔액을 바꾸는 유일한 경로는 `adjustCustomerPointsRecord()` — **사유 필수**다.
+ *
+ * 칸은 6개다(성명·성별·휴대전화·첫 방문일·선결제·메모). 등급·그룹·방문동기·생일·
+ * 집전화·주소·이메일 따위는 화면 어디에서도 읽지 않아 영구히 삭제했다.
  */
 // 반환 타입은 추론에 맡긴다. `CustomerValue` 는 `JsonObject &` 교차형이라
 // `Omit<>` 을 씌우면 index signature 만 남고 이름 붙은 필드가 전부 날아간다.
 function customerFrom(formData: FormData) {
   const name = text(formData, "name");
   if (!name) throw new Error("고객명은 필수입니다.");
-  const phoneAbsent = checked(formData, "phoneAbsent");
   const phone = text(formData, "phone").replace(/\D/g, "");
-  if (!phoneAbsent && !/^01\d{8,9}$/.test(phone)) throw new Error("휴대전화 번호를 확인하세요.");
+  if (!/^01\d{8,9}$/.test(phone)) throw new Error("휴대전화 번호를 확인하세요.");
   const memo = text(formData, "memo");
   if (memo.length > 150) throw new Error("메모는 150자 이하로 입력하세요.");
 
   return {
     name,
-    phone: phoneAbsent ? "" : phone,
-    telephone: text(formData, "telephone"),
-    phoneAbsent,
+    phone,
     gender: text(formData, "gender") || "unspecified",
     smsOptIn: text(formData, "smsOptIn") !== "off",
-    birthday: text(formData, "birthday"),
-    birthdayCalendar: text(formData, "birthdayCalendar") || "solar",
-    grade: text(formData, "grade") || "일반",
-    group: text(formData, "group"),
-    motive: text(formData, "motive"),
-    pointCard: text(formData, "pointCard"),
-    familyNumber: text(formData, "familyNumber"),
-    nickname: text(formData, "nickname"),
-    address: text(formData, "address"),
-    email: text(formData, "email"),
     visitType: text(formData, "visitType") || "first",
     memo,
-    firstMetAt: text(formData, "firstMetAt"),
+    // 첫 방문일 = 가입일. 두 이름으로 같은 날짜를 두 번 묻지 않는다.
     joinedAt: text(formData, "joinedAt"),
     operator: actor,
   };
 }
 
+/** 0 이상 정수만 받는다. 빈 칸은 0 — 대부분의 손님은 선결제를 하지 않는다. */
+function prepaidAmount(formData: FormData, name: string) {
+  const raw = text(formData, name);
+  if (!raw) return 0;
+  const amount = Number(raw);
+  if (!Number.isSafeInteger(amount) || amount < 0) throw new Error("선결제 금액을 확인하세요.");
+  return amount;
+}
+
 export function saveCustomerRecord(store: SalonStore, formData: FormData) {
   const draft = customerFrom(formData);
-  for (const [field, value] of [["생년월일", draft.birthday], ["첫 만남 날짜", draft.firstMetAt], ["가입일", draft.joinedAt]] as const) {
-    if (typeof value !== "string" || (value && !validDate(value))) throw new Error(`${field}을 확인하세요.`);
-  }
+  if (draft.joinedAt && !validDate(draft.joinedAt)) throw new Error("첫 방문날짜를 확인하세요.");
   const id = recordId(formData, "customerId", "customer");
-  // 포인트 잔액과 포인트 빚은 원장이 계산한 값이다. 폼에서 오지 않으므로 기존 레코드에서 이어받는다.
+  // 포인트 잔액과 선결제 잔액은 원장이 만든 값이다. 폼에서 오지 않으므로 기존 레코드에서 이어받는다.
   const existing = store.get("customers", id);
   const previous = existing ? objectValue(existing) : {};
+  const previousPrepaid = typeof previous.prepaidWon === "number" && Number.isSafeInteger(previous.prepaidWon) ? previous.prepaidWon : 0;
+  // 신규 등록에서만 선결제 칸을 읽는다. 기존 고객의 잔액은 [선결제 충전]으로만 움직인다 —
+  // 정보 수정 폼이 잔액을 덮어쓰면 원장에 없는 돈이 생긴다.
+  const charge = existing ? 0 : prepaidAmount(formData, "prepaidWon");
   const customer: CustomerValue = {
+    ...previous,
     ...draft,
     points: typeof previous.points === "number" && Number.isSafeInteger(previous.points) ? previous.points : 0,
-    ...(typeof previous.pointDebtWon === "number" ? { pointDebtWon: previous.pointDebtWon } : {}),
+    prepaidWon: previousPrepaid + charge,
   };
   const duplicate = store.list("customers").some((record) => {
     if (record.id === id) return false;
     const value = objectValue(record);
-    return value.name === customer.name || (!customer.phoneAbsent && value.phone === customer.phone);
+    return value.name === customer.name || value.phone === customer.phone;
   });
   if (duplicate && !checked(formData, "allowDuplicate")) throw new Error("중복 고객입니다. 중복 등록을 확인하세요.");
-  const bookingDate = text(formData, "initialBookingDate");
-  const bookingTime = text(formData, "initialBookingTime");
-  if ((bookingDate || bookingTime) && !validDateTime(bookingDate, bookingTime)) {
-    throw new Error("초기 예약 날짜와 시간을 확인하세요.");
-  }
-  const waitingMemo = text(formData, "waitingMemo");
-  if (checked(formData, "registerWaiting") && waitingMemo.length > 150) throw new Error("대기 메모는 150자 이하로 입력하세요.");
 
   const saved = store.save("customers", id, customer, actor);
-  if (checked(formData, "initialSms") && customer.smsOptIn) {
-    store.save("messages", recordId(formData, "initialMessageId", "message"), { recipientId: id, channel: "SMS", status: "queued", operator: actor }, actor);
-  }
-  if (bookingDate || bookingTime) {
-    store.save("bookings", recordId(formData, "initialBookingId", "booking"), { customerId: id, startsAt: `${bookingDate}T${bookingTime}:00.000Z`, service: text(formData, "initialBookingService") || "예약", status: "confirmed", operator: actor }, actor);
-  }
-  if (checked(formData, "registerWaiting")) {
-    store.save("waiting-customers", recordId(formData, "waitingId", "waiting"), { customerId: id, name: customer.name, memo: waitingMemo, operator: actor }, actor);
-  }
+  // 등록하며 받은 선결제도 돈이 들어온 사실이다. 고객 필드만 바꾸면 그 돈이 매출에서 사라진다.
+  if (charge > 0) appendPrepaidLedger(store, id, charge, "cash", text(formData, "prepaidRequestKey"));
   return saved;
 }
 
-export function archiveCustomerRecord(store: SalonStore, formData: FormData) {
-  return store.archive("customers", text(formData, "customerId"), actor);
+/**
+ * 선결제 충전 1행. **잔액은 고객 필드가, 돈이 움직인 사실은 원장이 맡는다.**
+ *
+ * 매출 화면이 이 행을 시술 매출과 섞지 않도록 `serviceMajor` 를 "선결제"로 남긴다.
+ */
+function appendPrepaidLedger(store: SalonStore, customerId: string, amount: number, method: string, requestKey: string) {
+  return store.appendLedger({
+    requestKey: requestKey || `prepaid-${randomUUID()}`,
+    kind: "payment",
+    customerId,
+    grossWon: amount,
+    amountWon: amount,
+    details: { operator: actor, serviceMajor: "선결제", prepaidChargeWon: amount, paymentMethods: { [method]: amount } },
+  }, actor);
+}
+
+export function chargePrepaidRecord(store: SalonStore, formData: FormData) {
+  const customerId = text(formData, "customerId");
+  const existing = customerId ? store.get("customers", customerId) : null;
+  if (!existing) throw new Error("선결제를 충전할 고객을 확인하세요.");
+  const amount = prepaidAmount(formData, "amountWon");
+  if (amount <= 0) throw new Error("선결제 금액을 확인하세요.");
+  const method = text(formData, "method") || "cash";
+  if (!PAYMENT_METHODS.some((entry) => entry.key === method) || method === "prepaid" || method === "points") {
+    throw new Error("선결제 결제수단을 확인하세요.");
+  }
+
+  const previous = objectValue(existing);
+  const balance = typeof previous.prepaidWon === "number" && Number.isSafeInteger(previous.prepaidWon) ? previous.prepaidWon : 0;
+  appendPrepaidLedger(store, customerId, amount, method, text(formData, "requestKey"));
+  return store.save("customers", customerId, { ...previous, prepaidWon: balance + amount, operator: actor }, actor);
 }
 
 /**
@@ -146,39 +160,4 @@ export function adjustCustomerPointsRecord(store: SalonStore, formData: FormData
     pointsWon: amount,
     details: { operator: actor, reason, pointsUsedWon: amount < 0 ? -amount : 0, pointsEarnedWon: amount > 0 ? amount : 0 },
   }, actor);
-}
-
-export function saveWaitingCustomerRecord(store: SalonStore, formData: FormData) {
-  const name = text(formData, "name");
-  if (!name) throw new Error("대기 고객명은 필수입니다.");
-  const memo = text(formData, "memo");
-  if (memo.length > 150) throw new Error("대기 메모는 150자 이하로 입력하세요.");
-  return store.save("waiting-customers", recordId(formData, "waitingId", "waiting"), { customerId: text(formData, "customerId"), name, memo, operator: actor }, actor);
-}
-
-export function completeWaitingCustomerRecord(store: SalonStore, formData: FormData) {
-  return store.archive("waiting-customers", text(formData, "waitingId"), actor);
-}
-
-export function saveCustomerPolicyRecord(store: SalonStore, formData: FormData) {
-  const policy: JsonObject = {};
-  if (formData.has("customerGroups")) policy.customerGroups = text(formData, "customerGroups");
-  if (formData.has("customerGrades")) policy.customerGrades = text(formData, "customerGrades");
-  if (formData.has("visitMotives")) policy.visitMotives = text(formData, "visitMotives");
-  if (formData.has("defaultSmsOptIn")) policy.defaultSmsOptIn = text(formData, "defaultSmsOptIn") !== "off";
-  if (formData.has("birthdayCalendar")) policy.birthdayCalendar = text(formData, "birthdayCalendar") || "solar";
-  if (formData.has("powerCustomerMinPoints")) {
-    const points = Number(text(formData, "powerCustomerMinPoints"));
-    if (!Number.isSafeInteger(points) || points < 0) throw new Error("파워 고객 포인트 기준을 확인하세요.");
-    policy.powerCustomerMinPoints = points;
-  }
-  const settings = Object.keys(policy).length ? store.saveSettings(policy, actor) : store.getSettings();
-  const group = text(formData, "bulkGroup") || text(formData, "customerGroups");
-  const grade = text(formData, "bulkGrade") || text(formData, "customerGrades");
-  for (const id of formData.getAll("customerIds")) {
-    if (typeof id !== "string" || !id) continue;
-    const customer = store.get("customers", id);
-    if (customer) store.save("customers", id, { ...objectValue(customer), ...(group ? { group } : {}), ...(grade ? { grade } : {}), operator: actor }, actor);
-  }
-  return settings;
 }

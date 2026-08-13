@@ -38,7 +38,7 @@ const plexMono = IBM_Plex_Mono({
 const fontVariables = [pretendard, marcellus, plexSansKr, plexMono].map((font) => font.variable).join(" ");
 
 export const metadata: Metadata = {
-  title: "Hairhaeyo Salon Management",
+  title: "Hairhaeyo",
   description: "헤어해요 미용실 고객·예약·매출 관리 시스템",
 };
 

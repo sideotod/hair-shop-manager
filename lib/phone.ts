@@ -10,3 +10,16 @@ export function maskPhone(phone: string) {
   if (digits.length < 9) return phone;
   return `${digits.slice(0, 3)}-****-${digits.slice(-4)}`;
 }
+
+/**
+ * 상세 화면용 하이픈 표기. `01012345678` → `010-1234-5678`.
+ *
+ * 저장은 숫자만 한다 — 검색·중복 판정이 형식에 걸리지 않게 하려는 것이다.
+ * 사람이 읽는 자리에서만 끊어 준다. 010 이 아닌 번호(02·031·1588)는 형식을
+ * 짐작하지 않고 그대로 돌려준다 — 틀린 위치에 하이픈을 넣으면 안 넣느니만 못하다.
+ */
+export function formatPhone(phone: string) {
+  const digits = phone.replace(/\D/g, "");
+  if (!/^01\d{8,9}$/.test(digits)) return phone;
+  return `${digits.slice(0, 3)}-${digits.slice(3, -4)}-${digits.slice(-4)}`;
+}

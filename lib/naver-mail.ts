@@ -137,7 +137,7 @@ export function applyNaverBookingMails(store: SalonStore, messages: readonly Par
       ? customers.find((record) => String(recordValue(record).phone ?? "").replace(/\D/g, "") === message.customerPhone)
       : nameMatches.length === 1 ? nameMatches[0] : undefined;
     const customerId = matchingCustomer?.id ?? `naver-customer:${message.customerPhone || message.reservationNumber}`;
-    if (!matchingCustomer) store.save("customers", customerId, { name: message.customerName || "네이버 예약 고객", phone: message.customerPhone, telephone: "", phoneAbsent: !message.customerPhone, smsOptIn: false, points: 0, visitType: "first", operator: actor }, actor);
+    if (!matchingCustomer) store.save("customers", customerId, { name: message.customerName || "네이버 예약 고객", phone: message.customerPhone, smsOptIn: false, points: 0, visitType: "first", operator: actor }, actor);
     store.save("bookings", bookingId, { ...merged.value, customerId }, actor);
     if (merged.archived) {
       store.archive("bookings", bookingId, actor);

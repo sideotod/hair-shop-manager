@@ -4,8 +4,8 @@ import { seoulDate } from "@/lib/seoul-date";
 import { connection } from "next/server";
 import { runStartupNaverSync } from "../naver-mail-actions";
 
-/** 대시보드가 그리는 카드 5종. `snapshot()` 처럼 모든 kind 를 훑지 않는다 (A4-4). */
-const dashboardKinds = ["customers", "bookings", "waiting-customers", "automations", "notices"] as const;
+/** 대시보드가 그리는 카드 4종. `snapshot()` 처럼 모든 kind 를 훑지 않는다 (A4-4). */
+const dashboardKinds = ["customers", "bookings", "automations", "notices"] as const;
 
 export default async function Page() {
   await connection();

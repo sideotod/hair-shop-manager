@@ -18,6 +18,7 @@ export const PAYMENT_METHODS = [
   { key: "naverPay", label: "N페이" },
   { key: "other", label: "기타" },
   { key: "zeroPay", label: "제로페이" },
+  { key: "prepaid", label: "선불권" },
 ] as const;
 
 export type PaymentMethod = typeof PAYMENT_METHODS[number]["key"];

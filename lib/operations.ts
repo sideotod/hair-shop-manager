@@ -1,6 +1,6 @@
 import { randomUUID } from "node:crypto";
 
-import type { JsonObject, LedgerEntry, LedgerInput, SalonStore } from "./salon-domain";
+import type { JsonObject, JsonValue, LedgerEntry, LedgerInput, SalonRecord, SalonStore } from "./salon-domain";
 import { seoulInstant } from "./seoul-date";
 
 const actor = "원장" as const;
@@ -59,6 +59,13 @@ export function savePresetRecord(store: SalonStore, data: FormData) {
   const values = text(data, "values").split(",").map((value) => value.trim()).filter(Boolean);
   if (!values.length || values.some((value) => value.length > 50)) throw new Error("설정 값을 확인하세요.");
   return store.saveSettings({ [presetType]: values.join(", ") }, actor);
+}
+export const FALLBACK_SERVICE_MAJORS = ["커트", "펌", "매직", "드라이", "클리닉", "컬러", "업스타일", "매니큐어", "세트메뉴", "기타"] as const;
+/** 카탈로그의 대분류 이름. 비어 있으면 기존 하드코딩 목록. `current` 가 목록에 없으면 앞에 끼운다 — 정정 화면에서 옛 결제의 대분류가 조용히 바뀌면 안 된다. */
+export function serviceMajorOptions(catalog: readonly SalonRecord<JsonValue>[], current?: string): readonly string[] {
+  const names = catalog.filter((item) => string(object(item.value), "type") === "service-major").map((item) => string(object(item.value), "name")).filter(Boolean);
+  const list = names.length ? names : [...FALLBACK_SERVICE_MAJORS];
+  return current && !list.includes(current) ? [current, ...list] : list;
 }
 export function ledgerSettlement(ledger: readonly LedgerEntry[]) {
   const sum = (field: keyof Pick<LedgerEntry, "grossWon" | "amountWon" | "vatWon" | "feeWon" | "expenseWon" | "profitWon">) => ledger.reduce((total, entry) => total + entry[field], 0);

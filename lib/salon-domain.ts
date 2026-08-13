@@ -7,15 +7,12 @@ export type JsonObject = { [key: string]: JsonValue };
 export type CustomerValue = JsonObject & {
   name: string;
   phone: string;
-  telephone: string;
-  phoneAbsent: boolean;
   smsOptIn: boolean;
   points: number;
-  pointDebtWon?: number;
+  /** 남은 선결제 잔액. 충전은 원장 한 줄로 남고, 이 값은 그 결과다. */
+  prepaidWon: number;
   operator: "원장";
 };
-
-export type WaitingCustomerValue = JsonObject & { name: string; memo: string; operator: "원장" };
 
 export type SalonRecord<T extends JsonValue = JsonValue> = {
   id: string;
@@ -148,6 +145,8 @@ export type SalonStore = {
   listLedgerRange(start: string, endExclusive: string): readonly LedgerEntry[];
   /** One customer's ledger rows. Cheaper than `listLedger()` when only a selected customer is shown. */
   listLedgerByCustomer(customerId: string): readonly LedgerEntry[];
+  /** 고객별 마지막 결제일. 목록의 "최근 방문일" 정렬이 원장 전량을 읽지 않게 한다. */
+  lastVisitByCustomer(): ReadonlyMap<string, string>;
   /** Grouped totals over `[start, endExclusive)`. Ascending by key. */
   aggregateLedger(start: string, endExclusive: string, unit: LedgerUnit): readonly LedgerAggregateRow[];
   /** Settlement totals over `[start, endExclusive)`. */

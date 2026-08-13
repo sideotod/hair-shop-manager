@@ -2,7 +2,7 @@ import Link from "next/link";
 
 import { logoutOwner } from "../app/auth-actions";
 import { focusRing, focusRingOnDark } from "./button";
-import { searchModes } from "../lib/customer-search";
+
 import { activeNavigationItem, matchNavigationItem, navigationItems } from "../lib/navigation";
 import type { JsonObject, JsonValue, SalonRecord } from "../lib/salon-domain";
 import { resolveVisualTokens } from "../lib/visual-tokens";
@@ -92,12 +92,12 @@ export function AppShell({
           <header className="flex h-[72px] shrink-0 items-center gap-5 border-b border-[var(--border)] bg-[var(--surface)] px-7 text-[13px]">
             <div className="flex shrink-0 flex-col gap-0.5"><h1 className={typeScale.title}>{title}</h1><span className="font-mono text-[11px] text-[var(--muted)]">{dateLabel}</span></div>
             <div className="h-px min-w-0 flex-1" />
+            {/* 검색 기준 드롭다운은 없앴다. 8개 중 6개(닉네임·메모·주소·이메일·포인트카드·패밀리번호)가
+                삭제된 속성을 읽어 아무것도 찾지 못했고, 남은 둘은 `/customers` 가 입력만 보고 알아서 가른다 —
+                숫자면 번호 뒷자리, 아니면 이름. 고를 것이 없으면 고르게 하지 않는다. */}
             <form action="/customers" className="flex h-10 w-[340px] shrink-0 items-center gap-2 rounded-[var(--radius-chip)] bg-[var(--background)] px-3" method="get" role="search">
-              <select aria-label="고객 검색 기준" className={`h-8 w-[76px] rounded-[var(--radius-control)] border border-[var(--border)] bg-[var(--surface)] px-2 text-[11px] text-[var(--brand)] ${focusRing}`} name="mode">
-                {searchModes.map(([value, label]) => <option key={value} value={value}>{label}</option>)}
-              </select>
               {/* `outline-none` 이었다. 셸에서 유일하게 포커스가 완전히 사라지는 칸이었다. */}
-              <input aria-label="고객 검색어" className={`h-8 min-w-0 flex-1 rounded-[var(--radius-control)] bg-transparent px-1 text-[12px] ${focusRing}`} name="query" placeholder="고객 검색" />
+              <input aria-label="고객 검색어" className={`h-8 min-w-0 flex-1 rounded-[var(--radius-control)] bg-transparent px-1 text-[12px] ${focusRing}`} name="query" placeholder="고객명 또는 휴대전화 뒷자리" />
               {/* `not-sr-only` 이 `padding:0` 을 되돌려 붙인다. 크기는 `focus:` 쪽에서 다시 줘야
                   포커스로 드러난 버튼이 23×19.5px 짜리 글자 덩어리로 나오지 않는다(실측). */}
               <button className={`sr-only rounded-[var(--radius-control)] bg-[var(--brand)] text-[11px] text-white focus:not-sr-only focus:inline-flex focus:h-8 focus:items-center focus:px-2.5 ${focusRing}`} type="submit">검색</button>

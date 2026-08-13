@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import { correctExpenseRecord, ledgerSettlement, recordExpense, saveCatalogItemRecord } from "./operations";
+import { FALLBACK_SERVICE_MAJORS, correctExpenseRecord, ledgerSettlement, recordExpense, saveCatalogItemRecord, serviceMajorOptions } from "./operations";
 import { createSalonStore } from "./salon-store";
 
 function form(values: Record<string, string>) {
@@ -48,6 +48,35 @@ describe("expense ledger", () => {
       saveCatalogItemRecord(store, form({ catalogId: "service-detail", type: "service-detail", category: "커트", name: "여성 커트", priceWon: "25000" }));
       saveCatalogItemRecord(store, form({ catalogId: "service-detail", type: "service-detail", category: "커트", name: "여성 디자인 커트", priceWon: "30000" }));
       expect(store.get("catalog-items", "service-detail")?.value).toMatchObject({ name: "여성 디자인 커트", priceWon: 30000 });
+    } finally { store.close(); }
+  });
+});
+
+describe("service major options", () => {
+  it("reads major names from the catalog and falls back only when none exist", () => {
+    const store = createSalonStore(":memory:");
+    try {
+      saveCatalogItemRecord(store, form({ catalogId: "major-cut", type: "service-major", name: "커트", priceWon: "0" }));
+      saveCatalogItemRecord(store, form({ catalogId: "major-perm", type: "service-major", name: "펌", priceWon: "0" }));
+      expect(serviceMajorOptions(store.list("catalog-items"))).toEqual(["커트", "펌"]);
+    } finally { store.close(); }
+  });
+
+  it("falls back to the hardcoded ten when the catalog holds no major", () => {
+    const store = createSalonStore(":memory:");
+    try {
+      expect(serviceMajorOptions(store.list("catalog-items"))).toEqual([...FALLBACK_SERVICE_MAJORS]);
+      saveCatalogItemRecord(store, form({ catalogId: "detail-only", type: "service-detail", category: "커트", name: "여성 커트", priceWon: "25000" }));
+      expect(serviceMajorOptions(store.list("catalog-items"))).toEqual([...FALLBACK_SERVICE_MAJORS]);
+    } finally { store.close(); }
+  });
+
+  it("keeps a current value that the catalog dropped, without duplicating one it still has", () => {
+    const store = createSalonStore(":memory:");
+    try {
+      saveCatalogItemRecord(store, form({ catalogId: "major-cut", type: "service-major", name: "커트", priceWon: "0" }));
+      expect(serviceMajorOptions(store.list("catalog-items"), "없어진분류")).toEqual(["없어진분류", "커트"]);
+      expect(serviceMajorOptions(store.list("catalog-items"), "커트")).toEqual(["커트"]);
     } finally { store.close(); }
   });
 });

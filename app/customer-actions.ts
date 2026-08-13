@@ -3,7 +3,7 @@
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 
-import { adjustCustomerPointsRecord, archiveCustomerRecord, completeWaitingCustomerRecord, saveCustomerPolicyRecord, saveCustomerRecord, saveWaitingCustomerRecord } from "../lib/customer-operations";
+import { adjustCustomerPointsRecord, chargePrepaidRecord, saveCustomerRecord } from "../lib/customer-operations";
 import type { SalonStore } from "../lib/salon-domain";
 import { createSalonStore } from "../lib/salon-store";
 
@@ -23,7 +23,6 @@ function back(formData: FormData, key: "error" | "notice", message: string): nev
   const url = new URL(returnTo(formData), "http://localhost");
   url.searchParams.delete(key === "notice" ? "error" : "notice");
   url.searchParams.delete("new");
-  url.searchParams.delete("waiting");
   url.searchParams.set(key, message);
   redirect(`${url.pathname}${url.search}`);
 }
@@ -44,8 +43,5 @@ function mutate(formData: FormData, notice: string, operation: (store: SalonStor
 }
 
 export async function saveCustomer(formData: FormData) { mutate(formData, "고객 정보를 저장했습니다.", (store) => saveCustomerRecord(store, formData)); }
-export async function archiveCustomer(formData: FormData) { mutate(formData, "고객을 보관했습니다.", (store) => archiveCustomerRecord(store, formData)); }
-export async function saveWaitingCustomer(formData: FormData) { mutate(formData, "대기 고객을 등록했습니다.", (store) => saveWaitingCustomerRecord(store, formData)); }
-export async function completeWaitingCustomer(formData: FormData) { mutate(formData, "대기 고객을 완료 처리했습니다.", (store) => completeWaitingCustomerRecord(store, formData)); }
-export async function saveCustomerPolicy(formData: FormData) { mutate(formData, "고객 설정을 저장했습니다.", (store) => saveCustomerPolicyRecord(store, formData)); }
+export async function chargePrepaid(formData: FormData) { mutate(formData, "선결제를 충전했습니다.", (store) => chargePrepaidRecord(store, formData)); }
 export async function adjustCustomerPoints(formData: FormData) { mutate(formData, "포인트를 조정했습니다.", (store) => adjustCustomerPointsRecord(store, formData)); }

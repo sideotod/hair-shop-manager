@@ -51,10 +51,6 @@ function seoulMinutes(now: Date) {
   return minutesOfDay(timeFormatter.format(now));
 }
 
-function gapLabel(minutes: number, waitingCount: number) {
-  return waitingCount > 0 ? `${minutes}분 비어 있음 · 대기 고객 ${waitingCount}명 배정 가능` : `${minutes}분 비어 있음`;
-}
-
 /**
  * 대시보드가 실제로 읽는 것만 받는다. 예전엔 `SalonSnapshot` 전체(모든 kind + 원장 5,576행 +
  * 감사 6,435행, 실측 76.07ms)를 받아놓고 원장에선 "오늘 합계", 감사에선 "마지막 5행"만 썼다.
@@ -73,7 +69,6 @@ export type DashboardData = {
 export function DashboardPage({ data, today = new Date() }: { data: DashboardData; today?: Date }) {
   const customers = data.records.customers ?? [];
   const bookings = data.records.bookings ?? [];
-  const waitingCustomers = data.records["waiting-customers"] ?? [];
   const automations = data.records.automations ?? [];
   const notices = data.records.notices ?? [];
   const settings = data.settings;
@@ -127,8 +122,7 @@ export function DashboardPage({ data, today = new Date() }: { data: DashboardDat
    * 빈 구간은 예약 **사이**만이 아니다. 첫 예약 전과 마지막 예약 후도 비어 있다.
    *
    * 지금까지는 인접한 두 예약의 틈만 셌다. 오전 첫 예약이 14시면 09–14시가 통째로
-   * 비어 있는데도 축에 아무 표시가 없었고, 예약이 0~1건인 날은 빈 구간이 하나도 안 잡혀
-   * 대기 고객 "배정" 링크가 시각 없이 나갔다 — 원장은 배정 화면에서 시간을 다시 쳐야 했다.
+   * 비어 있는데도 축에 아무 표시가 없었다.
    *
    * 경계를 `[영업시작, 예약1시작, 예약1종료, …, 영업종료]` 로 늘어놓으면 짝수 자리가
    * 빈 구간의 시작이 된다. 예약이 없는 날은 `[시작, 종료]` 하나 — 하루 전체가 빈 구간이다.
@@ -138,10 +132,10 @@ export function DashboardPage({ data, today = new Date() }: { data: DashboardDat
     const gap = index % 2 === 0 ? railEdges[index + 1] - start : 0;
     return gap >= policy.bookingSlotMinutes ? [{ height: railHeight(gap), minutes: gap, startMinutes: start, top: railOffset(start, openMinutes) }] : [];
   });
-  // 빈 슬롯과 대기 고객이 "배정 가능"이라고 말만 하던 자리에 실제 목적지를 준다.
+  // 빈 슬롯이 "배정 가능"이라고 말만 하던 자리에 실제 목적지를 준다.
   // 예약 폼은 `defaultValue` 로만 채운다 — 원장이 시간을 고칠 수 있어야 한다.
   const clock = (minutes: number) => `${String(Math.floor(minutes / 60)).padStart(2, "0")}:${String(minutes % 60).padStart(2, "0")}`;
-  const assignHref = (customerId = "", waitingId = "", startMinutes?: number) => `/bookings?new=1&date=${todayKey}${customerId ? `&customerId=${encodeURIComponent(customerId)}` : ""}${waitingId ? `&waitingId=${encodeURIComponent(waitingId)}` : ""}${startMinutes === undefined ? "" : `&startTime=${clock(startMinutes)}`}`;
+  const assignHref = (customerId = "", startMinutes?: number) => `/bookings?new=1&date=${todayKey}${customerId ? `&customerId=${encodeURIComponent(customerId)}` : ""}${startMinutes === undefined ? "" : `&startTime=${clock(startMinutes)}`}`;
   const completedToday = railBookings.filter((booking) => booking.status === "completed").length;
   const enabledAutomations = automations.filter((record) => textValue(objectValue(record), "status") === "사용").length;
 
@@ -151,7 +145,7 @@ export function DashboardPage({ data, today = new Date() }: { data: DashboardDat
           <h2 className={typeScale.section}>오늘 할 일</h2>
           <div className="h-px min-w-0 flex-1 bg-transparent" />
           <nav aria-label="빠른 작업" className="flex gap-2">
-            {[["예약 등록", "/bookings?new=1"], ["고객 등록", "/customers?new=1"], ["결제 등록", "/sales?tab=payment"], ["대기 등록", "/customers?waiting=1"], ["문자 발송", "/messages?new=1"]].map(([label, href], index) => <Link className={button("md", index === 0 ? "primary" : "secondary")} href={href} key={href}>{label}</Link>)}
+            {[["예약 등록", "/bookings?new=1"], ["고객 등록", "/customers?new=1"], ["결제 등록", "/sales?tab=payment"], ["문자 발송", "/messages?new=1"]].map(([label, href], index) => <Link className={button("md", index === 0 ? "primary" : "secondary")} href={href} key={href}>{label}</Link>)}
           </nav>
         </div>
 
@@ -174,8 +168,8 @@ export function DashboardPage({ data, today = new Date() }: { data: DashboardDat
                     </div>
                   ))}
                   {railGaps.map(({ height, minutes, startMinutes, top }) => (
-                    <Link className={`absolute left-[56px] right-0 grid place-items-center rounded-[var(--radius-control)] text-[11px] text-[var(--muted)] hover:bg-[var(--brand-soft)] hover:text-[var(--brand)] ${focusRing}`} href={assignHref("", "", startMinutes)} key={`gap-${top}`} style={{ height: `${height}px`, top: `${top}px` }}>
-                      {gapLabel(minutes, waitingCustomers.length)}
+                    <Link className={`absolute left-[56px] right-0 grid place-items-center rounded-[var(--radius-control)] text-[11px] text-[var(--muted)] hover:bg-[var(--brand-soft)] hover:text-[var(--brand)] ${focusRing}`} href={assignHref("", startMinutes)} key={`gap-${top}`} style={{ height: `${height}px`, top: `${top}px` }}>
+                      {minutes}분 비어 있음
                     </Link>
                   ))}
                   <ol>
@@ -208,13 +202,12 @@ export function DashboardPage({ data, today = new Date() }: { data: DashboardDat
           </section>
 
           <aside className="min-h-0 space-y-[18px] overflow-auto pr-1">
-            <section aria-label="운영 현황" className={`${card} overflow-hidden`}><div className="flex items-center justify-between border-b border-[var(--border)] px-[18px] py-3"><h2 className={typeScale.section}>운영 현황</h2><span className="font-mono text-[10px] text-[var(--muted)]">확정 반영</span></div><dl className="px-[18px] py-2"><div className="flex items-end justify-between gap-2 border-b border-[var(--border)] py-[10px]"><dt className="text-[11px] text-[var(--muted)]">매출</dt><dd className={`font-mono ${typeScale.display}`}>₩{todaySales.toLocaleString("ko-KR")}</dd></div>{[["예약", `완료 ${completedToday}건 · 남은 ${todayBookings.length - completedToday}건`, `${todayBookings.length}건`], ["대기 고객", waitingCustomers.length ? "배정 대기" : "없음", `${waitingCustomers.length}명`], ["미수금", "없음", "₩0"], ["SMS 잔여", `자동 발송 ${enabledAutomations}건 예정`, `${smsRemaining.toLocaleString("ko-KR")}건`]].map(([label, subtitle, value]) => <div className="flex items-center gap-[8px] border-b border-[var(--border)] py-[10px] last:border-0" key={label}><div className="min-w-0 flex-1"><dt className="text-[12px]">{label}</dt><span className="mt-0.5 block text-[11px] text-[var(--muted)]">{subtitle}</span></div><dd className="font-mono font-medium">{value}</dd></div>)}<div className="flex items-center gap-2 pt-3 text-[11px] text-[var(--muted)]"><span className="h-[11px] w-[2px] bg-[var(--accent)]" />정정 {recentAudit.filter((event) => event.action.includes("correction")).length}건 · 삭제 없이 원장에 덧붙임</div></dl></section>
-            <section aria-label="대기 고객" className={`${card} overflow-hidden`}><div className="flex items-center justify-between border-b border-[var(--border)] px-[18px] py-3"><h2 className={typeScale.section}>대기 고객</h2><span className="font-mono text-[11px] text-[var(--muted)]">{waitingCustomers.length}명</span></div><ul className="px-[18px] py-1">{waitingCustomers.length ? waitingCustomers.slice(0, 3).map((record) => { const waiting = objectValue(record); const customerId = textValue(waiting, "customerId", ""); return <li className="flex items-center gap-2 border-b border-[var(--border)] py-3 last:border-0" key={record.id}><div className="min-w-0 flex-1"><strong className="block text-[13px]">{textValue(waiting, "name")}</strong><span className="mt-1 block text-[11px] text-[var(--muted)]">{textValue(waiting, "memo", "메모 없음")}</span></div><span className="font-mono text-[11px] text-[var(--muted)]">대기</span><Link aria-label={`${textValue(waiting, "name")} 예약 배정`} className={button("xs")} href={assignHref(customerId, record.id, railGaps[0]?.startMinutes)}>예약 배정</Link></li>; }) : <li className="py-5 text-sm text-[var(--muted)]">대기 고객이 없습니다.</li>}</ul></section>
+            <section aria-label="운영 현황" className={`${card} overflow-hidden`}><div className="flex items-center justify-between border-b border-[var(--border)] px-[18px] py-3"><h2 className={typeScale.section}>운영 현황</h2><span className="font-mono text-[10px] text-[var(--muted)]">확정 반영</span></div><dl className="px-[18px] py-2"><div className="flex items-end justify-between gap-2 border-b border-[var(--border)] py-[10px]"><dt className="text-[11px] text-[var(--muted)]">매출</dt><dd className={`font-mono ${typeScale.display}`}>₩{todaySales.toLocaleString("ko-KR")}</dd></div>{[["예약", `완료 ${completedToday}건 · 남은 ${todayBookings.length - completedToday}건`, `${todayBookings.length}건`], ["미수금", "없음", "₩0"], ["SMS 잔여", `자동 발송 ${enabledAutomations}건 예정`, `${smsRemaining.toLocaleString("ko-KR")}건`]].map(([label, subtitle, value]) => <div className="flex items-center gap-[8px] border-b border-[var(--border)] py-[10px] last:border-0" key={label}><div className="min-w-0 flex-1"><dt className="text-[12px]">{label}</dt><span className="mt-0.5 block text-[11px] text-[var(--muted)]">{subtitle}</span></div><dd className="font-mono font-medium">{value}</dd></div>)}<div className="flex items-center gap-2 pt-3 text-[11px] text-[var(--muted)]"><span className="h-[11px] w-[2px] bg-[var(--accent)]" />정정 {recentAudit.filter((event) => event.action.includes("correction")).length}건 · 삭제 없이 원장에 덧붙임</div></dl></section>
             <section aria-label="자동 문자" className={`${card} overflow-hidden`}><div className="flex items-center justify-between border-b border-[var(--border)] px-[18px] py-3"><h2 className={typeScale.section}>자동 문자</h2><span className="font-mono text-[11px] text-[var(--muted)]">오늘 예정</span></div><div className="grid grid-cols-2 gap-x-3 gap-y-3 px-[18px] py-3">{automations.length ? automations.slice(0, 6).map((record) => { const automation = objectValue(record); const enabled = textValue(automation, "status") === "사용"; return <div className="flex items-start gap-1.5" key={record.id}><span className={`mt-1 size-1.5 rounded-full ${enabled ? "bg-[var(--success)]" : "bg-[var(--muted)]"}`} /><div><strong className="block text-[12px]">{textValue(automation, "label")}</strong><span className="font-mono text-[10px] text-[var(--muted)]">{textValue(automation, "schedule")} · {enabled ? "켜짐" : "꺼짐"}</span></div></div>; }) : <p className="col-span-2 py-3 text-sm text-[var(--muted)]">대기 중인 자동화가 없습니다.</p>}</div><p className="mx-[18px] mb-3 rounded-[var(--radius-card)] bg-[var(--brand-soft)] px-2 py-1.5 text-[11px] text-[var(--brand)]">발송 전 확인 필요 · 설정 › 문자에서 켜고 끕니다</p></section>
           </aside>
         </div>
 
-        <div className="sr-only"><h2>공지사항</h2>{notices.length ? notices.map((record) => <Link href={`/settings?section=help#${record.id}`} key={record.id}>{textValue(objectValue(record), "title")}</Link>) : <p>공지사항이 없습니다.</p>}<h2>최근 감사 이력</h2>{recentAudit.length ? recentAudit.map((event) => <span key={event.id}>{event.actor} · {event.action} · {event.kind ?? "시스템"} · {auditDateLabel(event.occurredAt)}</span>) : <p>감사 이력이 없습니다.</p>}<p>오늘 매출</p><p>오늘 예약</p><p>대기 고객</p><p>자동화 대기열</p><p>SMS 잔여 {smsRemaining.toLocaleString("ko-KR")}건</p>{automations.map((record) => <p key={`automation-summary-${record.id}`}>{textValue(objectValue(record), "status")}</p>)}{dayCounts.map(({ label, count }) => <p key={`summary-${label}`}>{label} {count}건</p>)}</div>
+        <div className="sr-only"><h2>공지사항</h2>{notices.length ? notices.map((record) => <Link href={`/settings?section=help#${record.id}`} key={record.id}>{textValue(objectValue(record), "title")}</Link>) : <p>공지사항이 없습니다.</p>}<h2>최근 감사 이력</h2>{recentAudit.length ? recentAudit.map((event) => <span key={event.id}>{event.actor} · {event.action} · {event.kind ?? "시스템"} · {auditDateLabel(event.occurredAt)}</span>) : <p>감사 이력이 없습니다.</p>}<p>오늘 매출</p><p>오늘 예약</p><p>자동화 대기열</p><p>SMS 잔여 {smsRemaining.toLocaleString("ko-KR")}건</p>{automations.map((record) => <p key={`automation-summary-${record.id}`}>{textValue(objectValue(record), "status")}</p>)}{dayCounts.map(({ label, count }) => <p key={`summary-${label}`}>{label} {count}건</p>)}</div>
       </main>
   );
 }

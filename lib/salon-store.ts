@@ -225,7 +225,6 @@ function seed(db: DatabaseSync) {
     const records: ReadonlyArray<readonly [string, string, Record<string, unknown>]> = [
       ["customers", "customer-seed-1", { name: "김하늘", gender: "female", visitType: "repeat", operator: "원장" }],
       ["customers", "customer-seed-2", { name: "이도윤", gender: "male", visitType: "first", operator: "원장" }],
-      ["waiting-customers", "waiting-seed-1", { customerId: "customer-seed-2", name: "박봄", memo: "커트", gender: "female", visitType: "first", operator: "원장" }],
       // 저장은 참 시각 ISO 다. 아래는 서울 10:00 / 11:00 / 12:00 / 13:00 (`lib/seoul-date.ts`).
       ["bookings", "booking-seed-1", { customerId: "customer-seed-1", startsAt: "2026-07-31T01:00:00.000Z", service: "커트", status: "confirmed", operator: "원장" }],
       ["bookings", "booking-seed-2", { customerId: "customer-seed-2", startsAt: "2026-08-01T02:00:00.000Z", service: "남성 펌", status: "confirmed", operator: "원장" }],
@@ -410,6 +409,14 @@ export function createSalonStore(filename = process.env.HAIRHAEYO_DB_PATH || joi
     },
     listLedgerByCustomer(customerId: string) {
       return (db.prepare("SELECT * FROM ledger WHERE customer_id = ? ORDER BY occurred_at, rowid").all(customerId) as LedgerRow[]).map(ledgerFromRow);
+    },
+    lastVisitByCustomer() {
+      // 목록의 "최근 방문일" 정렬용. 5,576행을 전부 객체로 만들지 않고 SQLite 가 한 줄씩 접는다.
+      // 방문 = 결제다. 지출·환불은 손님이 온 증거가 아니다.
+      const rows = db.prepare(
+        "SELECT customer_id AS id, MAX(occurred_at) AS last FROM ledger WHERE customer_id IS NOT NULL AND kind = 'payment' GROUP BY customer_id",
+      ).all() as { id: string; last: string }[];
+      return new Map(rows.map((row) => [row.id, row.last]));
     },
     aggregateLedger(start: string, endExclusive: string, unit: LedgerUnit) {
       // occurred_at is a UTC ISO string, and seoulBusinessDate() is identical to its

@@ -1,6 +1,6 @@
 {
   "$schema": "../node_modules/@tauri-apps/cli/config.schema.json",
-  "productName": "Hairhaeyo",
+  "productName": "Hairhaeyo Management",
   "version": "0.1.0",
   "identifier": "com.hairhaeyo.salon",
   "build": {
@@ -12,7 +12,7 @@
     "windows": [
       {
         "label": "main",
-        "title": "Hairhaeyo",
+        "title": "Hairhaeyo Management",
         "width": 1440,
         "height": 1000,
         "minWidth": 1280,

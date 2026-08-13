@@ -32,19 +32,17 @@ describe("DashboardPage", () => {
 
     expect(html).toContain("오늘 매출");
     expect(html).toContain("오늘 예약");
-    expect(html).toContain("대기 고객");
     expect(html).toContain("오늘 1건");
     expect(html).toContain("내일 1건");
     expect(html).toContain("모레 1건");
     expect(html).toContain("글피 1건");
-    expect(html).toContain("박봄");
     expect(html).toContain("자동화 대기열");
     expect(html).toContain("사용");
     expect(html).toContain("중지");
     expect(html).toContain("운영 안내");
     expect(html).toContain("최근 감사 이력");
 
-    for (const href of ["/customers?new=1", "/customers?waiting=1", "/bookings?new=1", "/sales?tab=payment", "/messages?new=1"]) {
+    for (const href of ["/customers?new=1", "/bookings?new=1", "/sales?tab=payment", "/messages?new=1"]) {
       expect(html).toContain(`href="${href}"`);
     }
   });
@@ -63,7 +61,6 @@ describe("DashboardPage", () => {
 
     expect(html).toContain("SMS 잔여 0건");
     expect(html).toContain("오늘 예약이 없습니다.");
-    expect(html).toContain("대기 고객이 없습니다.");
     expect(html).toContain("대기 중인 자동화가 없습니다.");
     expect(html).toContain("공지사항이 없습니다.");
     expect(html).toContain("감사 이력이 없습니다.");

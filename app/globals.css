@@ -57,22 +57,15 @@ body {
 
 /*
  * 고객 목록/상세는 858행이라 그대로 흘리면 본문이 45,000px가 된다. 두 칸만 자체 스크롤한다.
- * 예전에는 `main` 을 `h-full overflow-hidden` 으로 묶어 높이를 만들었는데,
- * 그러면 아래 형제(대기 고객·고객 정책·인쇄 양식)가 눌려 400px가 보이지도 스크롤되지도 않았다(실측).
- * 이제 높이는 뷰포트에서 직접 받는다. 셸 헤더 + 툴바 + 검색 줄이 약 290px.
+ *
+ * 두 칸을 같은 높이로 세우려면 `main` 이 먼저 확정된 높이를 가져야 한다. 셸 본문
+ * (`[data-app-content]`)은 `overflow: auto` 라 자식이 늘어나면 같이 늘어난다 — 그래서
+ * 여기서만 뷰포트에서 직접 받는다(셸 헤더 72px + 본문 위아래 여백).
+ * 나머지(격자 1행, 각 칸 `min-h-0`, 안쪽 `overflow-auto`)는 마크업의 flex/grid 가 맡는다.
  */
-main:has([data-customer-list]) > .no-print.mt-5.grid > form {
-  display: flex;
-  min-height: 0;
-  flex-direction: column;
+main:has([data-customer-list]) {
+  height: calc(100dvh - 72px);
   overflow: hidden;
-}
-
-main:has([data-customer-list]) [data-customer-list],
-main:has([data-customer-list]) > .no-print.mt-5.grid > aside {
-  min-height: 0;
-  max-height: calc(100dvh - 300px);
-  overflow-y: auto;
 }
 
 body {
@@ -228,8 +221,28 @@ time {
   font-family: var(--font-marcellus), Georgia, serif;
 }
 
-.customer-print {
-  display: none;
+/* 다이얼로그 안에서 스크롤하는 영역. 기본 스크롤바는 패널 위에서 자리를 너무 많이 먹는다. */
+.dialog-scroll {
+  scrollbar-width: thin;
+  scrollbar-color: var(--border) transparent;
+}
+
+.dialog-scroll::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+
+.dialog-scroll::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.dialog-scroll::-webkit-scrollbar-thumb {
+  border-radius: 999px;
+  background: var(--border);
+}
+
+.dialog-scroll::-webkit-scrollbar-thumb:hover {
+  background: var(--muted);
 }
 
 .print-only {
@@ -257,10 +270,6 @@ time {
     display: none;
   }
 
-  .customer-print {
-    display: block;
-  }
-
   [data-revenue-print] {
     padding: 0;
   }
@@ -278,18 +287,6 @@ time {
 
   .print-only {
     display: block;
-  }
-
-  .customer-print table {
-    width: 100%;
-    border-collapse: collapse;
-  }
-
-  .customer-print th,
-  .customer-print td {
-    border: 1px solid #222;
-    padding: 8px;
-    text-align: left;
   }
 
   body {

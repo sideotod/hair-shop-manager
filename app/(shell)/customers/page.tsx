@@ -1,7 +1,10 @@
+import { randomUUID } from "node:crypto";
+
 import { connection } from "next/server";
 
 import { CustomersPage } from "../../../components/customers/customers-page";
 import { createSalonStore } from "../../../lib/salon-store";
+import { seoulDate } from "../../../lib/seoul-date";
 
 function value(input: string | string[] | undefined) {
   return typeof input === "string" ? input : "";
@@ -12,35 +15,33 @@ export default async function Page({ searchParams }: { searchParams: Promise<Rec
   const params = await searchParams;
   const store = createSalonStore();
   try {
-    const segment = value(params.segment);
     const selectedCustomerId = value(params.customer);
-    // 원장 전량(5,576행)이 필요한 건 매출·최근방문·미방문 분류뿐이다. 그 밖에는 선택 고객 이력만 쓴다.
-    // snapshot()은 여기에 더해 감사 이력 6,435행까지 읽어 응답을 690KB로 부풀린다 (A4-3).
-    const ledger = segment === "sales" || segment === "recent" || segment === "nonvisit"
-      ? store.listLedger()
-      : selectedCustomerId ? store.listLedgerByCustomer(selectedCustomerId) : [];
+    const payCustomerId = value(params.pay);
+    // 선택 고객 이력만 읽는다. 원장 전량(5,576행)이나 snapshot()(감사 6,435행 포함)은 여기서 필요 없다.
+    // 최근 방문일 정렬은 고객당 1행짜리 집계로 따로 받는다.
+    const ledger = selectedCustomerId ? store.listLedgerByCustomer(selectedCustomerId) : [];
     return <CustomersPage
       bookings={store.list("bookings")}
       customers={store.list("customers")}
+      editCustomerId={value(params.edit) || undefined}
       error={value(params.error) || undefined}
+      lastVisits={value(params.sort) === "visit" ? store.lastVisitByCustomer() : undefined}
       ledger={ledger}
       messages={store.list("messages")}
-      mode={value(params.mode)}
       notice={value(params.notice) || undefined}
       page={value(params.page)}
-      printLayout={value(params.printLayout)}
-      printing={value(params.print) === "1"}
+      payCustomerId={payCustomerId || undefined}
       query={value(params.query)}
-      segment={segment}
-      segmentValue={value(params.segmentValue)}
-      selectedCustomerId={selectedCustomerId}
-      salesThreshold={value(params.salesThreshold)}
+      // `requestKey` 는 요청당 1회. 렌더 중에 만들면 재렌더마다 값이 달라져 멱등성 키의 의미가 사라진다.
+      requestKey={randomUUID()}
       searchParams={params}
+      selectedCustomerId={selectedCustomerId}
       settings={store.getSettings()}
       showNew={value(params.new) === "1"}
-      showWaiting={value(params.waiting) === "1"}
-      today={new Date()}
-      waitingCustomers={store.list("waiting-customers")}
+      showPrepaid={value(params.prepaid) === "1"}
+      sort={value(params.sort) || "name"}
+      tab={value(params.tab) || "ledger"}
+      today={seoulDate()}
     />;
   } finally {
     store.close();

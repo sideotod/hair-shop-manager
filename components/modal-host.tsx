@@ -50,8 +50,19 @@ export function ModalHost({ children, label }: { children: React.ReactNode; labe
     };
     node.ownerDocument.addEventListener("keydown", escape);
 
+    // `click` 이 아니라 `pointerdown` 이다 — 패널 안에서 글자를 끌어 선택하다 밖에서 손을 떼면
+    // `click` 은 바깥 클릭으로 잡혀 입력해 둔 폼이 통째로 날아간다.
+    const outside = (event: PointerEvent) => {
+      const panel = node.querySelector<HTMLElement>("[data-dialog-panel]");
+      if (!panel || panel.contains(event.target as Node)) return;
+      const close = node.querySelector<HTMLElement>("[data-dialog-close]");
+      if (close) { event.preventDefault(); close.click(); }
+    };
+    node.addEventListener("pointerdown", outside);
+
     return () => {
       node.ownerDocument.removeEventListener("keydown", escape);
+      node.removeEventListener("pointerdown", outside);
       for (const element of disabled) element.inert = false;
       if (restore instanceof HTMLElement && restore.isConnected) restore.focus();
     };

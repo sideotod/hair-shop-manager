@@ -3,8 +3,9 @@ import { readFileSync } from "node:fs";
 import { join } from "node:path";
 import { describe, expect, it } from "vitest";
 
-import { createSalonStore } from "../../lib/salon-store";
+import { customerCode } from "../../lib/customer-code";
 import type { JsonValue } from "../../lib/salon-domain";
+import { createSalonStore } from "../../lib/salon-store";
 import { CustomersPage } from "./customers-page";
 
 function page(store = createSalonStore(":memory:"), props: Partial<React.ComponentProps<typeof CustomersPage>> = {}) {
@@ -14,8 +15,9 @@ function page(store = createSalonStore(":memory:"), props: Partial<React.Compone
     customers={snapshot.records.customers ?? []}
     ledger={snapshot.ledger}
     messages={snapshot.records.messages ?? []}
+    requestKey="test-request-key"
     settings={snapshot.settings}
-    waitingCustomers={snapshot.records["waiting-customers"] ?? []}
+    today="2026-08-13"
     {...props}
   />);
 }
@@ -24,181 +26,165 @@ function listRows(html: string) {
   return [...html.matchAll(/data-customer-row="([^"]+)"/g)].map((match) => match[1]);
 }
 
+function many(count: number) {
+  return Array.from({ length: count }, (_, index) => ({
+    id: `bulk-${index}`, kind: "customers" as const, value: { name: `고객${String(index).padStart(3, "0")}`, phone: `010-0000-${String(index).padStart(4, "0")}` },
+    createdAt: "2026-01-01T00:00:00.000Z", updatedAt: "2026-01-01T00:00:00.000Z", archivedAt: null,
+  }));
+}
+
 describe("CustomersPage", () => {
   it("keeps the customer workspace scrollable only inside its two panes", () => {
     const html = page();
     const styles = readFileSync(join(process.cwd(), "app", "globals.css"), "utf8");
 
-    expect(html).toContain('data-customer-list');
+    expect(html).toContain("data-customer-list");
     expect(html).toContain('aria-label="고객 상세"');
-    expect(styles).toContain('main:has([data-customer-list]) [data-customer-list]');
-    expect(styles).not.toContain('main:has([data-customer-list]) { overflow: auto; }');
+    // 두 칸이 같은 높이로 서려면 `main` 이 먼저 확정된 높이를 가져야 한다.
+    expect(styles).toContain("main:has([data-customer-list])");
+    expect(styles).toContain("height: calc(100dvh - 72px)");
   });
 
-  it("omits product and coupon customer-history surfaces", () => {
+  it("drops the deleted waiting, print, segment, and bulk surfaces", () => {
     const html = page(undefined, { selectedCustomerId: "customer-seed-1" });
 
-    expect(html).not.toContain("상품");
-    expect(html).not.toContain("쿠폰");
-  });
-
-  it("renders linked booking, ledger, point, and message histories", () => {
-    const html = page(undefined, { selectedCustomerId: "customer-seed-1" });
-
-    expect(html).toContain('data-selected-customer-payment="customer-seed-1"');
-    expect(html).toContain('/sales?tab=payment&amp;customer=customer-seed-1');
-
-    // 저장은 참 시각 ISO(`2026-07-31T01:00Z`), 표시는 서울 벽시계다.
-    expect(html).toContain("2026-07-31 10:00 · 커트 · confirmed");
-    expect(html).toContain("2026-07-24 · 결제 · ₩10,480,000");
-    expect(html).toContain("2026-07-24 · 1,000P");
-    expect(html).toContain("SMS · dry-run");
-  });
-
-  it("filters selected grade, group, gender, motive, ledger-sales, and activity criteria", () => {
-    const store = createSalonStore(":memory:");
-    const first = store.get("customers", "customer-seed-1")!;
-    const second = store.get("customers", "customer-seed-2")!;
-    store.save("customers", first.id, { ...(first.value as Record<string, JsonValue>), grade: "VIP2", group: "충성", motive: "소개" }, "원장");
-    store.save("customers", second.id, { ...(second.value as Record<string, JsonValue>), grade: "일반", group: "신규", motive: "검색" }, "원장");
-    store.save("customers", "customer-idle", { name: "미방문", phone: "01011112222", telephone: "", phoneAbsent: false, smsOptIn: true, points: 0, gender: "female", operator: "원장" }, "원장");
-
-    for (const [segment, segmentValue, expected] of [["grade", "VIP2", ["customer-seed-1"]], ["group", "신규", ["customer-seed-2"]], ["gender", "female", ["customer-seed-1", "customer-idle"]], ["motive", "소개", ["customer-seed-1"]]] as const) {
-      expect(listRows(page(store, { segment, segmentValue }))).toEqual(expected);
+    for (const gone of ["대기 고객", "대기 등록", "인쇄", "고객 정책", "파워 고객", "방문동기", "고객 보관", 'name="customerIds"', 'name="bulkGrade"']) {
+      expect(html).not.toContain(gone);
     }
-    expect(listRows(page(store, { segment: "sales", salesThreshold: "15000000" }))).toEqual(["customer-seed-1"]);
-    expect(listRows(page(store, { segment: "recent", today: new Date("2026-08-05T00:00:00.000Z") }))).toEqual(["customer-seed-1", "customer-seed-2"]);
-    expect(listRows(page(store, { segment: "nonvisit", today: new Date("2026-08-05T00:00:00.000Z") }))).toEqual(["customer-idle"]);
   });
 
-  it("renders distinct server-selected printable layouts and a native print control", () => {
-    const contact = page(undefined, { printLayout: "1", printing: true });
-    const membership = page(undefined, { printLayout: "2", printing: true });
-    const loyalty = page(undefined, { printLayout: "4", printing: true });
-
-    expect(contact).toContain('data-print-layout="1"');
-    expect(contact).toContain("<th>휴대전화</th>");
-    expect(membership).toContain('data-print-layout="2"');
-    expect(membership).toContain("<th>등급</th>");
-    expect(membership).not.toContain("<th>휴대전화</th>");
-    expect(loyalty).toContain("<th>패밀리 번호</th>");
-    // 인쇄 버튼은 표 없이도 항상 있다. 눌러야 `?print=1` 로 표가 붙는다.
-    expect(page()).toContain("현재 양식 인쇄");
-    expect(page()).not.toContain('class="customer-print"');
-  });
-
-  it("renders usable customer policy choices and selected-customer bulk controls", () => {
+  it("shows the display-only customer code, hyphenated phone, and one action row", () => {
     const store = createSalonStore(":memory:");
-    store.saveSettings({ customerGroups: "충성, 신규", customerGrades: "일반, VIP2", visitMotives: "소개, 검색" }, "원장");
-    const html = page(store, { showNew: true });
+    const seed = store.get("customers", "customer-seed-1")!;
+    store.save("customers", seed.id, { ...(seed.value as Record<string, JsonValue>), phone: "01012345678" }, "원장");
+    const html = page(store, { selectedCustomerId: "customer-seed-1" });
 
-    expect(html).toContain('name="customerIds"');
-    expect(html).toContain('name="bulkGroup"');
-    expect(html).toContain('name="bulkGrade"');
-    expect(html).toContain('value="충성"');
-    expect(html).toContain(">VIP2<");
-    expect(html).toContain('list="visit-motives"');
+    expect(html).toContain(customerCode("customer-seed-1"));
+    // 저장은 숫자만, 표시는 하이픈이다. 원장이 그대로 읽어 전화를 건다.
+    expect(html).toContain("010-1234-5678");
+    expect(html).toContain('data-selected-customer-payment="customer-seed-1"');
+    expect(html).toContain("선결제 충전");
+    expect(html).toContain("고객 정보 변경");
   });
 
-  it("uses persisted power policy and KST current-month birthday scope", () => {
+  // 다섯 구역을 전부 펼치면 상세 칸이 목록보다 세 배 길어져 두 칸 높이가 어긋난다.
+  it("renders only the selected detail tab", () => {
+    const ledger = page(undefined, { selectedCustomerId: "customer-seed-1" });
+    const bookings = page(undefined, { selectedCustomerId: "customer-seed-1", tab: "bookings" });
+
+    expect(ledger).toContain("2026-07-24 · 컬러 · ₩10,480,000");
+    expect(ledger).not.toContain("예약 이력이");
+    expect(bookings).toContain("2026-07-31 10:00 · 커트 · confirmed");
+    expect(bookings).not.toContain("시술·결제 이력이");
+    expect(page(undefined, { selectedCustomerId: "customer-seed-1", tab: "points" })).toContain("2026-07-24 · 1,000P");
+    expect(page(undefined, { selectedCustomerId: "customer-seed-1", tab: "messages" })).toContain("SMS · dry-run");
+  });
+
+  /** 원장이 실제로 치는 건 둘뿐이다 — "김하늘" 아니면 "5678". 모드 선택칸을 두지 않는다. */
+  it("searches by name for text and by trailing phone digits for numbers", () => {
     const store = createSalonStore(":memory:");
-    store.saveSettings({ powerCustomerMinPoints: 500 }, "원장");
-    store.save("customers", "birthday-august", { name: "팔월 생일", phone: "01022223333", telephone: "", phoneAbsent: false, smsOptIn: true, points: 200, birthday: "2000-08-10", operator: "원장" }, "원장");
-    store.save("customers", "birthday-september", { name: "구월 생일", phone: "01044445555", telephone: "", phoneAbsent: false, smsOptIn: true, points: 700, birthday: "2000-09-10", operator: "원장" }, "원장");
+    const seed = store.get("customers", "customer-seed-1")!;
+    store.save("customers", seed.id, { ...(seed.value as Record<string, JsonValue>), phone: "01012345678" }, "원장");
 
-    expect(listRows(page(store, { segment: "power" }))).toEqual(["birthday-september"]);
-    expect(listRows(page(store, { segment: "birthday", today: new Date("2026-08-05T00:00:00.000Z") }))).toEqual(["birthday-august"]);
+    expect(listRows(page(store, { query: "김하늘" }))).toEqual(["customer-seed-1"]);
+    expect(listRows(page(store, { query: "5678" }))).toEqual(["customer-seed-1"]);
+    // 앞자리는 맞지 않는다. 뒷자리 검색이어야 "010" 이 전부를 부르지 않는다.
+    expect(listRows(page(store, { query: "010" }))).toEqual([]);
+    expect(listRows(page(store, { query: "없는이름" }))).toEqual([]);
   });
 
-  it("applies registration SMS and calendar policies only to new customers", () => {
+  it("sorts by name, join date, and last visit", () => {
     const store = createSalonStore(":memory:");
-    store.saveSettings({ defaultSmsOptIn: false, birthdayCalendar: "lunar" }, "원장");
-    const newHtml = page(store, { showNew: true });
-    const existingHtml = page(store, { selectedCustomerId: "customer-seed-1" });
+    const customers = [
+      { id: "sort-b", kind: "customers" as const, value: { name: "나고객", phone: "01000000002", joinedAt: "2026-01-05" }, createdAt: "", updatedAt: "", archivedAt: null },
+      { id: "sort-a", kind: "customers" as const, value: { name: "가고객", phone: "01000000001", joinedAt: "2026-03-09" }, createdAt: "", updatedAt: "", archivedAt: null },
+    ];
 
-    expect(newHtml).toContain('<option value="off" selected="">수신 거부</option>');
-    expect(newHtml).toContain('type="radio" name="birthdayCalendar" checked="" value="lunar"');
-    expect(existingHtml).toContain('<option value="on" selected="">수신 동의</option>');
-    expect(existingHtml).toContain('type="radio" name="birthdayCalendar" checked="" value="solar"');
+    expect(listRows(page(store, { customers }))).toEqual(["sort-a", "sort-b"]);
+    expect(listRows(page(store, { customers, sort: "joined" }))).toEqual(["sort-a", "sort-b"]);
+    expect(listRows(page(store, { customers, sort: "visit", lastVisits: new Map([["sort-b", "2026-08-01"], ["sort-a", "2026-02-01"]]) }))).toEqual(["sort-b", "sort-a"]);
   });
 
-  it("applies default gender only to new customers", () => {
+  // 목록 칸은 화면 높이에 고정된다. 페이지 크기도 그 안에 들어가는 만큼(실측 9행)이어야 또 스크롤하지 않는다.
+  it("pages the list to what fits the pane and clamps out-of-range pages", () => {
     const store = createSalonStore(":memory:");
-    store.saveSettings({ defaultGender: "male" }, "원장");
+    const customers = many(30);
 
-    const newHtml = page(store, { showNew: true });
-    const existingHtml = page(store, { selectedCustomerId: "customer-seed-1" });
+    const first = page(store, { customers });
+    const fourth = page(store, { customers, page: "4" });
 
-    expect(newHtml).toContain('<option value="male" selected="">남성</option>');
-    expect(existingHtml).toContain('<option value="female" selected="">여성</option>');
-  });
-  it("closes registration without losing the current customer filters", () => {
-    const html = page(undefined, { mode: "phone", query: "010", segment: "sales", salesThreshold: "500000", showNew: true });
-
-    expect(html).toContain('data-dialog-close="true"');
-    expect(html).toContain('/customers?mode=phone&amp;query=010&amp;segment=sales&amp;salesThreshold=500000');
-  });
-
-  it("closes registration back onto the selected customer", () => {
-    const html = page(undefined, { mode: "phone", query: "010", selectedCustomerId: "customer-seed-1", showNew: true });
-    const close = html.match(/<a\b[^>]*data-dialog-close="true"[^>]*>/)?.[0].match(/href="([^"]+)"/)?.[1] ?? "";
-
-    expect(close).toContain("customer=customer-seed-1");
-    expect(close).not.toContain("new=1");
-  });
-
-  // 858명을 한 화면에 흘리던 목록을 서버에서 자른다. 인쇄 표는 `?print=1` 일 때만 붙인다.
-  it("pages the list, clamps out-of-range pages, and prints every customer only on demand", () => {
-    const store = createSalonStore(":memory:");
-    const many = Array.from({ length: 120 }, (_, index) => ({
-      id: `bulk-${index}`, kind: "customers" as const, value: { name: `고객${index}`, phone: `010-0000-${String(index).padStart(4, "0")}` },
-      createdAt: "2026-01-01T00:00:00.000Z", updatedAt: "2026-01-01T00:00:00.000Z", archivedAt: null,
-    }));
-
-    const first = page(store, { customers: many });
-    const third = page(store, { customers: many, page: "3" });
-    const beyond = page(store, { customers: many, page: "999" });
-    const garbage = page(store, { customers: many, page: "abc" });
-
-    expect(listRows(first)).toHaveLength(50);
+    expect(listRows(first)).toHaveLength(9);
     expect(listRows(first)[0]).toBe("bulk-0");
-    expect(listRows(third)).toHaveLength(20);
-    // 범위를 벗어난 페이지는 빈 목록이 아니라 마지막 페이지로 접힌다.
-    expect(listRows(beyond)).toEqual(listRows(third));
-    expect(listRows(garbage)).toEqual(listRows(first));
+    expect(listRows(fourth)).toHaveLength(3);
+    expect(listRows(page(store, { customers, page: "999" }))).toEqual(listRows(fourth));
+    expect(listRows(page(store, { customers, page: "abc" }))).toEqual(listRows(first));
     expect(first).toContain('aria-label="고객 목록 페이지"');
     // 첫 페이지의 "이전"은 링크가 아니라 비활성 표시여야 한다.
     expect(first).toContain('aria-disabled="true"');
     expect(first).toContain("page=2");
-    // 평소 응답에는 마지막 고객이 없다. 인쇄를 눌러야 전량이 실린다.
-    expect(listRows(first)).not.toContain("bulk-119");
-    expect(first).not.toContain("고객119");
-    expect(page(store, { customers: many, printing: true })).toContain("고객119");
   });
 
-  it("carries the active filters across pages and drops the open modal", () => {
+  it("carries the active search and sort across pages and drops the open modal", () => {
     const store = createSalonStore(":memory:");
-    const many = Array.from({ length: 120 }, (_, index) => ({
-      id: `bulk-${index}`, kind: "customers" as const, value: { name: `고객${index}`, phone: `010-0000-${String(index).padStart(4, "0")}` },
-      createdAt: "2026-01-01T00:00:00.000Z", updatedAt: "2026-01-01T00:00:00.000Z", archivedAt: null,
-    }));
-    const html = page(store, { customers: many, mode: "name", query: "고객", searchParams: { mode: "name", query: "고객", new: "1" }, showNew: true });
+    const html = page(store, { customers: many(30), query: "고객", sort: "joined", searchParams: { query: "고객", sort: "joined", new: "1" }, showNew: true });
     const next = html.match(/href="([^"]*page=2[^"]*)"/)?.[1] ?? "";
 
-    expect(next).toContain("mode=name");
+    expect(next).toContain("query=%EA%B3%A0%EA%B0%9D");
+    expect(next).toContain("sort=joined");
     expect(next).not.toContain("new=1");
   });
 
-  // 일괄 수정 체크박스와 페이지 링크가 같은 폼 안에 있다. 페이지를 넘기면 체크가 조용히 풀리므로 미리 알린다.
-  it("warns that checked customers are cleared when paging", () => {
-    const store = createSalonStore(":memory:");
-    const many = Array.from({ length: 120 }, (_, index) => ({
-      id: `bulk-${index}`, kind: "customers" as const, value: { name: `고객${index}`, phone: `010-0000-${String(index).padStart(4, "0")}` },
-      createdAt: "2026-01-01T00:00:00.000Z", updatedAt: "2026-01-01T00:00:00.000Z", archivedAt: null,
-    }));
+  it("closes every popup back onto the selected customer without losing filters", () => {
+    for (const open of [{ showNew: true }, { editCustomerId: "customer-seed-1" }, { payCustomerId: "customer-seed-1" }, { showPrepaid: true }]) {
+      const html = page(undefined, { query: "김", selectedCustomerId: "customer-seed-1", ...open });
+      const close = html.match(/<a\b[^>]*data-dialog-close="true"[^>]*>/)?.[0].match(/href="([^"]+)"/)?.[1] ?? "";
 
-    expect(page(store, { customers: many })).toContain("체크한 고객은 페이지를 넘기면 해제됩니다.");
-    // 페이지가 하나뿐이면 넘길 곳이 없으니 경고도 없다.
-    expect(page(store)).not.toContain("체크한 고객은 페이지를 넘기면 해제됩니다.");
+      expect(html).toContain('data-dialog-panel="true"');
+      expect(close).toContain("customer=customer-seed-1");
+      expect(close).toContain("query=");
+      for (const key of ["new=", "edit=", "pay=", "prepaid="]) expect(close).not.toContain(key);
+    }
+  });
+
+  // 전역 패널 폭은 `min(1120px,100%)` 다. 세로로 선 폼을 그 폭에 두면 라벨과 입력칸이 한 뼘씩 벌어진다.
+  it("narrows both popups, giving the payment form a little more room", () => {
+    expect(page(undefined, { showNew: true })).toContain("!w-[420px]");
+    expect(page(undefined, { payCustomerId: "customer-seed-1" })).toContain("!w-[560px]");
+  });
+
+  it("registers with six fields and never offers prepaid on the edit form", () => {
+    const create = page(undefined, { showNew: true });
+    const edit = page(undefined, { editCustomerId: "customer-seed-1" });
+
+    for (const field of ["name", "gender", "phone", "joinedAt", "prepaidWon", "memo"]) expect(create).toContain(`name="${field}"`);
+    for (const gone of ["telephone", "birthday", "address", "email", "nickname", "grade", "group", "motive", "pointCard", "familyNumber", "initialBookingDate", "registerWaiting"]) {
+      expect(create).not.toContain(`name="${gone}"`);
+    }
+    // 잔액을 덮어쓰면 원장에 없는 돈이 생긴다. 수정 화면에는 칸 자체가 없다.
+    expect(edit).not.toContain('name="prepaidWon"');
+  });
+
+  it("applies the default gender only to new customers", () => {
+    const store = createSalonStore(":memory:");
+    store.saveSettings({ defaultGender: "male" }, "원장");
+
+    expect(page(store, { showNew: true })).toContain('<option value="male" selected="">남성</option>');
+    expect(page(store, { editCustomerId: "customer-seed-1" })).toContain('<option value="female" selected="">여성</option>');
+  });
+
+  /** 결제 팝업은 고객이 이미 정해져 있다. 물을 필요가 없는 칸은 숨은 값으로 보낸다. */
+  it("prefills the payment popup and omits the fields the customer record already answers", () => {
+    const html = page(undefined, { payCustomerId: "customer-seed-1" });
+
+    expect(html).toContain('name="memberType" value="member"');
+    expect(html).toContain('name="customerId" value="customer-seed-1"');
+    expect(html).toContain('name="requestKey" value="test-request-key"');
+    expect(html).toContain('name="occurredDate" value="2026-08-13"');
+    for (const gone of ["nonMemberName", "generalNote", "medicineNote", "scalpNote", "hairNote", "smsRequested"]) {
+      expect(html).not.toContain(`name="${gone}"`);
+    }
+    // 결제수단 8칸은 그대로 남는다 — `finance.ts` 가 전부를 읽는다.
+    expect(html).toContain('name="payment_cash"');
+    expect(html).toContain('name="payment_prepaid"');
   });
 });

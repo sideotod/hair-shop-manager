@@ -51,7 +51,7 @@ export function parseShopSettings(formData: FormData, current: JsonObject): Json
   const values: JsonObject = {};
   for (const name of [
     "shopName", "shopPhone", "ownerName", "customerOpenMode", "customerDisplayMode", "defaultGender",
-    "customerGrades", "customerGroups", "visitMotives", "reminderText", "helpPhone", "helpEmail", "vatMode",
+    "reminderText", "helpPhone", "helpEmail", "vatMode",
   ]) if (formData.has(name)) values[name] = text(formData, name);
   if (formData.has("reminderText") && text(formData, "reminderText").length > 150) throw new Error("예약 추가 문구는 150자 이하로 입력하세요.");
   for (const name of ["shopName", "ownerName"]) if (formData.has(name) && !values[name]) throw new Error("매장명과 원장 표시 이름을 입력하세요.");
@@ -73,6 +73,10 @@ export function parseShopSettings(formData: FormData, current: JsonObject): Json
   }
 
   if (formData.has("cardFeeRate")) values.cardFeeRate = rate(formData, "cardFeeRate");
+  // 포인트는 결제할 때마다 실결제액의 이 비율만큼 자동으로 쌓인다. 적립 **결과**는 여전히
+  // 원장 `details.pointsEarnedWon` 한 곳에만 남는다 — 여기서 정하는 것은 비율뿐이다.
+  if (formData.has("pointEarnRate")) values.pointEarnRate = rate(formData, "pointEarnRate");
+  // 파워 고객 기준은 고객 세그먼트가 사라진 뒤에도 남는다 — 문자 대상 선별(`lib/messages.ts:61`)이 읽는다.
   if (formData.has("powerCustomerMinPoints")) {
     const points = Number(text(formData, "powerCustomerMinPoints"));
     if (!Number.isSafeInteger(points) || points < 0) throw new Error("포인트 기준을 확인하세요.");

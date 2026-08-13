@@ -17,7 +17,7 @@ import { NaverMailConnection } from "./naver-mail-connection";
 
 const input = control;
 
-type Props = { bookings: readonly SalonRecord<JsonValue>[]; customers: readonly SalonRecord<JsonValue>[]; settings: JsonObject; syncHistory: readonly SalonRecord<JsonValue>[]; date?: string; view?: string; period?: string; showNew?: boolean; newCustomerId?: string; newStartTime?: string; newWaitingId?: string; error?: string; notice?: string; edit?: string; now?: Date; searchParams?: Record<string, string | string[] | undefined>; };
+type Props = { bookings: readonly SalonRecord<JsonValue>[]; customers: readonly SalonRecord<JsonValue>[]; settings: JsonObject; syncHistory: readonly SalonRecord<JsonValue>[]; date?: string; view?: string; period?: string; showNew?: boolean; newCustomerId?: string; newStartTime?: string; error?: string; notice?: string; edit?: string; now?: Date; searchParams?: Record<string, string | string[] | undefined>; };
 
 const seoulClock = new Intl.DateTimeFormat("ko-KR", { hour: "2-digit", hour12: false, minute: "2-digit", timeZone: "Asia/Seoul" });
 
@@ -31,7 +31,7 @@ export function addCalendarMonths(date: string, months: number) { const [year, m
 function link(date: string, view: string, period: string, extra = "") { return `/bookings?date=${date}&view=${view}${period ? `&period=${period}` : ""}${extra}`; }
 function Field({ children, label }: { children: React.ReactNode; label: string }) { return <label className="grid gap-1 text-xs font-medium text-[var(--muted)]"><span>{label}</span>{children}</label>; }
 
-function BookingForm({ booking, customerId, customers, date, returnTo, slotMinutes, startTime, waitingId }: { booking?: SalonRecord<JsonValue>; customerId?: string; customers: Props["customers"]; date: string; returnTo: string; slotMinutes: number; startTime?: string; waitingId?: string }) {
+function BookingForm({ booking, customerId, customers, date, returnTo, slotMinutes, startTime }: { booking?: SalonRecord<JsonValue>; customerId?: string; customers: Props["customers"]; date: string; returnTo: string; slotMinutes: number; startTime?: string }) {
   const current = booking ? value(booking) : {}; const string = (key: string, fallback = "") => typeof current[key] === "string" ? current[key] : fallback;
   const start = seoulClockOrEmpty(string("startsAt")); const end = seoulClockOrEmpty(string("endsAt"));
   // 시작 시간만 프리필하고 종료를 10:30 으로 두면 저장이 "예약 종료" 검증에서 튕긴다. 한 슬롯 뒤로 민다.
@@ -39,8 +39,6 @@ function BookingForm({ booking, customerId, customers, date, returnTo, slotMinut
   const after = (Number(defaultStart.slice(0, 2)) * 60 + Number(defaultStart.slice(3, 5)) + slotMinutes) % 1440;
   const defaultEnd = end.time || `${String(Math.floor(after / 60)).padStart(2, "0")}:${String(after % 60).padStart(2, "0")}`;
   return <ActionForm action={saveBooking} aria-label={booking ? "예약 수정" : "예약 등록"} className="grid grid-cols-4 gap-3" errorClassName="col-span-4 rounded-[var(--radius-card)] border border-[var(--warning)] bg-[var(--warning-soft)] px-4 py-3 text-sm text-[var(--warning)]" errorPrefix="입력 내용을 수정하세요: "><input name="returnTo" type="hidden" value={returnTo} />
-    {/* 대기 고객에서 넘어왔으면 예약 저장 성공 시 그 대기 줄이 사라져야 한다. 두 번 처리할 일이 아니다. */}
-    {waitingId && <input name="waitingId" type="hidden" value={waitingId} />}
     {booking && <input name="bookingId" type="hidden" value={booking.id} />}<Field label="기존 고객"><select className={input} defaultValue={string("customerId") || customerId || ""} name="customerId"><option value="">신규 고객으로 등록</option>{customerOptions(customers).map((option) => <option key={option.id} value={option.id}>{option.label}</option>)}</select></Field><Field label="신규 고객명"><input className={input} name="newCustomerName" placeholder="기존 고객 미선택 시" /></Field><Field label="신규 휴대전화"><input className={input} name="newCustomerPhone" placeholder="010-0000-0000" type="tel" /></Field><Field label="시술 메뉴"><input className={input} defaultValue={string("service")} name="service" required /></Field>
     <Field label="예약 날짜"><input className={input} defaultValue={start.date || date} name="date" required type="date" /></Field><Field label="시작 시간"><input className={input} defaultValue={defaultStart} name="startTime" required type="time" /></Field><Field label="종료 시간"><input className={input} defaultValue={defaultEnd} name="endTime" required type="time" /></Field><Field label="상태"><select className={input} defaultValue={string("status", "confirmed")} name="status"><option value="confirmed">예약</option><option value="waiting">대기</option><option value="completed">완료</option></select></Field>
     <label className="flex items-center gap-2 text-sm"><input defaultChecked={bool(booking ?? { id: "", kind: "", value: {}, createdAt: "", updatedAt: "", archivedAt: null }, "reminderDayBefore")} name="reminderDayBefore" type="checkbox" /> 전일 알림</label><label className="flex items-center gap-2 text-sm"><input defaultChecked={bool(booking ?? { id: "", kind: "", value: {}, createdAt: "", updatedAt: "", archivedAt: null }, "reminderDayOf")} name="reminderDayOf" type="checkbox" /> 당일 알림</label><Field label="방문일 추가 문구"><input className={input} defaultValue={string("reminderText")} maxLength={150} name="reminderText" /></Field><Field label="예약 메모"><input className={input} defaultValue={string("memo")} maxLength={150} name="memo" /></Field>
@@ -48,7 +46,7 @@ function BookingForm({ booking, customerId, customers, date, returnTo, slotMinut
   </ActionForm>;
 }
 
-export function BookingsPage({ bookings, customers, settings, syncHistory, date, view = "day", period = "7", showNew, newCustomerId, newStartTime, newWaitingId, error, notice, edit, searchParams, now = new Date() }: Props) {
+export function BookingsPage({ bookings, customers, settings, syncHistory, date, view = "day", period = "7", showNew, newCustomerId, newStartTime, error, notice, edit, searchParams, now = new Date() }: Props) {
   const selectedDate = /^\d{4}-\d{2}-\d{2}$/.test(date ?? "") ? date! : todayInSeoul();
   const activeView = ["day", "month", "period"].includes(view) ? view : "day";
   const days = Math.min(31, Math.max(1, Number(period) || 7));
@@ -86,7 +84,7 @@ export function BookingsPage({ bookings, customers, settings, syncHistory, date,
     const status = statusOf(booking);
     return [{ end, id: booking.id, label: seoulClockOrEmpty(text(booking, "startsAt")).time, name: names.get(text(booking, "customerId")) ?? "고객 확인 필요", service: text(booking, "service"), start, startsAt: text(booking, "startsAt"), status, style: statusStyles[status] }];
   });
-  const overlay = showNew ? <section aria-label="새 예약 등록" aria-modal="true" data-dialog-panel role="dialog" className="p-5"><div className="flex items-center justify-between gap-4"><h2 className={typeScale.title}>새 예약 등록</h2><Link data-dialog-close href={returnTo} className={button("md")}>닫기</Link></div><div className="mt-4"><BookingForm customerId={newCustomerId} customers={customers} date={selectedDate} returnTo={returnTo} slotMinutes={policy.bookingSlotMinutes} startTime={newStartTime} waitingId={newWaitingId} /></div></section> : undefined;
+  const overlay = showNew ? <section aria-label="새 예약 등록" aria-modal="true" data-dialog-panel role="dialog" className="p-5"><div className="flex items-center justify-between gap-4"><h2 className={typeScale.title}>새 예약 등록</h2><Link data-dialog-close href={returnTo} className={button("md")}>닫기</Link></div><div className="mt-4"><BookingForm customerId={newCustomerId} customers={customers} date={selectedDate} returnTo={returnTo} slotMinutes={policy.bookingSlotMinutes} startTime={newStartTime} /></div></section> : undefined;
   return <main className="min-w-[1032px] px-7 pb-6 pt-5">
     {overlay && <ModalHost label="새 예약 등록">{overlay}</ModalHost>}
     {error && <p className="mb-5 rounded-[var(--radius-card)] border border-[var(--warning)] bg-[var(--warning-soft)] px-4 py-3 text-sm text-[var(--warning)]" role="alert">입력 내용을 수정하세요: {error}</p>}

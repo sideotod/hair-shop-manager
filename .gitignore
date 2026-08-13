@@ -6,6 +6,7 @@ coverage/
 .data/
 !.data/
 !.data/hairhaeyo.sqlite
+.data/*.backup-*.sqlite
 src-tauri/target/
 src-tauri/gen/
 src-tauri/binaries/

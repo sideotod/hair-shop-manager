@@ -28,11 +28,11 @@ const won = (value: number) => `${value.toLocaleString("ko-KR")}원`;
  * 앱이 스스로 찍어주는 `50,000` 형식을 되받으면 거절하고, 앞자리 `0` 이 남으면
  * `50000` 이 `050000`(→50,000 이 아니라 그대로 통과하는 값)으로 새기 때문이다.
  */
-export function PaymentAmounts({ availablePoints, cardFeeRate: initialCardFeeRate, splitOpen: initialSplitOpen = false, vatMode: initialVatMode }: { availablePoints: number | null; cardFeeRate: number; splitOpen?: boolean; vatMode: VatMode }) {
+export function PaymentAmounts({ availablePoints, cardFeeRate: initialCardFeeRate, pointEarnRate = 0, splitOpen: initialSplitOpen = false, vatMode: initialVatMode }: { availablePoints: number | null; cardFeeRate: number; pointEarnRate?: number; splitOpen?: boolean; vatMode: VatMode }) {
   const [gross, setGross] = useState("0");
   const [discount, setDiscount] = useState("0");
   const [pointsUsedInput, setPointsUsed] = useState("0");
-  const [pointsEarnedInput, setPointsEarned] = useState("0");
+  const [pointsEarnedInput, setPointsEarned] = useState<string | null>(null);
   const [expense, setExpense] = useState("0");
   const [vatMode, setVatMode] = useState<VatMode>(initialVatMode);
   const [cardFeeRate, setCardFeeRate] = useState(String(initialCardFeeRate));
@@ -46,11 +46,13 @@ export function PaymentAmounts({ availablePoints, cardFeeRate: initialCardFeeRat
   // 화면에서 도달할 수 없게 만든다 — 실패시키는 것보다 못 적게 하는 쪽이 싸다.
   const member = useIsMember();
   const pointsUsed = member ? pointsUsedInput : "0";
-  const pointsEarned = member ? pointsEarnedInput : "0";
-  const pointsCleared = !member && (num(pointsUsedInput) > 0 || num(pointsEarnedInput) > 0);
+  const pointsCleared = !member && (num(pointsUsedInput) > 0 || num(pointsEarnedInput ?? "0") > 0);
   const pointsLock = member ? "" : " bg-[var(--background)] text-[var(--muted)]";
 
   const { taxable, netPaid, vat } = settleAmounts(num(gross), num(discount), num(pointsUsed), vatMode);
+  // 적립은 설정의 적립률로 **미리 채운다**. 원장이 그 칸을 한 번이라도 만지면(`null` 이 아니게 되면)
+  // 그 뒤로는 총액을 고쳐도 손으로 적은 값을 덮지 않는다 — 고친 숫자가 조용히 사라지는 게 더 나쁘다.
+  const pointsEarned = !member ? "0" : pointsEarnedInput ?? String(Math.floor(netPaid * pointEarnRate / 100));
   // 포인트는 결제수단 합계에서 빠진다 (`finance.ts:57`). 기본 수단은 나머지를 받는 칸이다.
   const assigned = PAYMENT_METHODS.reduce((sum, { key }) => key === "points" || key === primary ? sum : sum + num(splits[key] ?? "0"), 0);
   const remainder = netPaid - assigned;
@@ -63,7 +65,7 @@ export function PaymentAmounts({ availablePoints, cardFeeRate: initialCardFeeRat
       <label className={label}>총 시술금액<input className={field} inputMode="numeric" name="grossWon" onChange={(event) => setGross(digits(event.target.value))} value={gross} /></label>
       <label className={label}>할인<input aria-describedby={taxable < 0 ? "payment-taxable-error" : undefined} aria-invalid={taxable < 0 || undefined} className={field} inputMode="numeric" name="discountWon" onChange={(event) => setDiscount(digits(event.target.value))} value={discount} /></label>
       <label className={label}>포인트 사용{member && availablePoints !== null && <span className="font-normal"> · 보유 {availablePoints.toLocaleString("ko-KR")}P</span>}{!member && <span className="font-normal"> · 비회원 불가</span>}<input aria-describedby={overPoints ? "payment-points-error" : pointsCleared ? "payment-member-points-error" : undefined} aria-invalid={overPoints || undefined} className={`${field}${pointsLock}`} inputMode="numeric" name="pointsUsedWon" onChange={(event) => setPointsUsed(digits(event.target.value))} readOnly={!member} value={pointsUsed} /></label>
-      <label className={label}>포인트 적립{!member && <span className="font-normal"> · 비회원 불가</span>}<input aria-describedby={pointsCleared ? "payment-member-points-error" : undefined} className={`${field}${pointsLock}`} inputMode="numeric" name="pointsEarnedWon" onChange={(event) => setPointsEarned(digits(event.target.value))} readOnly={!member} value={pointsEarned} /></label>
+      <label className={label}>포인트 적립{member && pointEarnRate > 0 && pointsEarnedInput === null && <span className="font-normal"> · 실결제의 {pointEarnRate}%</span>}{!member && <span className="font-normal"> · 비회원 불가</span>}<input aria-describedby={pointsCleared ? "payment-member-points-error" : undefined} className={`${field}${pointsLock}`} inputMode="numeric" name="pointsEarnedWon" onChange={(event) => setPointsEarned(digits(event.target.value))} readOnly={!member} value={pointsEarned} /></label>
       <label className={label}>결제수단<select className={field} onChange={(event) => setPrimary(event.target.value as PaymentMethod)} value={primary}>{PAYMENT_METHODS.filter(({ key }) => key !== "points").map(({ key, label: name }) => <option key={key} value={key}>{name}</option>)}</select></label>
       <p className="grid gap-1 self-end text-xs font-medium text-[var(--muted)]">실결제<output aria-live="polite" className={`${typeScale.metric} tabular-nums text-[var(--foreground)]`}>{won(netPaid)}</output></p>
     </div>

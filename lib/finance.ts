@@ -143,6 +143,8 @@ function paymentLedgerInput(store: SalonStore, formData: FormData, correction?: 
     memberType,
     customerName: customer && typeof customer.name === "string" ? customer.name : text(formData, "nonMemberName") || "비회원",
     serviceMajor,
+    // 예약 존재 여부를 검증하지 않는다. 없는 id 는 원장 금액에 영향이 없고, 검증을 넣으면 예약이 나중에 취소·보관된 뒤 과거 결제를 정정하려 할 때 막힌다.
+    ...(text(formData, "bookingId") ? { bookingId: text(formData, "bookingId") } : {}),
     serviceDetail: text(formData, "serviceDetail"),
     styleName: text(formData, "styleName"),
     gender,

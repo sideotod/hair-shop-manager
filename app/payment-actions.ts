@@ -6,9 +6,10 @@ import { redirect } from "next/navigation";
 import { correctPaymentRecord, recordPayment, refundPaymentRecord } from "../lib/finance";
 import { createSalonStore } from "../lib/salon-store";
 
-// 환불은 `/sales/transactions` 에서 출발한다. 이 경로를 허용하지 않으면 실패 메시지가
-// `/sales` 로 떨어져 원장이 "눌렀는데 아무 일도 안 났다" 를 본다.
-function returnTo(formData: FormData) { const value = formData.get("returnTo"); return typeof value === "string" && /^\/sales(?:\/transactions)?(?:\?|$)/.test(value) ? value : "/sales?tab=payment"; }
+// 환불은 `/sales/transactions` 에서, 결제는 `/customers`·`/bookings` 에서도 출발한다. 이 경로들을
+// 허용하지 않으면 실패 메시지가 `/sales` 로 떨어져 원장이 "눌렀는데 아무 일도 안 났다" 를 본다.
+// 목록은 앞이 고정된 허용 목록으로 남긴다 — 열린 리다이렉트를 만들지 않는다.
+function returnTo(formData: FormData) { const value = formData.get("returnTo"); return typeof value === "string" && /^(?:\/sales(?:\/transactions)?|\/customers|\/bookings)(?:\?|$)/.test(value) ? value : "/sales?tab=payment"; }
 function back(formData: FormData, key: "error" | "notice", message: string): never {
   const url = new URL(returnTo(formData), "http://localhost");
   url.searchParams.delete(key === "notice" ? "error" : "notice");

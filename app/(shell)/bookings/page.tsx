@@ -21,7 +21,6 @@ export default async function Page({ searchParams }: { searchParams: Promise<Rec
       error={value(params.error)}
       newCustomerId={value(params.customerId)}
       newStartTime={value(params.startTime)}
-      newWaitingId={value(params.waitingId)}
       notice={value(params.notice)}
       period={value(params.period)}
       searchParams={params}

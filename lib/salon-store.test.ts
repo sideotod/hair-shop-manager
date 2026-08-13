@@ -26,19 +26,19 @@ describe("SalonStore", () => {
 
     store.save("customers", "customer-1", { name: "김하늘", gender: "female", visitType: "first" }, "원장");
     const updated = store.save("customers", "customer-1", { name: "김하늘", gender: "female", visitType: "repeat" }, "원장");
-    store.save("waiting-customers", "waiting-1", { name: "박봄", memo: "커트" }, "원장");
-    const archived = store.archive("waiting-customers", "waiting-1", "원장");
+    store.save("notices", "notice-1", { title: "휴무 안내" }, "원장");
+    const archived = store.archive("notices", "notice-1", "원장");
 
     expect(updated).toMatchObject({ id: "customer-1", value: { visitType: "repeat" } });
     expect(store.list("customers")).toHaveLength(customerCount + 1);
-    expect(store.list("waiting-customers").some((record) => record.id === "waiting-1")).toBe(false);
+    expect(store.list("notices").some((record) => record.id === "notice-1")).toBe(false);
     expect(archived.archivedAt).toEqual(expect.any(String));
 
     const events = store.snapshot().auditEvents.slice(auditCount);
     expect(events).toHaveLength(4);
     expect(events).toEqual(expect.arrayContaining([
       expect.objectContaining({ action: "save", kind: "customers", recordId: "customer-1", actor: "원장" }),
-      expect.objectContaining({ action: "archive", kind: "waiting-customers", recordId: "waiting-1", actor: "원장" }),
+      expect.objectContaining({ action: "archive", kind: "notices", recordId: "notice-1", actor: "원장" }),
     ]));
   });
 
@@ -124,7 +124,7 @@ describe("SalonStore", () => {
     expect(new Set(customers.map(({ value }) => value.gender))).toEqual(new Set(["female", "male"]));
     expect(new Set(customers.map(({ value }) => value.visitType))).toEqual(new Set(["first", "repeat"]));
     expect(customers.every(({ value }) => value.operator === "원장")).toBe(true);
-    for (const kind of ["waiting-customers", "bookings", "messages", "products", "coupons", "notices"]) {
+    for (const kind of ["bookings", "messages", "products", "coupons", "notices"]) {
       expect(store.list(kind), kind).not.toEqual([]);
     }
     expect(bookings.map(({ value }) => value.startsAt.slice(0, 10))).toEqual([
