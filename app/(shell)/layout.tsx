@@ -8,8 +8,8 @@ import { createSalonStore } from "../../lib/salon-store";
  */
 export default async function ShellLayout({ children }: { children: React.ReactNode }) {
   const store = createSalonStore();
-  // 헤더 바로가기는 최근 고객 몇 명만 보여준다. 전체 조회는 858행·681KB 를 모든 셸 경로에 실었다.
-  // 전체 탐색은 헤더 검색폼(`/customers`)이 맡는다.
-  try { return <ShellFrame customers={store.listRecent("customers", 8)} settings={store.getSettings()}>{children}</ShellFrame>; }
+  // 고객 탐색은 헤더 검색폼(`/customers`)이 전부 맡는다. 헤더 최근 고객 목록이 사라져
+  // 셸 경로마다 돌던 `listRecent("customers", 8)` 조회도 같이 없앴다.
+  try { return <ShellFrame settings={store.getSettings()}>{children}</ShellFrame>; }
   finally { store.close(); }
 }

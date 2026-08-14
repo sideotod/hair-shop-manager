@@ -12,7 +12,7 @@ function form(values: Record<string, string>) {
 }
 
 const splitPayment = {
-  requestKey: "split-payment", memberType: "member", customerId: "customer-seed-1", serviceMajor: "커트", serviceDetail: "", styleName: "", grossWon: "11000", discountWon: "0", pointsUsedWon: "0", pointsEarnedWon: "0", expenseWon: "0", cardFeeRate: "0", vatMode: "included", payment_cash: "5000", payment_card: "6000", occurredDate: "2026-07-31", occurredTime: "10:00", generalNote: "", medicineNote: "", scalpNote: "", hairNote: "", gender: "female", visitType: "repeat",
+  requestKey: "split-payment", customerId: "customer-seed-1", serviceMajor: "커트", serviceDetail: "", styleName: "", grossWon: "11000", discountWon: "0", pointsUsedWon: "0", pointsEarnedWon: "0", expenseWon: "0", cardFeeRate: "0", vatMode: "included", payment_cash: "5000", payment_card: "6000", occurredDate: "2026-07-31", occurredTime: "10:00", generalNote: "", medicineNote: "", scalpNote: "", hairNote: "", gender: "female", visitType: "repeat",
 } as const;
 
 describe("server revenue aggregate", () => {
@@ -57,12 +57,13 @@ describe("server revenue aggregate", () => {
     }
   });
 
-  it("keeps today/month/total cards visible while the selected day has no data", () => {
+  it("keeps today/month/total cards visible while the selected window has no data", () => {
     const store = createSalonStore(":memory:");
     try {
       const snapshot = store.snapshot();
       const transactions = buildRevenueTransactions(snapshot.ledger, snapshot.records.customers ?? []);
-      const analytics = buildRevenueAnalytics(transactions, { view: "day", cursor: "2026-07-31" }, "2026-07-31");
+      // 일별 칩의 창은 한 달이다. 9월에는 시드 거래가 없지만 카드 세 장은 계속 오늘·이번 달·전체를 읽는다.
+      const analytics = buildRevenueAnalytics(transactions, { view: "day", cursor: "2026-09-15" }, "2026-07-31");
 
       expect(analytics.totals).toEqual({ today: 0, month: 29960000, total: 29960000 });
       expect(analytics.transactions).toEqual([]);
@@ -87,15 +88,18 @@ describe("server revenue aggregate", () => {
     expect(analytics.settlement.find(({ name }) => name === "수수료 차감 후")?.value).toBe(352640);
   });
 
-  it("filters day, month, total, and accessible chart selections without staff filters", () => {
+  it("filters each chip window and accessible chart selections without staff filters", () => {
     const store = createSalonStore(":memory:");
     try {
       const snapshot = store.snapshot();
       const transactions = buildRevenueTransactions(snapshot.ledger, snapshot.records.customers ?? []);
 
-      expect(filterRevenueTransactions(transactions, { view: "day", cursor: "2026-07-25" })).toHaveLength(1);
+      // 칩마다 창이 다르다: 일별은 그 달, 주별·월별은 그 해, 년별은 전체.
+      expect(filterRevenueTransactions(transactions, { view: "day", cursor: "2026-07-25" })).toHaveLength(4);
+      expect(filterRevenueTransactions(transactions, { view: "day", cursor: "2026-09-25" })).toHaveLength(0);
+      expect(filterRevenueTransactions(transactions, { view: "week", cursor: "2026-07-31" })).toHaveLength(4);
       expect(filterRevenueTransactions(transactions, { view: "month", cursor: "2026-07-31" })).toHaveLength(4);
-      expect(filterRevenueTransactions(transactions, { view: "total", cursor: "2026-07-31" })).toHaveLength(4);
+      expect(filterRevenueTransactions(transactions, { view: "year", cursor: "2026-07-31" })).toHaveLength(4);
       expect(filterRevenueSelection(transactions, { kind: "payment", key: "현금" })).toHaveLength(1);
       expect(filterRevenueSelection(transactions, { kind: "service", key: "컬러" })).toHaveLength(1);
       expect(filterRevenueSelection(transactions, { kind: "date", key: "7/24" })).toHaveLength(1);
@@ -119,7 +123,7 @@ describe("server revenue aggregate", () => {
 
       const refund = refundPaymentRecord(store, form({ targetId: payment.id, requestKey: "refund-split", reason: "환불" }));
       expect(refund.details).toMatchObject({ paymentMethods: { cash: -5000, card: -5000, points: -1000 }, pointsUsedWon: -1000 });
-      const afterRefund = buildRevenueAnalytics(buildRevenueTransactions([payment, refund]), { view: "total", cursor: "2026-07-31" }, "2026-07-31");
+      const afterRefund = buildRevenueAnalytics(buildRevenueTransactions([payment, refund]), { view: "year", cursor: "2026-07-31" }, "2026-07-31");
       expect(afterRefund.payments).toEqual(expect.arrayContaining([
         expect.objectContaining({ name: "현금", amount: 5000, value: 45 }),
         expect.objectContaining({ name: "카드", amount: 5000, value: 45 }),
@@ -140,7 +144,9 @@ describe("server revenue aggregate", () => {
     const transactions = buildRevenueTransactions(ledger);
 
     expect(transactions.map(({ id, date }) => ({ id, date }))).toEqual([{ id: "before-nine", date: "2026-07-31" }, { id: "at-nine", date: "2026-08-01" }]);
-    expect(filterRevenueTransactions(transactions, { view: "month", cursor: "2026-08-01" }).map(({ id }) => id)).toEqual(["at-nine"]);
+    // 일별 칩의 창이 곧 그 달이라 08:59 결제는 7월 창에 남는다.
+    expect(filterRevenueTransactions(transactions, { view: "day", cursor: "2026-08-01" }).map(({ id }) => id)).toEqual(["at-nine"]);
+    expect(filterRevenueTransactions(transactions, { view: "day", cursor: "2026-07-01" }).map(({ id }) => id)).toEqual(["before-nine"]);
   });
 
   it("uses positive payment inflows for pie slices while exposing signed refunds in settlement", () => {

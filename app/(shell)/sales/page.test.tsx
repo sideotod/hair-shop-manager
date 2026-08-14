@@ -30,9 +30,9 @@ describe("SalesPage", () => {
   it("opens payment registration on the sales tab with a preselected customer", async () => {
     const page = await SalesPage({ searchParams: Promise.resolve({ tab: "payment", customer: "customer-seed-2" }) });
     const html = renderToStaticMarkup(page);
-    expect(html).toContain('value="customer-seed-2" selected=""');
-    // 기간 스테퍼(일별/주별/…/누적 + ←/→)는 결제 폼을 한 글자도 바꾸지 않는다.
-    // 아무 일도 안 하는 컨트롤 7개가 폼보다 먼저 Tab 순서에 서 있었다.
+    // 고객 드롭다운은 사라졌다 — 이미 정해진 고객은 숨은 값 하나로 실린다.
+    expect(html).toContain('name="customerId" value="customer-seed-2"');
+    // 기간 스테퍼(일별/주별/…/누적 + ←/→)는 결제 폼을 한 글자도 바꾸지 않았다. 그 줄은 이제 없다.
     expect(html).not.toContain('aria-label="매출 조회"');
     // 탭 줄도 없앴다. 라우트는 살아 있고(이 테스트가 곧 그 증거다) 링크만 내렸다 —
     // 결제는 예약 행·고객 상세·오늘 화면에서 열리는 작업이지 상시 메뉴가 아니다.
@@ -42,7 +42,8 @@ describe("SalesPage", () => {
     const page = await SalesPage({ searchParams: Promise.resolve({ tab: "expenses" }) });
     const html = renderToStaticMarkup(page);
     expect(html).toContain("기간 정산");
-    expect(html).toContain('aria-label="매출 조회"');
+    // 기간은 시작일/종료일 폼 하나가 정한다. `view/cursor` 를 쓰던 칩 줄은 이 폼을 덮어써서 없앴다.
+    expect(html).not.toContain('aria-label="매출 조회"');
   });
   it("never lets a sales tab borrow another page's header title", async () => {
     for (const tab of ["payment", "expenses"]) {

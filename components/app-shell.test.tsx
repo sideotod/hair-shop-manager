@@ -80,7 +80,7 @@ describe("AppShell", () => {
 
   /** 셸 크롬 검증은 원래 대시보드 테스트에 있었다. 셸이 레이아웃으로 올라갔으니 여기가 제자리다. */
   it("renders the shell chrome once for every route", () => {
-    const html = renderToStaticMarkup(<AppShell ownerName="사용자" pathname="/" settings={{ smsRemaining: 500 }}><main /></AppShell>);
+    const html = renderToStaticMarkup(<AppShell ownerName="사용자" pathname="/"><main /></AppShell>);
 
     expect(html).toContain("HAIRHAEYO");
     expect(html).toContain("SALON LEDGER");
@@ -95,8 +95,10 @@ describe("AppShell", () => {
     expect(html).toContain('placeholder="고객명 또는 휴대전화 뒷자리"');
     expect(html).not.toContain('name="mode"');
     expect(html.match(/<option value=/g)).toBeNull();
-    expect(html).toContain("SMS 500");
-    expect(html).toContain("도움말");
+    // 헤더는 제목·검색·계정 셋뿐이다. 날짜·최근 고객·도움말·SMS 잔량은 각각 본문·검색칸·사이드바 설정·문자 화면에 이미 있었다.
+    expect(html).not.toContain("SMS 500");
+    expect(html).not.toContain("도움말");
+    expect(html).not.toContain("최근 고객");
     // 로그아웃은 계정 설정으로 갔다 (`components/settings/settings-page.tsx`). 매장 카드는 상호와 영업시간만 남는다.
     expect(html).not.toContain("로그아웃");
     expect(html).toContain("min-h-screen w-full");

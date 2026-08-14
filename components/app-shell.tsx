@@ -6,9 +6,8 @@ import { Fragment } from "react";
 import { focusRing, focusRingOnDark } from "./button";
 
 import { activeNavigationItem, childNavigationItems, matchNavigationItem, navigationItems, resolveSettingsSection, settingsSections } from "../lib/navigation";
-import type { JsonObject, JsonValue, SalonRecord } from "../lib/salon-domain";
+import type { JsonObject } from "../lib/salon-domain";
 import { resolveVisualTokens } from "../lib/visual-tokens";
-import { floatingShadow } from "./surface";
 import { typeScale } from "./type";
 
 const groupOrder = ["운영", "정산", "관리"] as const;
@@ -21,36 +20,23 @@ type AppShellProps = {
    * 페이지가 제목을 넘기던 구조가 "사이드바와 헤더가 서로 다른 화면을 가리키는" 버그의 원인이었다.
    */
   pathname: string;
-  customers?: readonly SalonRecord<JsonValue>[];
-  smsRemaining?: number;
   shopName?: string;
   ownerName?: string;
   settings?: JsonObject;
-  today?: Date;
 };
-
-function customerName(customer: SalonRecord<JsonValue>) {
-  if (typeof customer.value !== "object" || customer.value === null || Array.isArray(customer.value)) return customer.id;
-  const value = customer.value as { name?: JsonValue };
-  return typeof value.name === "string" ? value.name : customer.id;
-}
 
 export function AppShell({
   children,
   pathname,
-  customers = [],
-  smsRemaining = 0,
   shopName = "헤어해요",
   ownerName = "서원",
   settings = {},
-  today = new Date(),
 }: AppShellProps) {
   const title = matchNavigationItem(pathname).title;
   const activeHref = activeNavigationItem(pathname).path;
   const setting = (key: string, fallback: string) => typeof settings[key] === "string" ? settings[key] : fallback;
   const resolvedShopName = setting("shopName", shopName);
   const resolvedOwnerName = setting("ownerName", ownerName);
-  const resolvedSmsRemaining = typeof settings.smsRemaining === "number" ? settings.smsRemaining : smsRemaining;
   const hiddenMenus = new Set(Array.isArray(settings.hiddenMenus) ? settings.hiddenMenus.filter((value): value is string => typeof value === "string") : []);
   const visibleGroups = menuGroups.map(({ label, items }) => ({ label, items: items.filter((item) => !hiddenMenus.has(item.path)) })).filter(({ items }) => items.length > 0);
   // 설정 하위 목록은 설정에 있을 때만 편다. 항상 펼쳐 두면 7줄이 늘 자리를 먹어 사이드바가
@@ -59,9 +45,7 @@ export function AppShell({
   const section = useSearchParams()?.get("section") ?? undefined;
   const settingsOpen = activeHref === "/settings";
   const activeSection = resolveSettingsSection(section);
-  const customerTarget = settings.customerOpenMode === "new-window" ? "_blank" : undefined;
   const ownerLabel = resolvedOwnerName === "사용자" ? "사용자님" : `${resolvedOwnerName} 사용자님`;
-  const dateLabel = new Intl.DateTimeFormat("ko-KR", { dateStyle: "full", timeZone: "Asia/Seoul" }).format(today);
   const resolvedVisualTokens = resolveVisualTokens(settings);
   const visualTokens = {
     "--background": resolvedVisualTokens.backgroundColor,
@@ -104,7 +88,9 @@ export function AppShell({
 
         <div className="flex min-h-0 min-w-0 flex-col overflow-hidden">
           <header className="flex h-[72px] shrink-0 items-center gap-5 border-b border-[var(--border)] bg-[var(--surface)] px-7 text-[13px]">
-            <div className="flex shrink-0 flex-col gap-0.5"><h1 className={typeScale.title}>{title}</h1><span className="font-mono text-[11px] text-[var(--muted)]">{dateLabel}</span></div>
+            {/* 헤더는 세 가지만 든다: 여기가 어디인지(제목), 고객을 찾는 칸, 내 계정.
+                날짜·최근 고객·도움말·SMS 잔량은 각각 본문·검색칸·사이드바 설정·문자 화면에 이미 있다. */}
+            <h1 className={`shrink-0 ${typeScale.title}`}>{title}</h1>
             <div className="h-px min-w-0 flex-1" />
             {/* 검색 기준 드롭다운은 없앴다. 8개 중 6개(닉네임·메모·주소·이메일·포인트카드·패밀리번호)가
                 삭제된 속성을 읽어 아무것도 찾지 못했고, 남은 둘은 `/customers` 가 입력만 보고 알아서 가른다 —
@@ -116,19 +102,6 @@ export function AppShell({
                   포커스로 드러난 버튼이 23×19.5px 짜리 글자 덩어리로 나오지 않는다(실측). */}
               <button className={`sr-only rounded-[var(--radius-control)] bg-[var(--brand)] text-[11px] text-white focus:not-sr-only focus:inline-flex focus:h-8 focus:items-center focus:px-2.5 ${focusRing}`} type="submit">검색</button>
             </form>
-            {customers.length > 0 && (
-              <details className="relative shrink-0">
-                <summary className={`inline-flex h-8 cursor-pointer list-none items-center rounded-[var(--radius-control)] px-2 text-[var(--brand)] ${focusRing}`}>최근 고객</summary>
-                <ul aria-label="최근 고객 바로가기" className={`absolute right-0 z-20 mt-3 w-52 rounded-[var(--radius-card)] border border-[var(--border)] bg-[var(--surface)] p-2 ${floatingShadow}`}>
-                  {/* 조밀 모드라도 32px 아래로는 내리지 않는다. `py-1` 은 27.5px 였다. */}
-                  {customers.map((customer) => (
-                    <li key={customer.id}><Link className={`flex items-center rounded-[var(--radius-control)] px-3 hover:bg-[var(--brand-soft)] ${focusRing} ${settings.customerDisplayMode === "compact" ? "h-8" : "h-9"}`} href={`/customers?customer=${customer.id}`} target={customerTarget}>{customerName(customer)}</Link></li>
-                  ))}
-                </ul>
-              </details>
-            )}
-            <Link className={`inline-flex h-8 shrink-0 items-center rounded-[var(--radius-control)] px-2 text-[11px] text-[var(--muted)] ${focusRing}`} href="/settings?section=help">도움말</Link>
-            <span className="shrink-0 rounded-[var(--radius-control)] bg-[var(--brand-soft)] px-2.5 py-1.5 font-mono text-[12px] font-medium text-[var(--brand)]">SMS {resolvedSmsRemaining.toLocaleString("ko-KR")}</span>
             <Link aria-label={ownerLabel} className={`flex h-8 shrink-0 items-center gap-2 rounded-[var(--radius-control)] px-1 font-medium ${focusRing}`} href="/settings?section=owner"><span aria-hidden="true" className="grid size-7 place-items-center rounded-full bg-[var(--sidebar)] text-[10px] text-white">서</span><span className="text-[12px]">{resolvedOwnerName}</span></Link>
           </header>
           {/* `scrollbar-gutter: stable` — 스크롤바가 생기는 화면(/sales, /messages)만 본문 폭이 15px 좁아져

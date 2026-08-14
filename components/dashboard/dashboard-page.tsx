@@ -165,7 +165,7 @@ export function DashboardPage({ data, today = new Date() }: { data: DashboardDat
           <h2 className={typeScale.section}>오늘 할 일</h2>
           <div className="h-px min-w-0 flex-1 bg-transparent" />
           <nav aria-label="빠른 작업" className="flex gap-2">
-            {[["예약 등록", "/bookings?new=1"], ["고객 등록", "/customers?new=1"], ["결제 등록", "/sales?tab=payment"], ["문자 발송", "/messages?new=1"]].map(([label, href], index) => <Link className={button("md", index === 0 ? "primary" : "secondary")} href={href} key={href}>{label}</Link>)}
+            {[["예약 등록", "/bookings?new=1"], ["고객 등록", "/?new=1"], ["결제 등록", "/sales?tab=payment"], ["문자 발송", "/messages?new=1"]].map(([label, href], index) => <Link className={button("md", index === 0 ? "primary" : "secondary")} href={href} key={href}>{label}</Link>)}
           </nav>
         </div>
 

@@ -42,7 +42,8 @@ describe("DashboardPage", () => {
     expect(html).toContain("운영 안내");
     expect(html).toContain("최근 감사 이력");
 
-    for (const href of ["/customers?new=1", "/bookings?new=1", "/sales?tab=payment", "/messages?new=1"]) {
+    // 고객 등록은 페이지를 떠나지 않는다. 같은 화면 위에 팝업만 연다.
+    for (const href of ["/?new=1", "/bookings?new=1", "/sales?tab=payment", "/messages?new=1"]) {
       expect(html).toContain(`href="${href}"`);
     }
   });
@@ -162,12 +163,10 @@ describe("DashboardPage", () => {
 
   it("keeps the token scope wrapping the shell background", () => {    const html = renderToStaticMarkup(
       <AppShell
-        customers={[]}
         ownerName="사용자"
         pathname="/"
         settings={{ brandColor: "#123456" }}
         shopName="헤어해요"
-        smsRemaining={500}
       >
         <main>배경</main>
       </AppShell>,
@@ -178,7 +177,8 @@ describe("DashboardPage", () => {
   });
 
   it("reads persisted menu visibility and visual tokens without changing route links", () => {
-    const html = renderToStaticMarkup(<AppShell pathname="/" settings={{ hiddenMenus: ["/messages"], backgroundColor: "#abcdef", brandColor: "#123456" }}><main>설정 적용</main></AppShell>);
+    // 설정 하위 목록은 `/settings` 에 있을 때만 편다. 헤더 도움말 링크가 사라져 이 검사도 그 경로로 옮겼다.
+    const html = renderToStaticMarkup(<AppShell pathname="/settings" settings={{ hiddenMenus: ["/messages"], backgroundColor: "#abcdef", brandColor: "#123456" }}><main>설정 적용</main></AppShell>);
     expect(html).not.toContain('href="/messages"');
     expect(html).toContain('href="/settings?section=help"');
     expect(html).toContain("--background:#abcdef");

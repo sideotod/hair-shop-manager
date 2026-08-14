@@ -3,10 +3,7 @@ import Link from "next/link";
 import { correctExpense, saveExpense, savePreset } from "../../app/operation-actions";
 import { ledgerSettlement } from "../../lib/operations";
 import { button, control, focusRing, rowLink } from "../button";
-import { PageToolbar } from "../page-toolbar";
 import type { JsonObject, JsonValue, LedgerEntry, SalonRecord } from "../../lib/salon-domain";
-import { SalesControls } from "../sales/sales-controls";
-import { revenueRange, type RevenueQuery } from "../sales/revenue-query";
 import { seoulBusinessDate, seoulClockOrEmpty } from "../../lib/seoul-date";
 import { SubmitButton } from "../submit-button";
 import { card } from "../surface";
@@ -29,7 +26,6 @@ type Props = {
    * 렌더 중 `randomUUID()` 를 부르면 같은 요청의 재렌더마다 마크업이 달라져 캐시가 무의미해진다.
    */
   requestKey: string;
-  salesQuery?: RevenueQuery;
 };
 
 function Field({ children, label }: { children: React.ReactNode; label: string }) { return <label className="grid gap-1 text-xs font-medium text-[var(--muted)]"><span>{label}</span>{children}</label>; }
@@ -60,7 +56,7 @@ function Expenses({ correctionId, expenses, ledger, period, requestKey, returnTo
   return <div className="grid gap-5"><div className="grid grid-cols-[minmax(0,1fr)_minmax(0,1fr)] gap-5"><ExpenseForm presets={expenses} requestKey={requestKey} returnTo={returnTo} target={target} /><form action={savePreset} className={card}><ReturnTo value={returnTo} /><input name="presetType" type="hidden" value="expense" /><input name="presetId" type="hidden" value={`expense-preset-${requestKey}`} /><h2 className={typeScale.section}>지출 프리셋</h2><div className="mt-4 grid grid-cols-2 gap-3"><Field label="항목"><input className={input} name="name" required /></Field><Field label="기본 금액"><input className={input} min="0" name="defaultWon" required type="number" /></Field></div><SubmitButton extra="mt-4" size="md" tone="secondary">프리셋 저장</SubmitButton><ul className="mt-4 divide-y divide-[var(--border)] text-sm">{expenses.map((preset) => <li className="flex justify-between py-2" key={preset.id}><span>{string(value(preset), "name")}</span><strong>{won(number(value(preset), "defaultWon"))}</strong></li>)}</ul></form></div><section aria-label="기간 정산" className={card}><div className="flex items-center justify-between"><div><h2 className={typeScale.section}>기간 정산</h2><p className="text-sm text-[var(--muted)]">{period.start} ~ {period.end}</p></div><form className="flex items-end gap-2" method="get"><input name="tab" type="hidden" value="expenses" /><Field label="시작"><input className={input} defaultValue={period.start === "0000-01-01" ? "" : period.start} name="start" type="date" /></Field><Field label="종료"><input className={input} defaultValue={period.end === "9999-12-31" ? "" : period.end} name="end" type="date" /></Field><button className={button("md", "secondary")} type="submit">적용</button></form></div><dl className="mt-5 grid grid-cols-5 gap-3">{[["총 매출", settlement.grossWon], ["실결제", settlement.amountWon], ["VAT", settlement.vatWon], ["지출", settlement.expenseWon], ["샵 수익", settlement.profitWon]].map(([label, amount]) => <div className="rounded-[var(--radius-card)] bg-[var(--background)] px-4 py-3" key={label as string}><dt className="text-xs text-[var(--muted)]">{label}</dt><dd className="mt-1 font-bold tabular-nums">{won(amount as number)}</dd></div>)}</dl></section><ExpenseLedger caption={`${period.start} ~ ${period.end} 지출 원장`} correctionHref={(id) => `${returnTo}&correction=${encodeURIComponent(id)}`} entries={entries} /></div>;
 }
 
-export function OperationsPage({ correctionId, error, expenses, ledger, period = { start: "0000-01-01", end: "9999-12-31" }, requestKey, salesQuery }: Props) {
+export function OperationsPage({ correctionId, error, expenses, ledger, period = { start: "0000-01-01", end: "9999-12-31" }, requestKey }: Props) {
   const returnTo = "/sales?tab=expenses";
-  return <main className="min-w-0 px-7 pb-6 pt-5">{salesQuery && <SalesControls label={revenueRange(salesQuery).label} query={salesQuery} tab="expenses" />}<PageToolbar className="mt-5" description={<>지출 원장과 기간 정산을 관리합니다. 매출 워크스페이스 · 지출·정산</>} />{error &&<p className="mt-5 rounded-[var(--radius-card)] border border-[var(--danger)] bg-[var(--danger-soft)] px-4 py-3 text-sm text-[var(--danger)]" role="alert">입력 내용을 수정하세요: {error}</p>}<section className="mt-5"><Expenses correctionId={correctionId} expenses={expenses} ledger={ledger} period={period} requestKey={requestKey} returnTo={returnTo} /></section></main>;
+  return <main className="min-w-0 px-7 pb-6 pt-5">{error &&<p className="mb-5 rounded-[var(--radius-card)] border border-[var(--danger)] bg-[var(--danger-soft)] px-4 py-3 text-sm text-[var(--danger)]" role="alert">입력 내용을 수정하세요: {error}</p>}<Expenses correctionId={correctionId} expenses={expenses} ledger={ledger} period={period} requestKey={requestKey} returnTo={returnTo} /></main>;
 }
