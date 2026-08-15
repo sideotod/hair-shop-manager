@@ -19,6 +19,13 @@ const files = [...sourceFiles("components"), ...sourceFiles("app")];
 
 /** 카드 표면 그림자. 배경 색조(13,21,18)로 물들여 순수 검정을 피한다. */
 const cardShadow = "shadow-[0_1px_2px_rgba(13,21,18,0.04),0_14px_30px_-20px_rgba(13,21,18,0.25)]";
+/** 09A~09H는 일반 화면이 아니라 Figma 실측 모달이다. 이 숫자만 예외로 등록한다. */
+const figmaPaymentDialog = "components/sales/payment-registration-dialog.tsx";
+const figmaPaymentAmounts = "components/sales/payment-amounts.tsx";
+const figmaPaymentCustomer = "components/sales/payment-customer.tsx";
+const figmaSpacing = new Set([`${figmaPaymentDialog}:p-6`]);
+const figmaTextSizes = new Set([`${figmaPaymentDialog}:19px`, `${figmaPaymentDialog}:15px`, `${figmaPaymentAmounts}:15px`, `${figmaPaymentAmounts}:22px`, `${figmaPaymentCustomer}:19px`]);
+const figmaTextUtilities = new Set([`${figmaPaymentDialog}:text-lg`]);
 
 describe("design consistency", () => {
   it("카드 표면은 한 곳에서만 정의된다", () => {
@@ -40,7 +47,9 @@ describe("design consistency", () => {
   it("여백은 합의된 스케일만 쓴다", () => {
     const offenders: string[] = [];
     for (const [path, source] of files) {
-      for (const line of lines(source, /\bp-(6|7|9|10|12)\b/)) offenders.push(`${path}:${line}`);
+      for (const [line, token] of spacingLiterals(source)) {
+        if (!figmaSpacing.has(`${path}:${token}`)) offenders.push(`${path}:${line}`);
+      }
     }
 
     expect(offenders).toEqual([]);
@@ -65,9 +74,11 @@ describe("design consistency", () => {
       if (path === "components/type.ts") continue;
       const allowed = path === "components/app-shell.tsx" ? /^(10|11|12|13|21)px$/ : /^(10|11|12|13)px$/;
       for (const [line, size] of sizeLiterals(source)) {
-        if (!allowed.test(size)) offenders.push(`${path}:${line} text-[${size}]`);
+        if (!allowed.test(size) && !figmaTextSizes.has(`${path}:${size}`)) offenders.push(`${path}:${line} text-[${size}]`);
       }
-      for (const line of lines(source, /\btext-(lg|xl|2xl|3xl|4xl|5xl|6xl)\b/)) offenders.push(`${path}:${line}`);
+      for (const [line, token] of textUtilities(source)) {
+        if (!figmaTextUtilities.has(`${path}:${token}`)) offenders.push(`${path}:${line}`);
+      }
     }
 
     expect(offenders).toEqual([]);
@@ -80,6 +91,21 @@ function sizeLiterals(source: string) {
   const pattern = /\btext-\[(\d+(?:\.\d+)?px)\]/g;
   let match: RegExpExecArray | null;
   while ((match = pattern.exec(source))) found.push([source.slice(0, match.index).split("\n").length, match[1]]);
+  return found;
+}
+
+function spacingLiterals(source: string) {
+  return utilityLiterals(source, /\bp-(6|7|9|10|12)\b/g);
+}
+
+function textUtilities(source: string) {
+  return utilityLiterals(source, /\btext-(lg|xl|2xl|3xl|4xl|5xl|6xl)\b/g);
+}
+
+function utilityLiterals(source: string, pattern: RegExp) {
+  const found: [number, string][] = [];
+  let match: RegExpExecArray | null;
+  while ((match = pattern.exec(source))) found.push([source.slice(0, match.index).split("\n").length, match[0]]);
   return found;
 }
 

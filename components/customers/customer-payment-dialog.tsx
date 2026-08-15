@@ -55,6 +55,5 @@ export function CustomerPaymentDialog({ catalog = [], customer, defaultDate, def
     </div>
 
     <SubmitButton extra="w-full">결제 저장</SubmitButton>
-    <p className="text-center text-xs text-[var(--muted)]">메모와 결제 SMS 는 <a className="underline" href={`/sales?tab=payment&customer=${encodeURIComponent(customer.id)}`}>매출 · 결제 등록</a>에서 함께 남길 수 있습니다.</p>
   </ActionForm></PaymentCustomerScope>;
 }

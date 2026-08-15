@@ -162,6 +162,22 @@ describe("SettingsPage", () => {
     settings: { shopName: "강남점", ownerName: "민지", hiddenMenus: ["/messages"], backgroundColor: "#f7f5f6", foregroundColor: "#211a1f" },
   } as const;
 
+  it("renders every settings section in a horizontal navigation bar", () => {
+    const html = renderToStaticMarkup(<SettingsPage {...props} section="payment" />);
+
+    expect(html).toContain('aria-label="설정 세부 메뉴"');
+    for (const label of ["계정 설정", "고객 정책", "결제 정책", "예약", "시술 가격", "외부 연동", "도움말 · 공지"]) expect(html).toContain(`>${label}<`);
+    expect(html).toContain('data-settings-active-indicator="true"');
+    const activeTab = html.match(/<a[^>]*aria-current="page"[^>]*>/)?.[0] ?? "";
+    expect(activeTab).toContain("bg-transparent");
+  });
+
+  it("keeps the active settings content in the full horizontal work area below the section menu", () => {
+    const html = renderToStaticMarkup(<SettingsPage {...props} section="payment" />);
+
+    expect(html).toMatch(/data-settings-detail="true" class="w-full max-w-\[1180px\]"/);
+  });
+
   it("renders one account surface with both forms kept separate", () => {
     const html = renderToStaticMarkup(<SettingsPage {...props} section="owner" />);
     expect(html).toContain("계정 설정");
@@ -175,9 +191,9 @@ describe("SettingsPage", () => {
     expect(html).toContain('aria-label="사용자 비밀번호 변경"');
     // 로그아웃은 링크가 아니라 제출 버튼이다. GET 링크면 브라우저 선반입만으로 세션이 끊긴다.
     expect(html).toContain(">로그아웃</button>");
-    // 구역 목록은 사이드바로 갔다. 화면 안에 같은 목록을 또 그리면 두 벌이 된다.
+    // 구역 목록은 단순화된 사이드바 대신 본문 상단에 한 벌만 둔다.
     expect(html).not.toContain('aria-label="설정 구역"');
-    for (const label of ["고객 정책", "결제 정책", "외부 연동"]) expect(html).not.toContain(label);
+    expect(html).toContain('aria-label="설정 세부 메뉴"');
     expect(html).not.toContain("상품 설정");
     expect(html).not.toContain("쿠폰 설정");
   });
@@ -238,7 +254,7 @@ describe("SettingsPage", () => {
     expect(help).toContain('id="terms"');
     expect(help).toContain("서비스 이용약관");
     expect(help).toContain("불변 거래 원장");
-    expect(help).toContain("공급자 연결 전까지 dry-run");
+    for (const hidden of ["문자가 실제 발송되나요?", "SMS", "공급자 연결 전까지 dry-run"]) expect(help).not.toContain(hidden);
   });
 
   /** `/operations` 의 시술 탭이 옮겨온 자리. 화면이 사라진 게 아니라 집이 바뀐 것이다 (설계 §5.2). */

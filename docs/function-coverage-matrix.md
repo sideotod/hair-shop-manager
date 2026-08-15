@@ -99,7 +99,7 @@ bullet 문구는 원문 그대로 둔다. 레거시 목록은 무엇이 있었�
 | 생일 양력·음력 표시 | 구현 | app/(shell)/customers/page.tsx; app/customer-actions.ts | components/customers/customers-page.test.tsx |
 | 고객 SMS 수신 기본값 | 구현 | app/(shell)/customers/page.tsx; app/customer-actions.ts | components/customers/customers-page.test.tsx |
 | 고객 화면 표시/이동 설정 | 구현 | app/(shell)/customers/page.tsx; app/customer-actions.ts | components/customers/customers-page.test.tsx |
-| 회원/비회원 선택 | 구현 | app/(shell)/sales/page.tsx; app/payment-actions.ts; components/sales/payment-customer.tsx; components/sales/revenue-dashboard.tsx | lib/finance.test.ts; components/sales/payment-customer.test.tsx; components/sales/revenue-dashboard.test.tsx |
+| 회원/비회원 선택 | 구현 | components/sales/payment-registration-dialog.tsx; components/sales/payment-customer.tsx; app/payment-actions.ts | components/sales/payment-registration-dialog.test.tsx; components/sales/payment-customer.test.tsx; lib/finance.test.ts |
 | 시술 대분류 선택: 컷, 펌, 매직, 드라이, 클리닉, 염색, 업스타일, 매니큐어, 세트메뉴, 기타 | 구현 | app/(shell)/sales/page.tsx; app/payment-actions.ts; components/sales/revenue-dashboard.tsx | lib/finance.test.ts; components/sales/revenue-dashboard.test.tsx |
 | 시술 상세 분류 선택 | 구현 | app/(shell)/sales/page.tsx; app/payment-actions.ts; components/sales/revenue-dashboard.tsx | lib/finance.test.ts; components/sales/revenue-dashboard.test.tsx |
 | 상세 스타일명 직접 입력 | 구현 | app/(shell)/sales/page.tsx; app/payment-actions.ts; components/sales/revenue-dashboard.tsx | lib/finance.test.ts; components/sales/revenue-dashboard.test.tsx |
@@ -116,11 +116,11 @@ bullet 문구는 원문 그대로 둔다. 레거시 목록은 무엇이 있었�
 | 지역페이 | 구현 | app/(shell)/sales/page.tsx; app/payment-actions.ts; components/sales/revenue-dashboard.tsx | lib/finance.test.ts; components/sales/revenue-dashboard.test.tsx |
 | 포인트 적립 | 구현 | app/(shell)/sales/page.tsx; app/payment-actions.ts; components/sales/revenue-dashboard.tsx; components/sales/payment-amounts.tsx | lib/finance.test.ts; components/sales/revenue-dashboard.test.tsx; components/sales/payment-customer.test.tsx |
 | 담당 디자이너/시술자 | 사용자 1인 대체 | app/(shell)/sales/page.tsx; app/payment-actions.ts; components/sales/revenue-dashboard.tsx | lib/finance.test.ts; components/sales/revenue-dashboard.test.tsx |
-| 메모 150자 | 구현 | app/(shell)/sales/page.tsx; app/payment-actions.ts; components/sales/revenue-dashboard.tsx | lib/finance.test.ts; components/sales/revenue-dashboard.test.tsx |
-| 선택 메모/약품 메모 | 구현 | app/(shell)/sales/page.tsx; app/payment-actions.ts; components/sales/revenue-dashboard.tsx | lib/finance.test.ts; components/sales/revenue-dashboard.test.tsx |
-| 두피 상태·모발 특징 메모 `[추가확인]` | 구현 | app/(shell)/sales/page.tsx; app/payment-actions.ts; components/sales/revenue-dashboard.tsx | lib/finance.test.ts; components/sales/revenue-dashboard.test.tsx |
+| 메모 150자 | 사용자 승인 제외 | FUNCTION.md; docs/function-coverage-matrix.md | lib/function-coverage.test.ts |
+| 선택 메모/약품 메모 | 사용자 승인 제외 | FUNCTION.md; docs/function-coverage-matrix.md | lib/function-coverage.test.ts |
+| 두피 상태·모발 특징 메모 `[추가확인]` | 사용자 승인 제외 | FUNCTION.md; docs/function-coverage-matrix.md | lib/function-coverage.test.ts |
 | 결제일·시간 | 구현 | app/(shell)/sales/page.tsx; app/payment-actions.ts; components/sales/revenue-dashboard.tsx | lib/finance.test.ts; components/sales/revenue-dashboard.test.tsx |
-| 결제 당일 SMS 발송/미발송 | 구현 | app/(shell)/sales/page.tsx; app/payment-actions.ts; components/sales/revenue-dashboard.tsx | lib/finance.test.ts; components/sales/revenue-dashboard.test.tsx |
+| 결제 당일 SMS 발송/미발송 | 사용자 승인 제외 | FUNCTION.md; docs/function-coverage-matrix.md | lib/function-coverage.test.ts |
 | VAT 포함/별도 처리 | 구현 | app/(shell)/sales/page.tsx; app/payment-actions.ts; components/sales/revenue-dashboard.tsx | lib/finance.test.ts; components/sales/revenue-dashboard.test.tsx |
 | 할인율 적용 | 구현 | app/(shell)/sales/page.tsx; app/payment-actions.ts; components/sales/revenue-dashboard.tsx | lib/finance.test.ts; components/sales/revenue-dashboard.test.tsx |
 | 수수료 계산 | 구현 | app/(shell)/sales/page.tsx; app/payment-actions.ts; components/sales/revenue-dashboard.tsx | lib/finance.test.ts; components/sales/revenue-dashboard.test.tsx |

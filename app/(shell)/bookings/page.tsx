@@ -2,6 +2,7 @@ import { connection } from "next/server";
 
 import { runStartupNaverSync } from "../../naver-mail-actions";
 import { BookingsPage } from "../../../components/bookings/bookings-page";
+import { PaymentRegistrationModal } from "../../../components/sales/payment-registration-modal";
 import { createSalonStore } from "../../../lib/salon-store";
 
 function value(input: string | string[] | undefined) { return typeof input === "string" ? input : ""; }
@@ -13,7 +14,7 @@ export default async function Page({ searchParams }: { searchParams: Promise<Rec
   const store = createSalonStore();
   try {
     // 예약 화면은 원장·감사 이력을 한 줄도 쓰지 않는다. snapshot()은 그 둘을 전량 읽는다 (A4-3).
-    return <BookingsPage
+    return <><PaymentRegistrationModal bookings={store.list("bookings")} catalog={store.list("catalog-items")} customers={store.list("customers")} ledger={store.listLedger()} pathname="/bookings" searchParams={params} settings={store.getSettings()} /><BookingsPage
       bookings={store.list("bookings")}
       customers={store.list("customers")}
       date={value(params.date)}
@@ -28,7 +29,7 @@ export default async function Page({ searchParams }: { searchParams: Promise<Rec
       showNew={value(params.new) === "1"}
       syncHistory={store.list("naver-syncs")}
       view={value(params.view)}
-    />;
+    /></>;
   } finally {
     store.close();
   }

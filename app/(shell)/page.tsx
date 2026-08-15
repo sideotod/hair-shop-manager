@@ -3,6 +3,7 @@ import Link from "next/link";
 import { button } from "@/components/button";
 import { CustomerForm, type DuplicateEntry } from "@/components/customers/customer-form";
 import { DashboardPage } from "@/components/dashboard/dashboard-page";
+import { PaymentRegistrationModal } from "@/components/sales/payment-registration-modal";
 import { ModalHost } from "@/components/modal-host";
 import { typeScale } from "@/components/type";
 import type { JsonObject, JsonValue, SalonRecord } from "@/lib/salon-domain";
@@ -60,6 +61,7 @@ export default async function Page({ searchParams }: { searchParams: Promise<Rec
           }}
           today={now}
         />
+        <PaymentRegistrationModal bookings={store.list("bookings")} catalog={store.list("catalog-items")} customers={records.customers ?? []} ledger={store.listLedger()} pathname="/" searchParams={params} settings={settings} />
       </>
     );
   } finally {

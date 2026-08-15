@@ -18,7 +18,7 @@ describe("TransactionsPage", () => {
   it("shows an empty state and forwards the selected customer to payment", async () => {
     const html = renderToStaticMarkup(await TransactionsPage({ searchParams: Promise.resolve({ view: "day", cursor: "2026-07-31", customer: "customer-seed-2" }) }));
     expect(html).toContain("조건에 맞는 거래 기록이 없습니다.");
-    expect(html).toContain("/sales?tab=payment&amp;view=day&amp;cursor=2026-07-31&amp;customer=customer-seed-2");
+    expect(html).toContain("/sales/transactions?pay=1&amp;view=day&amp;cursor=2026-07-31&amp;customer=customer-seed-2");
   });
   it("filters a drilldown selection", async () => {
     const html = renderToStaticMarkup(await TransactionsPage({ searchParams: Promise.resolve({ view: "month", cursor: "2026-07-31", selection: "payment", selectionKey: "현금" }) }));

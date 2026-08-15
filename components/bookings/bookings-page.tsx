@@ -64,7 +64,7 @@ export function BookingsPage({ bookings, customers, settings, syncHistory, date,
   const openHref = (() => { const params = withoutParams(current, "error", "notice"); params.set("new", "1"); return `/bookings?${params}`; })();
   // 결제 화면으로 넘어갔다 돌아올 자리도 `returnTo` 하나에서 나온다. 여기서 `/bookings?date=...` 를
   // 손으로 이어 붙이면 `view`·`period`·`edit` 이 조용히 떨어져 저장 후 엉뚱한 날짜로 돌아온다.
-  const payHref = (bookingId: string) => `/sales?tab=payment&booking=${bookingId}&returnTo=${encodeURIComponent(returnTo)}`;
+  const payHref = (bookingId: string) => `/bookings?pay=1&booking=${bookingId}&returnTo=${encodeURIComponent(returnTo)}`;
 
   const openMinutes = minutesOfDay(policy.bookingOpen) ?? 540;
   const closeMinutes = minutesOfDay(policy.bookingClose) ?? 1200;

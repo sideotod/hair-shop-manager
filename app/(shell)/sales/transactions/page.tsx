@@ -7,6 +7,7 @@ import { buildRevenueTransactions, filterRevenueSelection, type RevenueSelection
 import { createSalonStore } from "../../../../lib/salon-store";
 import { seoulBusinessDate } from "../../../../lib/seoul-date";
 import { SubmitButton, NoticeBanner } from "../../../../components/submit-button";
+import { PaymentRegistrationModal } from "../../../../components/sales/payment-registration-modal";
 
 const labels = { date: "날짜", payment: "결제수단", service: "시술" } as const;
 /**
@@ -23,7 +24,7 @@ export default async function TransactionsPage({ searchParams }: { searchParams:
   const selectionKey = value(params.selectionKey);
   const customerId = value(params.customer);
   const analysisHref = `/sales?${serializeRevenueQuery(query)}`;
-  const paymentHref = `/sales?tab=payment&${serializeRevenueQuery(query)}${customerId ? `&customer=${encodeURIComponent(customerId)}` : ""}`;
+  const paymentHref = `/sales/transactions?pay=1&${serializeRevenueQuery(query)}${customerId ? `&customer=${encodeURIComponent(customerId)}` : ""}`;
   const returnTo = `/sales/transactions?${serializeRevenueQuery(query)}${customerId ? `&customer=${encodeURIComponent(customerId)}` : ""}`;
   const store = createSalonStore();
   try {
@@ -35,7 +36,7 @@ export default async function TransactionsPage({ searchParams }: { searchParams:
     // 최신 거래부터 보여 주고 상한을 건다. 잘린 사실은 표 위·아래에 모두 적는다.
     const rows = matched.length > ROW_LIMIT ? matched.slice(-ROW_LIMIT).reverse() : [...matched].reverse();
     const customer = customerId ? store.get<{ name?: string }>("customers", customerId) : null;
-    return <main className="min-w-0 px-7 pb-6 pt-5">
+    return <><PaymentRegistrationModal bookings={store.list("bookings")} catalog={store.list("catalog-items")} customers={store.list("customers")} ledger={store.listLedger()} pathname="/sales/transactions" searchParams={params} settings={store.getSettings()} /><main className="min-w-0 px-7 pb-6 pt-5">
         {/* `role="alert"` 이 이미 assertive 다. `aria-live` 를 겹치면 두 번 읽힌다. */}
         {value(params.error) && <p className="mb-5 rounded-[var(--radius-card)] border border-[var(--danger)] bg-[var(--danger-soft)] px-4 py-3 text-sm text-[var(--danger)]" role="alert">{value(params.error)}</p>}
         {value(params.notice) && <NoticeBanner className="mb-5 rounded-[var(--radius-card)] border border-[var(--success)] bg-[var(--success-soft)] px-4 py-3 text-sm text-[var(--success)]">{value(params.notice)}</NoticeBanner>}
@@ -59,6 +60,6 @@ export default async function TransactionsPage({ searchParams }: { searchParams:
           </tbody></table>
         </section>
         </div>
-      </main>;
+      </main></>;
   } finally { store.close(); }
 }

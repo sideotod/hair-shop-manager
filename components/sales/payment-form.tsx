@@ -6,6 +6,7 @@ import { PageToolbar } from "../page-toolbar";
 import { SubmitButton, ActionForm, NoticeBanner } from "../submit-button";
 import { typeScale } from "../type";
 import { PaymentAmounts } from "./payment-amounts";
+import { messagingUiEnabled } from "../../lib/feature-flags";
 import { PaymentCustomer, PaymentCustomerScope } from "./payment-customer";
 import type { JsonObject, JsonValue, SalonRecord } from "../../lib/salon-domain";
 
@@ -82,7 +83,7 @@ export function PaymentForm({ booking, catalog = [], customers, customerId, corr
         </div>
       </section>
       <PaymentAmounts cardFeeRate={cardFeeRate} pointEarnRate={pointEarnRate} vatMode={vatMode} />
-      <details className="col-span-2 rounded-[var(--radius-card)] border border-[var(--border)] bg-[var(--surface)] p-5"><summary className={summary}>기록 · {defaultDate} {defaultTime} — 날짜·시간·메모 수정</summary><div className="mt-4 grid grid-cols-4 gap-4"><label className="grid gap-1 text-xs font-medium text-[var(--muted)]">결제일<input className={field} defaultValue={defaultDate} name="occurredDate" type="date" /></label><label className="grid gap-1 text-xs font-medium text-[var(--muted)]">시간<input className={field} defaultValue={defaultTime} name="occurredTime" type="time" /></label><label className="grid gap-1 text-xs font-medium text-[var(--muted)]">일반 메모<input className={field} name="generalNote" /></label><label className="grid gap-1 text-xs font-medium text-[var(--muted)]">의약품 메모<input className={field} name="medicineNote" /></label><label className="grid gap-1 text-xs font-medium text-[var(--muted)]">두피 메모<input className={field} name="scalpNote" /></label><label className="grid gap-1 text-xs font-medium text-[var(--muted)]">모발 메모<input className={field} name="hairNote" /></label><label className="flex items-center gap-2 pt-5 text-sm font-medium"><input name="smsRequested" type="checkbox" />결제 SMS 발송</label></div></details>
+      <details className="col-span-2 rounded-[var(--radius-card)] border border-[var(--border)] bg-[var(--surface)] p-5"><summary className={summary}>기록 · {defaultDate} {defaultTime} — 날짜·시간·메모 수정</summary><div className="mt-4 grid grid-cols-4 gap-4"><label className="grid gap-1 text-xs font-medium text-[var(--muted)]">결제일<input className={field} defaultValue={defaultDate} name="occurredDate" type="date" /></label><label className="grid gap-1 text-xs font-medium text-[var(--muted)]">시간<input className={field} defaultValue={defaultTime} name="occurredTime" type="time" /></label><label className="grid gap-1 text-xs font-medium text-[var(--muted)]">일반 메모<input className={field} name="generalNote" /></label><label className="grid gap-1 text-xs font-medium text-[var(--muted)]">의약품 메모<input className={field} name="medicineNote" /></label><label className="grid gap-1 text-xs font-medium text-[var(--muted)]">두피 메모<input className={field} name="scalpNote" /></label><label className="grid gap-1 text-xs font-medium text-[var(--muted)]">모발 메모<input className={field} name="hairNote" /></label>{messagingUiEnabled && <label className="flex items-center gap-2 pt-5 text-sm font-medium"><input name="smsRequested" type="checkbox" />결제 SMS 발송</label>}</div></details>
       <SubmitButton extra="col-span-2">{correctionTargetId ? "정정 결제 저장" : "결제 저장"}</SubmitButton>
     </ActionForm></PaymentCustomerScope>
   </div>;

@@ -28,24 +28,20 @@ describe("DashboardPage", () => {
     expect(html).not.toContain("직원");
     expect(html).not.toContain("디자이너");
 
-    expect(html).toContain("SMS 잔여 500건");
-
     expect(html).toContain("오늘 매출");
     expect(html).toContain("오늘 예약");
     expect(html).toContain("오늘 1건");
     expect(html).toContain("내일 1건");
     expect(html).toContain("모레 1건");
     expect(html).toContain("글피 1건");
-    expect(html).toContain("자동화 대기열");
-    expect(html).toContain("사용");
-    expect(html).toContain("중지");
     expect(html).toContain("운영 안내");
     expect(html).toContain("최근 감사 이력");
 
     // 고객 등록은 페이지를 떠나지 않는다. 같은 화면 위에 팝업만 연다.
-    for (const href of ["/?new=1", "/bookings?new=1", "/sales?tab=payment", "/messages?new=1"]) {
+    for (const href of ["/?new=1", "/bookings?new=1", "/?pay=1"]) {
       expect(html).toContain(`href="${href}"`);
     }
+    for (const hidden of ["문자 발송", "SMS", "자동 문자", "자동화 대기열", "/messages"]) expect(html).not.toContain(hidden);
   });
 
   it("uses the configured owner label and renders explicit empty states", () => {
@@ -60,9 +56,8 @@ describe("DashboardPage", () => {
     };
     const html = renderToStaticMarkup(<DashboardPage data={data} today={today} />);
 
-    expect(html).toContain("SMS 잔여 0건");
     expect(html).toContain("오늘 예약이 없습니다.");
-    expect(html).toContain("대기 중인 자동화가 없습니다.");
+    for (const hidden of ["SMS", "자동 문자", "자동화 대기열", "/messages"]) expect(html).not.toContain(hidden);
     expect(html).toContain("공지사항이 없습니다.");
     expect(html).toContain("감사 이력이 없습니다.");
     expect(html).toContain('data-dashboard-empty-timeline="true"');
@@ -154,7 +149,7 @@ describe("DashboardPage", () => {
     it("상태가 정하는 목적지로 링크가 걸리고 완료는 링크가 없다", () => {
       const html = railHtml(booking("booking-a", "confirmed", 10), booking("booking-b", "completed", 14));
 
-      expect(html).toContain(`href="/sales?tab=payment&amp;booking=booking-a&amp;returnTo=${encodeURIComponent("/bookings?date=2026-07-31")}"`);
+      expect(html).toContain(`href="/?pay=1&amp;booking=booking-a&amp;returnTo=${encodeURIComponent("/bookings?date=2026-07-31")}"`);
       expect(html).not.toContain("booking=booking-b");
       // 완료 블록도 상태 텍스트·점·배지는 그대로 남는다 — 색만으로 상태를 말하지 않는다.
       expect(html).toContain('data-booking-status="completed"');
@@ -180,7 +175,7 @@ describe("DashboardPage", () => {
     // 설정 하위 목록은 `/settings` 에 있을 때만 편다. 헤더 도움말 링크가 사라져 이 검사도 그 경로로 옮겼다.
     const html = renderToStaticMarkup(<AppShell pathname="/settings" settings={{ hiddenMenus: ["/messages"], backgroundColor: "#abcdef", brandColor: "#123456" }}><main>설정 적용</main></AppShell>);
     expect(html).not.toContain('href="/messages"');
-    expect(html).toContain('href="/settings?section=help"');
+    expect(html).not.toContain('aria-label="설정 구역"');
     expect(html).toContain("--background:#abcdef");
     expect(html).toContain("--brand:#123456");
   });

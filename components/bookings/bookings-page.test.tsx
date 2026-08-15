@@ -110,7 +110,7 @@ describe("BookingsPage", () => {
 
     it("결제 링크가 현재 보기·날짜·기간을 returnTo 로 들고 간다", () => {
       const html = page({ bookings: [booking("booking-next", "confirmed")], searchParams: { date: "2026-07-31", view: "period", period: "14" }, view: "period", period: "14" });
-      const href = html.match(/href="([^"]*tab=payment[^"]*)"/)?.[1] ?? "";
+      const href = html.match(/href="([^"]*pay=1[^"]*)"/)?.[1] ?? "";
 
       expect(href).toContain("booking=booking-next");
       expect(decodeURIComponent(href.split("returnTo=")[1] ?? "")).toBe("/bookings?date=2026-07-31&view=period&period=14");

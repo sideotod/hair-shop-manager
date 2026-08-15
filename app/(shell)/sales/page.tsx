@@ -2,7 +2,7 @@ import { randomUUID } from "node:crypto";
 
 import { OperationsPage } from "../../../components/operations/operations-page";
 import { isCalendarDate } from "../../../lib/operations";
-import { PaymentForm } from "../../../components/sales/payment-form";
+import { PaymentRegistrationModal } from "../../../components/sales/payment-registration-modal";
 import { RevenueDashboard } from "../../../components/sales/revenue-dashboard";
 import { parseRevenueSearchParams, previousRevenuePeriod, revenueRange, revenueRangeExclusive, serializeRevenueQuery, type RevenueQuery } from "../../../components/sales/revenue-query";
 import { buildPoints, buildSummary, dayAxis, delta, monthlyAxis, weeklyAxis, weeklyRows, yearlyAxis } from "../../../lib/revenue-aggregate";
@@ -178,23 +178,6 @@ export default async function SalesPage({ searchParams }: { searchParams: Promis
     }
     const settings = store.getSettings();
     const customers = store.list("customers");
-    if (value(params.tab) === "payment") {
-      const correctionTarget = value(params.correction) ? store.listLedger().find(({ id, kind }) => id === value(params.correction) && kind === "payment") : undefined;
-      // 예약에서 넘어온 결제. 없는 id 를 줘도 `null` 이면 기존 동작 그대로다 — 던지지 않는다 (§4.3).
-      const booking = value(params.booking) ? store.get("bookings", value(params.booking)) : null;
-      const customerId = field(booking, "customerId") || value(params.customer) || correctionTarget?.customerId || undefined;
-      // 예약이 있으면 그 예약이 끝나는 서울 시각, 아니면 지금. 렌더 중이 아니라 여기서 한 번만 읽는다
-      // (`payment-form.tsx` 의 `requestKey` 주석과 같은 이유). 분은 반올림하지 않는다.
-      const endsAt = seoulClockOrEmpty(field(booking, "endsAt"));
-      const at = endsAt.date ? endsAt : seoulClock(new Date());
-      // 예약 행이 붙여 보낸 복귀 경로를 그대로 쓴다. 이 값을 무시하고 `/sales?tab=payment` 를
-      // 다시 조립하면 예약에서 출발한 사용자가 저장 후 빈 결제 폼으로 떨어진다 — 액션 쪽에서
-      // `/bookings` 를 허용해도(`payment-actions.ts:13`) 경로가 폼에 실리지 않으면 소용없다 (설계 §3.1).
-      const returnTo = paymentReturnTo(params.returnTo, `/sales?tab=payment&${serializeRevenueQuery(query)}${booking ? `&booking=${encodeURIComponent(booking.id)}` : ""}${customerId ? `&customer=${encodeURIComponent(customerId)}` : ""}${correctionTarget ? `&correction=${encodeURIComponent(correctionTarget.id)}` : ""}`);
-      // 예약의 `service` 는 자유 입력이라(`booking.ts:101`) 대분류로 매핑하지 않는다. 상세칸에만 넣는다.
-      const bookingContext = booking ? { id: booking.id, date: at.date, time: at.time, customerName: field(customers.find(({ id }) => id === customerId), "name") } : undefined;
-      return <main className="min-w-0 px-7 pb-6 pt-5"><section><PaymentForm booking={bookingContext} catalog={store.list("catalog-items")} correctionTargetId={correctionTarget?.id} customerId={customerId} customers={customers} defaultDate={at.date} defaultTime={at.time} error={value(params.error) || undefined} notice={value(params.notice) || undefined} requestKey={randomUUID()} returnTo={returnTo} serviceDetail={field(booking, "service")} serviceMajor={typeof correctionTarget?.details.serviceMajor === "string" ? correctionTarget.details.serviceMajor : undefined} settings={settings} /></section></main>;
-    }
     const bounds = store.ledgerBounds();
     const period = revenueRangeExclusive(query, bounds);
     const previous = previousRevenuePeriod(query, bounds);
@@ -237,6 +220,6 @@ export default async function SalesPage({ searchParams }: { searchParams: Promis
       // 객단가는 결제 건수가 아니라 방문 수로 나눈다 (한국 통용 정의: 총 매출 ÷ 방문 고객 수).
       averageTicket: averageTicket(summary.gross, mix.visits),
     };
-    return <RevenueDashboard analytics={analytics} briefing={briefing} chart={revenueChart(store, query, businessToday)} query={query} settings={settings} summary={summary} />;
+    return <><PaymentRegistrationModal bookings={store.list("bookings")} catalog={store.list("catalog-items")} customers={customers} ledger={ledger} pathname="/sales" searchParams={params} settings={settings} /><RevenueDashboard analytics={analytics} briefing={briefing} chart={revenueChart(store, query, businessToday)} query={query} settings={settings} summary={summary} /></>;
   } finally { store.close(); }
 }

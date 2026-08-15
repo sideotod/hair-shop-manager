@@ -6,7 +6,7 @@ import { createPortal } from "react-dom";
 import { formatPhone } from "../../lib/phone";
 import type { JsonObject } from "../../lib/salon-domain";
 import { button, control, focusRing } from "../button";
-import { CustomerForm, type DuplicateEntry } from "../customers/customer-form";
+import type { DuplicateEntry } from "../customers/customer-form";
 import { typeScale } from "../type";
 
 const field = `${control} w-full`;
@@ -53,20 +53,32 @@ function lookup(index: readonly DuplicateEntry[], name: string, tail: string) {
   });
 }
 
-function Readout({ entry }: { entry: DuplicateEntry }) {
-  return <dl className="grid gap-3">
-    {([["성명", entry[1] || "-"], ["성별", genders[entry[2]] ?? "미지정"], ["휴대전화", formatPhone(entry[3].replace(/\D/g, "")) || "휴대전화 없음"], ["첫 방문날짜", entry[4].slice(0, 10) || "기록 없음"]] as const).map(([term, description]) => <div className="grid gap-1" key={term}>
-      <dt className="text-xs font-medium text-[var(--muted)]">{term}</dt>
-      <dd className="flex h-10 items-center rounded-[var(--radius-control)] bg-[var(--background)] px-3 text-sm tabular-nums">{description}</dd>
+/** 고객 확인칸에 무언가 적었지만 일치하는 등록 고객이 없을 때만 경고한다. */
+export const isUnregisteredCustomer = (blank: boolean, matchCount: number) => !blank && matchCount === 0;
+
+/** 비회원 카드와 같은 높이로, 입력한 정보가 등록 목록에 없다는 사실만 말한다. */
+export function UnregisteredCustomerNotice() {
+  return <div className="mt-1 flex h-[59px] flex-col justify-center rounded-[4px] border border-[var(--danger)] bg-[var(--danger-soft)] px-3" role="alert"><strong className="text-[12px] text-[var(--danger)]">등록되지 않은 고객이에요</strong><span className="mt-1 text-[11px] text-[var(--foreground)]">비회원 결제로 등록됩니다.</span></div>;
+}
+
+/** 같은 이름·뒷자리 후보가 여럿이면 비회원 상태와 같은 경고 카드에서 선택을 요청한다. */
+export function CustomerChoiceNotice({ count, onChoose }: { count: number; onChoose: () => void }) {
+  return <div className="flex h-[59px] items-center justify-between rounded-[4px] border border-[var(--warning)] bg-[var(--warning-soft)] px-3"><div className="flex flex-col justify-center"><strong className="text-[12px] text-[var(--warning)]">고객님이 {count}명이에요</strong><span className="mt-1 text-[11px] text-[var(--foreground)]">한 분을 선택해 주세요.</span></div><button className={`text-[12px] font-semibold underline ${focusRing} text-[var(--warning)]`} onClick={onChoose} type="button">고르기</button></div>;
+}
+
+function CustomerRows({ entry, points = 0 }: { entry: DuplicateEntry; points?: number }) {
+  return <dl className="grid gap-2">
+    {([["휴대전화", formatPhone(entry[3].replace(/\D/g, "")) || "휴대전화 없음"], ["성별", genders[entry[2]] ?? "미지정"], ["첫 방문", entry[4].slice(0, 10) || "기록 없음"], ["보유 포인트", `${points.toLocaleString("ko-KR")}P`]] as const).map(([term, description]) => <div className="flex items-center gap-2" key={term}>
+      <dt className="w-[70px] shrink-0 text-[11px] text-[var(--muted)]">{term}</dt><dd className="min-w-0 flex-1 text-[13px] font-medium tabular-nums text-[var(--foreground)]">{description}</dd>
     </div>)}
   </dl>;
 }
 
 /** 결제 팝업 위에 다시 뜨는 창. 딤과 곡선은 아래 팝업과 같은 값이라 두 겹이 한 어법으로 읽힌다. */
-function Layer({ children, label: name, level }: { children: React.ReactNode; label: string; level: 1 | 2 }) {
+function Layer({ children, label: name, level, onBackdrop, panelClass = "p-5", width }: { children: React.ReactNode; label: string; level: 1 | 2; onBackdrop: () => void; panelClass?: string; width: string }) {
   return createPortal(
-    <div aria-label={name} className={`fixed inset-0 grid place-items-center bg-[rgb(13_21_18/38%)] p-8 ${level === 1 ? "z-[60]" : "z-[70]"}`} role="group">
-      <section aria-label={name} aria-modal="true" className="max-h-[calc(100vh-64px)] w-[560px] max-w-full overflow-auto rounded-[var(--radius-card)] bg-[var(--surface)] p-5 shadow-[0_24px_64px_rgb(13_21_18/24%)]" role="dialog">{children}</section>
+    <div aria-label={name} className={`fixed inset-0 grid place-items-center bg-[rgb(13_21_18/38%)] p-8 ${level === 1 ? "z-[60]" : "z-[70]"}`} onPointerDown={(event) => { if (event.target === event.currentTarget) onBackdrop(); }} role="group">
+      <section aria-label={name} aria-modal="true" className={`max-h-[calc(100vh-64px)] ${width} max-w-full overflow-auto rounded-[var(--radius-card)] bg-[var(--surface)] ${panelClass} shadow-[0_24px_64px_rgb(13_21_18/24%)]`} role="dialog">{children}</section>
     </div>,
     document.body,
   );
@@ -81,16 +93,15 @@ export function PaymentCustomer({ index, points = {}, settings, today }: { index
   const [probed, setProbed] = useState("");
   const [detail, setDetail] = useState<DuplicateEntry | null>(null);
   const [confirming, setConfirming] = useState<DuplicateEntry | null>(null);
-  const [registering, setRegistering] = useState(false);
 
   const matches = lookup(index, name, tail);
   const auto = matches.length === 1 ? matches[0] : null;
   const chosen = picked ?? auto;
   const key = `${name.trim()}|${tail}`;
   const blank = !name.trim() && !tail;
+  const unregistered = isUnregisteredCustomer(blank, matches.length);
   // 팝업은 손이 칸을 떠난 뒤에만 뜬다. 그 조합을 이미 한 번 지나쳤으면 다시 뜨지 않는다.
   const probing = probed === key && !blank && !chosen;
-  const missing = probing && matches.length === 0;
   const crowded = probing && matches.length > 1;
 
   // 렌더 중이 아니라 상태가 정해질 때 올린다 — 금액칸의 포인트 잠금이 이 값 하나로 갈린다.
@@ -116,82 +127,38 @@ export function PaymentCustomer({ index, points = {}, settings, today }: { index
       <label className={label}>휴대전화 뒷자리<input autoComplete="off" className={`${field} tabular-nums`} inputMode="numeric" maxLength={4} name="lookupTail" onBlur={() => setProbed(key)} onChange={(event) => retype(name, event.target.value.replace(/\D/g, "").slice(0, 4))} value={tail} /></label>
     </div>
 
-    {/* 결과는 칸 바로 아래 한 줄로 말한다. 셋 중 하나다 — 비회원 / 찾음 / 확인 필요. */}
-    <p className={`mt-3 flex h-8 items-center gap-2 ${typeScale.meta}`} role="status">
+    {/* 결과는 입력 아래에서 다음 행동을 분명히 한다. 등록 고객은 Figma 09B와 같이
+        한 줄 칩이 아니라 59px 안내 블록으로 남겨 포인트칸이 열린 이유를 같이 말한다. */}
+    <div className={`mt-3 ${typeScale.meta}`} role="status">
       {blank
-        ? <span className="text-[var(--muted)]">이름과 뒷자리를 비우면 <strong className="font-semibold text-[var(--foreground)]">비회원 결제</strong>로 저장됩니다.</span>
-        : chosen
-          ? <>
-            <span className="rounded-[var(--radius-chip)] bg-[var(--brand-soft)] px-1.5 py-px font-semibold text-[var(--brand)]">등록 고객</span>
-            <span className="tabular-nums text-[var(--foreground)]">{chosen[1] || "-"} · {formatPhone(chosen[3].replace(/\D/g, "")) || "휴대전화 없음"}</span>
-            <button className={`underline ${focusRing} text-[var(--muted)]`} onClick={() => retype("", "")} type="button">지우기</button>
-          </>
+        ? <div className="flex h-[59px] flex-col justify-center rounded-[4px] border border-[var(--warning)] bg-[var(--warning-soft)] px-3"><strong className="text-[12px] text-[var(--warning)]">비회원</strong><span className="mt-1 text-[11px] text-[var(--foreground)]">고객 정보 없이 비회원 결제로 저장됩니다.</span></div>
+          : chosen
+            ? <div className="flex h-[59px] flex-col justify-center rounded-[4px] border border-[var(--border)] bg-[var(--brand-soft)] px-3"><strong className="text-[12px] text-[var(--brand)]">등록 고객</strong><span className="mt-1 tabular-nums text-[11px] text-[var(--foreground)]">{chosen[1] || "-"} · {formatPhone(chosen[3].replace(/\D/g, "")) || "휴대전화 없음"}<button className={`ml-2 underline ${focusRing} text-[var(--muted)]`} onClick={() => retype("", "")} type="button">지우기</button></span></div>
           : matches.length > 1
-            ? <button className={`underline ${focusRing} text-[var(--warning)]`} onClick={() => setProbed(key)} type="button">고객님이 {matches.length}명이에요 · 고르기</button>
-            : <span className="text-[var(--muted)]">목록에서 찾으면 회원 결제로 저장됩니다.</span>}
-    </p>
-
-    {/* 09E — 적었는데 목록에 없다. 중복 확인 패널(`customer-form.tsx`)과 같은 경고 어법을 쓴다. */}
-    {missing && <Layer label="등록되지 않은 고객" level={1}>
-      <h3 className={`${typeScale.title} text-[var(--accent-ink)]`}>목록에 없는 고객이에요</h3>
-      <p className="mt-2 text-sm text-[var(--muted)]">{name.trim() || "이름 없음"}{tail && ` · 뒷자리 ${tail}`} 으로는 등록된 고객을 찾지 못했습니다. 처음 오신 손님이면 지금 등록하고 이어서 결제할 수 있습니다.</p>
-      <div className="mt-5 grid grid-cols-2 gap-2">
-        <button className={button("md", "secondary")} onClick={close} type="button">비회원으로 결제</button>
-        <button className={button("md", "primary")} onClick={() => { setRegistering(true); close(); }} type="button">고객 등록</button>
-      </div>
-    </Layer>}
-
-    {/* 처음 오는 손님은 등록 창까지 이어진다. 결제 폼 **밖**(portal)에 그려야 `<form>` 이 겹치지 않는다. */}
-    {registering && <Layer label="고객 등록" level={1}>
-      <div className="flex items-center justify-between gap-4">
-        <h3 className={typeScale.title}>고객 등록</h3>
-        <button className={button("md")} onClick={() => setRegistering(false)} type="button">닫기</button>
-      </div>
-      {/* 방금 친 이름은 그대로 들고 들어간다 — 못 찾았다고 두 번 치게 하지 않는다.
-          뒷자리는 넘기지 않는다. 저장은 `^01\d{8,9}$` 를 요구하므로(`customer-operations.ts:49`)
-          네 자리만 채워 두면 다 적은 것처럼 보이는 칸이 저장에서 거절된다. 아래 안내가 대신 말한다. */}
-      <CustomerForm defaultName={name.trim()} duplicateIndex={index} returnTo="/customers" settings={settings} today={today} />
-      <p className={`mt-3 ${typeScale.meta} text-[var(--muted)]`}>{tail && <>휴대전화 뒷자리 <strong className="font-semibold tabular-nums text-[var(--foreground)]">{tail}</strong> 로 찾았습니다. 번호를 앞자리까지 적어 주세요. </>}저장하면 고객 화면으로 이동합니다. 등록을 마친 뒤 그 고객의 결제 등록을 다시 열어 주세요.</p>
-    </Layer>}
+            ? <CustomerChoiceNotice count={matches.length} onChoose={() => setProbed(key)} />
+            : unregistered
+              ? null
+              : <p className="flex h-8 items-center text-[var(--muted)]">목록에서 찾으면 회원 결제로 저장됩니다.</p>}
+      {unregistered && <UnregisteredCustomerNotice />}
+    </div>
 
     {/* 09F·09G — 팝업 위 팝업. 고르면 옆으로 밀려나며 상세가 나온다. */}
-    {crowded && <Layer label="고객 고르기" level={1}>
-      <div className="flex items-center justify-between gap-4">
-        <h3 className={typeScale.title}>고객님이 {matches.length}명이에요</h3>
-        <button className={button("md")} onClick={close} type="button">닫기</button>
-      </div>
-      <p className={`mt-1 ${typeScale.meta} text-[var(--muted)]`}>{name.trim() && `이름 ${name.trim()}`}{name.trim() && tail && " · "}{tail && `뒷자리 ${tail}`} 로 찾은 고객입니다. 한 명을 고르면 옆에서 자세히 보여 드립니다.</p>
-
-      <div className="mt-4 flex items-stretch">
-        <ul className="w-[280px] shrink-0 divide-y divide-[var(--border)] overflow-hidden rounded-[var(--radius-card)] border border-[var(--border)]">
-          {matches.map((entry) => <li key={entry[0]}>
-            <button aria-current={detail?.[0] === entry[0] ? "true" : undefined} className={`flex w-full flex-col gap-0.5 py-2 pl-4 pr-3 text-left ${focusRing} ${detail?.[0] === entry[0] ? "bg-[var(--brand-soft)]" : "hover:bg-[var(--background)]"}`} onClick={() => setDetail(entry)} type="button">
-              <strong className={`truncate ${detail?.[0] === entry[0] ? "text-[var(--brand)]" : ""}`}>{entry[1] || "-"}</strong>
-              <span className={`truncate tabular-nums ${typeScale.meta} text-[var(--muted)]`}>{formatPhone(entry[3].replace(/\D/g, "")) || "휴대전화 없음"}</span>
-            </button>
-          </li>)}
-        </ul>
-        {/* 두루마리처럼 옆으로 펴진다 — 중복 확인 패널과 같은 `0fr → 1fr` 어법이다. */}
-        <div aria-hidden={!detail} className={`grid overflow-hidden transition-[grid-template-columns] duration-[260ms] ease-[cubic-bezier(0.32,0.72,0,1)] motion-reduce:transition-none ${detail ? "grid-cols-[1fr]" : "grid-cols-[0fr]"}`}>
-          <div className="min-w-0 overflow-hidden">
-            <div className="ml-4 flex h-full w-[220px] flex-col">
-              {detail && <>
-                <Readout entry={detail} />
-                <button className={button("md", "primary", "mt-auto w-full")} onClick={() => setConfirming(detail)} type="button">확인</button>
-              </>}
-            </div>
-          </div>
-        </div>
+    {crowded && <Layer label="고객 고르기" level={1} onBackdrop={close} panelClass="overflow-hidden p-0" width={detail ? "w-[760px]" : "w-[420px]"}>
+      <div className="flex h-[391px] items-stretch"><div className="flex w-[420px] shrink-0 flex-col gap-3 p-5"><h3 className="text-[19px] font-semibold">고객님이 여러명이에요.</h3><p className="text-[12px] text-[var(--muted)]">{name.trim() || "입력한 조건"}으로 {matches.length}명이 등록돼 있어요. 한 분을 골라 주세요.</p>
+        <ul className="h-[224px] w-full shrink-0 divide-y divide-[var(--border)] overflow-y-auto rounded-[9px] border border-[var(--border)]" data-payment-customer-results>{matches.map((entry) => <li key={entry[0]}><button aria-current={detail?.[0] === entry[0] ? "true" : undefined} className={`flex h-[56px] w-full items-center text-left ${focusRing} ${detail?.[0] === entry[0] ? "bg-[var(--brand-soft)]" : "hover:bg-[var(--background)]"}`} onClick={() => setDetail(entry)} type="button"><span className={`h-10 w-0.5 shrink-0 ${detail?.[0] === entry[0] ? "bg-[var(--brand)]" : "bg-transparent"}`} /><span className="min-w-0 flex-1 px-3.5"><strong className={`block truncate text-[13px] ${detail?.[0] === entry[0] ? "text-[var(--brand)]" : "text-[var(--foreground)]"}`}>{entry[1] || "-"} · {formatPhone(entry[3].replace(/\D/g, "")) || "휴대전화 없음"}</strong><span className="mt-0.5 block truncate text-[11px] text-[var(--muted)]">첫 방문 · {entry[4].slice(0, 10) || "기록 없음"}</span></span></button></li>)}</ul>
+        <div className="mt-auto grid grid-cols-2 gap-2 pt-1"><button className={button("md", "secondary", "h-10")} onClick={close} type="button">닫기</button><button className={button("md", "primary", "h-10")} disabled={!detail} onClick={() => detail && setConfirming(detail)} type="button">확인</button></div></div>
+        <div aria-hidden={!detail} className={`grid overflow-hidden transition-[grid-template-columns] duration-[260ms] ease-[cubic-bezier(0.32,0.72,0,1)] motion-reduce:transition-none ${detail ? "grid-cols-[1fr]" : "grid-cols-[0fr]"}`}><div className="min-w-0 overflow-hidden"><aside className="flex h-[391px] w-[340px] flex-col gap-2.5 rounded-br-[12px] rounded-tr-[12px] border-l border-[var(--border)] bg-[var(--background)] px-4 py-5"><p className="text-[10px] font-semibold text-[var(--muted)]">고른 고객</p>{detail && <><h4 className="text-[19px] font-semibold">{detail[1] || "-"}</h4><div className="border-t border-[var(--border)] pt-2.5"><CustomerRows entry={detail} points={points[detail[0]] ?? 0} /></div><p className="mt-auto text-[11px] text-[var(--muted)]">확인을 누르면 이 고객으로 결제합니다.</p></>}</aside></div></div>
       </div>
     </Layer>}
 
     {/* 09H — 팝업 위 팝업 위 확인. 정보를 한 번 더 보여주고, 예를 누르면 두 창이 함께 닫힌다. */}
-    {confirming && <Layer label="고객 확인" level={2}>
-      <h3 className={typeScale.title}>이 고객님으로 할까요?</h3>
-      <div className="mt-4"><Readout entry={confirming} /></div>
+    {confirming && <Layer label="고객 확인" level={2} onBackdrop={() => setConfirming(null)} width="w-[380px]">
+      <h3 className="text-[19px] font-semibold">이 고객님으로 할까요?</h3>
+      <p className="mt-3 text-[12px] text-[var(--muted)]">확인하면 고르기 창까지 함께 닫고 결제 등록으로 돌아갑니다.</p>
+      <div className="mt-4 rounded-[9px] bg-[var(--background)] p-3"><CustomerRows entry={confirming} points={points[confirming[0]] ?? 0} /></div>
       <div className="mt-5 grid grid-cols-2 gap-2">
-        <button className={button("md", "secondary")} onClick={() => setConfirming(null)} type="button">다시 고르기</button>
-        <button className={button("md", "primary")} onClick={() => { setPicked(confirming); settle(confirming); setProbed(""); setDetail(null); setConfirming(null); }} type="button">이 고객님이에요</button>
+        <button className={button("md", "secondary")} onClick={() => setConfirming(null)} type="button">닫기</button>
+        <button className={button("md", "primary")} onClick={() => { setPicked(confirming); settle(confirming); setProbed(""); setDetail(null); setConfirming(null); }} type="button">이 고객으로 결제</button>
       </div>
     </Layer>}
   </>;

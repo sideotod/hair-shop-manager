@@ -2,6 +2,7 @@ import Link from "next/link";
 
 import { adjustCustomerPoints, chargePrepaid } from "../../app/customer-actions";
 import { customerCode } from "../../lib/customer-code";
+import { messagingUiEnabled } from "../../lib/feature-flags";
 import { closeHref, toSearchParams, withoutParams } from "../../lib/navigation";
 import { formatPhone } from "../../lib/phone";
 import type { JsonObject, JsonValue, LedgerEntry, SalonRecord } from "../../lib/salon-domain";
@@ -11,11 +12,10 @@ import { ModalHost } from "../modal-host";
 import { NoticeBanner, SubmitButton } from "../submit-button";
 import { typeScale } from "../type";
 import { CustomerForm, type DuplicateEntry } from "./customer-form";
-import { CustomerPaymentDialog } from "./customer-payment-dialog";
 
 const input = `${control} min-w-0`;
 /** 상세 탭. 하나만 켜지고, 켜진 것만 본문을 그린다. */
-const detailTabs = [["기본정보", "profile"], ["예약", "bookings"], ["시술·결제", "ledger"], ["포인트", "points"], ["문자", "messages"]] as const;
+const detailTabs = [["기본정보", "profile"], ["예약", "bookings"], ["시술·결제", "ledger"], ["포인트", "points"]] as const;
 const sortModes = [["name", "이름"], ["joined", "등록일"], ["visit", "최근 방문일"]] as const;
 
 type Props = {
@@ -25,7 +25,7 @@ type Props = {
   /** 고객별 마지막 결제 시각. 정렬에만 쓰므로 원장 전량을 읽지 않는다. */
   lastVisits?: ReadonlyMap<string, string>;
   selectedCustomerId?: string; query?: string; sort?: string; tab?: string; page?: string;
-  showNew?: boolean; editCustomerId?: string; payCustomerId?: string; showPrepaid?: boolean;
+  showNew?: boolean; editCustomerId?: string; payCustomerId?: string; showPrepaid?: boolean; newCustomerName?: string;
   requestKey: string;
   /** 결제 팝업 기본 시각. 라우트가 요청당 1회 계산해 내린다 — 렌더 중 `new Date()` 는 재렌더마다 값이 달라진다. */
   defaultDate?: string; defaultTime?: string;
@@ -79,7 +79,7 @@ function matches(record: SalonRecord<JsonValue>, query: string) {
  */
 const pageSize = 9;
 
-export function CustomersPage({ catalog = [], customers, settings, bookings, messages, ledger, lastVisits, selectedCustomerId, error, notice, query = "", sort = "name", tab = "profile", page = "1", showNew, editCustomerId, payCustomerId, showPrepaid, requestKey, defaultDate = "", defaultTime = "", searchParams }: Props) {
+export function CustomersPage({ catalog = [], customers, settings, bookings, messages, ledger, lastVisits, selectedCustomerId, error, notice, query = "", sort = "name", tab = "profile", page = "1", showNew, editCustomerId, payCustomerId, showPrepaid, newCustomerName, requestKey, defaultDate = "", defaultTime = "", searchParams }: Props) {
   const filtered = customers.filter((record) => matches(record, query));
   const collator = new Intl.Collator("ko-KR");
   const sorted = [...filtered].sort((left, right) => {
@@ -99,6 +99,7 @@ export function CustomersPage({ catalog = [], customers, settings, bookings, mes
    * 자동 선택은 화면에서만 일어난다 — 검색·정렬을 바꾸면 첫 줄도 따라 바뀐다.
    */
   const selected = customers.find(({ id }) => id === selectedCustomerId) ?? sorted[0] ?? null;
+  const activeTab = detailTabs.some(([, key]) => key === tab) || (messagingUiEnabled && tab === "messages") ? tab : "profile";
   const activeId = selected?.id;
   const selectedBookings = selected ? linked(bookings, selected.id) : [];
   const selectedMessages = selected ? linked(messages, selected.id, "recipientId") : [];
@@ -109,7 +110,7 @@ export function CustomersPage({ catalog = [], customers, settings, bookings, mes
 
   // 닫기 경로는 현재 URL 에서 모달 키만 지워 만든다. 손으로 조립하면 `customer`, `sort` 처럼
   // 화이트리스트에 없는 파라미터가 조용히 사라져 "닫았더니 다른 화면" 이 된다.
-  const modalKeys = ["new", "edit", "pay", "prepaid"] as const;
+  const modalKeys = ["new", "edit", "pay", "prepaid", "firstVisitPayment"] as const;
   const current = toSearchParams(searchParams ?? { ...(query ? { query } : {}), ...(sort !== "name" ? { sort } : {}), ...(selectedCustomerId ? { customer: selectedCustomerId } : {}) });
   const customerHref = closeHref("/customers", current, ...modalKeys);
   const href = (changes: Record<string, string | undefined>) => {
@@ -126,9 +127,10 @@ export function CustomersPage({ catalog = [], customers, settings, bookings, mes
   const visible = sorted.slice(pageStart, pageStart + pageSize);
 
   const editing = editCustomerId ? customers.find(({ id }) => id === editCustomerId) ?? null : null;
-  const paying = payCustomerId ? customers.find(({ id }) => id === payCustomerId) ?? null : null;
+  // 결제는 페이지별 소형 폼이 아니라 공용 09A~09H 모달이 맡는다. 이 화면은 배경으로 남는다.
+  const paying = null;
   const prepaidTarget = showPrepaid ? selected : null;
-  const dialog = showNew || editing || paying || prepaidTarget
+  const dialog = showNew || editing || prepaidTarget
     ? { label: paying ? "결제 등록" : prepaidTarget ? "선결제 충전" : editing ? "고객 정보 변경" : "고객 등록", wide: Boolean(paying), form: !paying && !prepaidTarget }
     : null;
   // 중복 확인은 팝업이 열렸을 때만 필요하다. 858명 × 6칸은 목록 응답에 실리지 않는다.
@@ -147,9 +149,7 @@ export function CustomersPage({ catalog = [], customers, settings, bookings, mes
           <h2 className={typeScale.title}>{dialog.label}</h2>
           <Link className={button("md")} data-dialog-close href={customerHref}>닫기</Link>
         </div>
-        {paying
-          ? <div className="mt-5"><CustomerPaymentDialog cardFeeRate={typeof settings.cardFeeRate === "number" ? settings.cardFeeRate : 0} catalog={catalog} customer={{ id: paying.id, value: value(paying) }} defaultDate={defaultDate} defaultTime={defaultTime} error={error} pointEarnRate={typeof settings.pointEarnRate === "number" ? settings.pointEarnRate : 1} requestKey={requestKey} returnTo={customerHref} vatMode={settings.vatMode === "separate" ? "separate" : "included"} /></div>
-          : prepaidTarget
+        {prepaidTarget
             ? <form action={chargePrepaid} aria-label="선결제 충전" className="mt-5 grid gap-4">
               <input name="customerId" type="hidden" value={prepaidTarget.id} />
               <input name="requestKey" type="hidden" value={requestKey} />
@@ -159,7 +159,7 @@ export function CustomersPage({ catalog = [], customers, settings, bookings, mes
               <Field label="받은 방법"><select className={`${input} w-full`} defaultValue="cash" name="method"><option value="cash">현금</option><option value="card">카드</option><option value="transfer">계좌이체</option></select></Field>
               <SubmitButton extra="w-full">선결제 충전</SubmitButton>
             </form>
-            : <CustomerForm customer={editing ?? undefined} duplicateIndex={duplicateIndex} returnTo={customerHref} settings={settings} today={defaultDate} />}
+            : <CustomerForm customer={editing ?? undefined} defaultName={showNew ? newCustomerName : undefined} duplicateIndex={duplicateIndex} returnTo={customerHref} settings={settings} today={defaultDate} />}
       </section>
     </ModalHost>}
 
@@ -254,7 +254,7 @@ export function CustomersPage({ catalog = [], customers, settings, bookings, mes
                 이 칸에서 가장 큰 것이 제목(21px)이 아니라 버튼 셋이었다. 옆에 입력칸이 없으므로
                 `md` 가 지키던 h-10 정렬도 여기서는 지킬 게 없다. */}
             <div className="flex shrink-0 gap-2">
-              <Link className={button("sm", "primary")} data-selected-customer-payment={selected.id} href={href({ pay: selected.id })}>결제 등록</Link>
+              <Link className={button("sm", "primary")} data-selected-customer-payment={selected.id} href={href({ pay: "1", customer: selected.id })}>결제 등록</Link>
               <Link className={button("sm")} href={href({ prepaid: "1" })}>선결제 충전</Link>
               <Link className={button("sm")} href={href({ edit: selected.id })}>고객 정보 변경</Link>
             </div>
@@ -264,7 +264,8 @@ export function CustomersPage({ catalog = [], customers, settings, bookings, mes
           {/* 다섯 구역을 전부 펼쳐 두면 상세 칸이 목록보다 세 배 길어져 두 칸 높이가 어긋난다.
               탭은 그대로 두되 **누른 것만** 그린다. 링크라 뒤로가기도 그대로 동작한다. */}
           <nav aria-label="고객 상세 구역" className="mt-4 flex flex-wrap gap-2">
-            {detailTabs.map(([name, key]) => <Link aria-current={tab === key ? "page" : undefined} className={button("sm", tab === key ? "primary" : "quiet")} href={href({ tab: key })} key={key}>{name}</Link>)}
+            {detailTabs.map(([name, key]) => <Link aria-current={activeTab === key ? "page" : undefined} className={button("sm", activeTab === key ? "primary" : "quiet")} href={href({ tab: key })} key={key}>{name}</Link>)}
+            {messagingUiEnabled && <Link aria-current={activeTab === "messages" ? "page" : undefined} className={button("sm", activeTab === "messages" ? "primary" : "quiet")} href={href({ tab: "messages" })}>문자</Link>}
           </nav>
 
           <section className="mt-5 flex min-h-0 flex-1 flex-col">
@@ -272,20 +273,20 @@ export function CustomersPage({ catalog = [], customers, settings, bookings, mes
                 높이로 펴 그 자리를 채운다 — 미용실이 가장 자주 읽고 고치는 칸이고, 이미 있는
                 데이터다. 빈 자리에 장식을 넣는 게 아니라 원래 짧게 잘려 있던 칸을 제 크기로 되돌린다.
                 `h-full`(백분율)은 flex 아이템 안에서 195px 로 접혔다 — 위 `flex-col` + 여기 `flex-1` 로 받는다. */}
-            {tab === "profile" && <div className="flex min-h-0 flex-1 flex-col">
+            {activeTab === "profile" && <div className="flex min-h-0 flex-1 flex-col">
               <h3 className="font-bold">기본 정보</h3>
-              <dl className="mt-2 grid grid-cols-[auto_1fr] gap-x-4 gap-y-1 text-sm"><dt className="text-[var(--muted)]">성별</dt><dd>{{ female: "여성", male: "남성" }[text(selected, "gender", "")] ?? "미지정"}</dd><dt className="text-[var(--muted)]">첫 방문날짜</dt><dd className="tabular-nums">{joinedDate(selected)}</dd><dt className="text-[var(--muted)]">문자 수신</dt><dd>{value(selected).smsOptIn === false ? "거부" : "동의"}</dd></dl>
+              <dl className="mt-2 grid grid-cols-[auto_1fr] gap-x-4 gap-y-1 text-sm"><dt className="text-[var(--muted)]">성별</dt><dd>{{ female: "여성", male: "남성" }[text(selected, "gender", "")] ?? "미지정"}</dd><dt className="text-[var(--muted)]">첫 방문날짜</dt><dd className="tabular-nums">{joinedDate(selected)}</dd>{messagingUiEnabled && <><dt className="text-[var(--muted)]">문자 수신</dt><dd>{value(selected).smsOptIn === false ? "거부" : "동의"}</dd></>}</dl>
               <h3 className="mt-5 font-bold">메모</h3>
               {/* 긴 메모는 이 칸이 아니라 `aside` 가 스크롤한다(60행 주입 실측: 상세 720px 고정, 목록 안 밀림).
                   스크롤 상자를 두 겹으로 두면 어느 쪽이 움직일지 사용자가 알 수 없다. */}
               <p className="mt-2 min-h-0 flex-1 whitespace-pre-wrap rounded-[var(--radius-card)] bg-[var(--background)] p-4 text-sm">{text(selected, "memo", "").trim() || <span className="text-[var(--muted)]">메모가 없습니다. 고객 정보 변경에서 남길 수 있습니다.</span>}</p>
             </div>}
-            {tab === "bookings" && <><h3 className="font-bold">예약 이력</h3>{listItems(selectedBookings, "예약 이력이 없습니다.", (record) => { const at = seoulClockOrEmpty(text(record, "startsAt")); return <>{at.date} {at.time} · {text(record, "service")} · {text(record, "status")}</>; })}</>}
-            {tab === "ledger" && <><h3 className="font-bold">시술·결제 이력</h3>{paymentLedger.length ? <ul className="mt-2 divide-y divide-[var(--border)]">{paymentLedger.map((entry) => <li className="py-2 text-sm tabular-nums" key={entry.id}>{entry.occurredAt.slice(0, 10)} · {typeof entry.details.serviceMajor === "string" ? entry.details.serviceMajor : "결제"} · ₩{entry.amountWon.toLocaleString("ko-KR")}</li>)}</ul> : <p className="mt-2 text-sm text-[var(--muted)]">시술·결제 이력이 없습니다.</p>}</>}
-            {tab === "points" && <><h3 className="font-bold">포인트 이력</h3>{pointLedger.length ? <ul className="mt-2">{pointLedger.map((entry) => <li className="text-sm tabular-nums" key={entry.id}>{entry.occurredAt.slice(0, 10)} · {entry.pointsWon.toLocaleString("ko-KR")}P{typeof entry.details.reason === "string" && entry.details.reason ? <span className="ml-2 text-xs text-[var(--muted)]">{entry.details.reason}</span> : null}</li>)}</ul> : <p className="mt-2 text-sm text-[var(--muted)]">포인트 변동 이력이 없습니다.</p>}
+            {activeTab === "bookings" && <><h3 className="font-bold">예약 이력</h3>{listItems(selectedBookings, "예약 이력이 없습니다.", (record) => { const at = seoulClockOrEmpty(text(record, "startsAt")); return <>{at.date} {at.time} · {text(record, "service")} · {text(record, "status")}</>; })}</>}
+            {activeTab === "ledger" && <><h3 className="font-bold">시술·결제 이력</h3>{paymentLedger.length ? <ul className="mt-2 divide-y divide-[var(--border)]">{paymentLedger.map((entry) => <li className="py-2 text-sm tabular-nums" key={entry.id}>{entry.occurredAt.slice(0, 10)} · {typeof entry.details.serviceMajor === "string" ? entry.details.serviceMajor : "결제"} · ₩{entry.amountWon.toLocaleString("ko-KR")}</li>)}</ul> : <p className="mt-2 text-sm text-[var(--muted)]">시술·결제 이력이 없습니다.</p>}</>}
+            {activeTab === "points" && <><h3 className="font-bold">포인트 이력</h3>{pointLedger.length ? <ul className="mt-2">{pointLedger.map((entry) => <li className="text-sm tabular-nums" key={entry.id}>{entry.occurredAt.slice(0, 10)} · {entry.pointsWon.toLocaleString("ko-KR")}P{typeof entry.details.reason === "string" && entry.details.reason ? <span className="ml-2 text-xs text-[var(--muted)]">{entry.details.reason}</span> : null}</li>)}</ul> : <p className="mt-2 text-sm text-[var(--muted)]">포인트 변동 이력이 없습니다.</p>}
               {/* 되돌릴 수 없는 조정이라 사유가 필수다. 사유칸이 곧 확인 절차 — 별도 confirm 다이얼로그를 두지 않는다. */}
               <form action={adjustCustomerPoints} className="mt-4 grid grid-cols-[120px_1fr_auto] items-end gap-2 border-t border-[var(--border)] pt-4"><input name="customerId" type="hidden" value={selected.id} /><Field label="조정 포인트"><input className={input} name="pointsWon" placeholder="-500" required step="1" type="number" /></Field><Field label="조정 사유 (필수)"><input className={input} maxLength={150} name="reason" required /></Field><SubmitButton size="md" tone="secondary">포인트 조정</SubmitButton></form></>}
-            {tab === "messages" && <><h3 className="font-bold">문자 발송 이력</h3>{listItems(selectedMessages, "문자 발송 이력이 없습니다.", (record) => <>{text(record, "channel")} · {text(record, "status")}</>)}<Link className={button("sm", "quiet", "mt-3")} href={`/messages?customer=${selected.id}`}>문자 발송으로 이동</Link></>}
+            {messagingUiEnabled && activeTab === "messages" && <><h3 className="font-bold">문자 발송 이력</h3>{listItems(selectedMessages, "문자 발송 이력이 없습니다.", (record) => <>{text(record, "channel")} · {text(record, "status")}</>)}<Link className={button("sm", "quiet", "mt-3")} href={`/messages?customer=${selected.id}`}>문자 발송으로 이동</Link></>}
           </section>
         </div> : <p className="p-8 text-center text-sm text-[var(--muted)]">{query ? "검색과 일치하는 고객이 없습니다." : "등록된 고객이 없습니다. 고객 등록으로 첫 고객을 추가하세요."}</p>}
       </aside>

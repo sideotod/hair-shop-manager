@@ -213,6 +213,17 @@ summary:focus-visible {
   outline-color: #fff;
 }
 
+/* 헤더 검색은 입력과 컨테이너가 각각 포커스를 그리면 두 겹이 된다.
+   전역 input 아웃라인 대신 40px 클릭 영역 안쪽에 한 겹만 표시한다. */
+[data-header-search]:focus-within {
+  box-shadow: inset 0 0 0 2px var(--brand);
+}
+
+[data-header-search] input:focus-visible {
+  outline: none;
+  outline-offset: 0;
+}
+
 .tabular-nums,
 .font-mono,
 time {

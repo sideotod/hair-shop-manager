@@ -1,10 +1,13 @@
 import { MessagesPage } from "../../../components/messages/messages-page";
 import { createSalonStore } from "../../../lib/salon-store";
 import { forRecipientPicker } from "../../../lib/messages";
+import { messagingUiEnabled } from "../../../lib/feature-flags";
 import { connection } from "next/server";
+import { redirect } from "next/navigation";
 import { randomUUID } from "node:crypto";
 
 export default async function Page({ searchParams }: { searchParams: Promise<{ error?: string; notice?: string; segment?: string }> }) {
+  if (!messagingUiEnabled) redirect("/");
   await connection();
   const store = createSalonStore();
   try {

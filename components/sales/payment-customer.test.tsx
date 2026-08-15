@@ -3,14 +3,15 @@ import { describe, expect, it } from "vitest";
 
 import type { DuplicateEntry } from "../customers/customer-form";
 import { PaymentAmounts } from "./payment-amounts";
-import { PaymentCustomer, PaymentCustomerScope } from "./payment-customer";
+import { CustomerChoiceNotice, isUnregisteredCustomer, PaymentCustomer, PaymentCustomerScope, UnregisteredCustomerNotice } from "./payment-customer";
 
 const index: readonly DuplicateEntry[] = [
   ["customer-1", "김하늘", "female", "01011112222", "2024-03-02", ""],
   ["customer-2", "이수린", "female", "01033332222", "2025-01-09", ""],
 ];
 // react-dom 이 속성 순서를 제 마음대로 낸다(`readOnly` 가 `name` 앞). 칸 하나를 통째로 떠서 본다.
-const input = (html: string, name: string) => html.match(new RegExp(`<input[^>]*name="${name}"[^>]*>`))?.[0] ?? "";
+const input = (html: string, name: string) => html.match(new RegExp(`<input[^>]*data-money-input="${name}"[^>]*>`))?.[0] ?? "";
+const namedInput = (html: string, name: string) => html.match(new RegExp(`<input[^>]*name="${name}"[^>]*>`))?.[0] ?? "";
 const amounts = (fixed?: { customerId: string; points: number }) =>
   renderToStaticMarkup(<PaymentCustomerScope fixed={fixed}><PaymentAmounts cardFeeRate={0} vatMode="included" /></PaymentCustomerScope>);
 
@@ -28,19 +29,44 @@ describe("PaymentCustomer", () => {
     expect(html).toContain('name="lookupName"');
     expect(html).toContain('name="lookupTail"');
     expect(html).not.toContain('name="memberType"');
-    expect(html).not.toContain(">회원<");
-    expect(html).not.toContain(">비회원<");
+    expect(html).not.toContain('<select name="memberType"');
     // 첫 페인트에서는 아무도 안 골랐으므로 `customerId` 는 비어 있다.
-    expect(input(html, "customerId")).toContain('value=""');
+    expect(namedInput(html, "customerId")).toContain('value=""');
   });
 
-  it("둘 다 비우면 비회원 결제라고 화면이 먼저 말한다", () => {
-    expect(html).toContain("비회원 결제");
+  it("둘 다 비우면 주황색 비회원 상태 카드가 나온다", () => {
+    expect(html).toContain("비회원");
+    expect(html).toContain("h-[59px]");
+    expect(html).toContain("bg-[var(--warning-soft)]");
   });
 
   /** 서버가 던지는 필수는 요청 키뿐이다(`finance.ts`). 고객칸에 `required` 가 붙으면 비회원 결제가 막힌다. */
   it("고객칸을 필수로 만들지 않는다", () => {
     expect(html).not.toMatch(/name="customerId"[^>]*required/);
+  });
+
+  it("입력했지만 찾지 못한 고객은 결제 전 붉은 안내를 받는다", () => {
+    expect(isUnregisteredCustomer(false, 0)).toBe(true);
+    expect(isUnregisteredCustomer(true, 0)).toBe(false);
+    expect(isUnregisteredCustomer(false, 1)).toBe(false);
+  });
+
+  it("미등록 안내를 비회원 상태와 같은 카드 형태로 보인다", () => {
+    const notice = renderToStaticMarkup(<UnregisteredCustomerNotice />);
+
+    expect(notice).toContain("등록되지 않은 고객이에요");
+    expect(notice).toContain("h-[59px]");
+    expect(notice).toContain("bg-[var(--danger-soft)]");
+    expect(notice).not.toContain("결제 후");
+  });
+
+  it("동명이인 고르기도 비회원과 같은 주황 상태 카드로 보인다", () => {
+    const notice = renderToStaticMarkup(<CustomerChoiceNotice count={87} onChoose={() => {}} />);
+
+    expect(notice).toContain("고객님이 87명이에요");
+    expect(notice).toContain("고르기");
+    expect(notice).toContain("h-[59px]");
+    expect(notice).toContain("bg-[var(--warning-soft)]");
   });
 });
 

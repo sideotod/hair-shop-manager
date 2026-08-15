@@ -1,17 +1,14 @@
 import Link from "next/link";
-import { useSearchParams } from "next/navigation";
-import { Fragment } from "react";
 
 // 로그아웃은 여기서 나갔다 (`components/settings/settings-page.tsx` 계정 설정). `logoutOwner` 도 같이 갔다.
 import { focusRing, focusRingOnDark } from "./button";
 
-import { activeNavigationItem, childNavigationItems, matchNavigationItem, navigationItems, resolveSettingsSection, settingsSections } from "../lib/navigation";
+import { activeNavigationItem, matchNavigationItem, navigationItems } from "../lib/navigation";
 import type { JsonObject } from "../lib/salon-domain";
 import { resolveVisualTokens } from "../lib/visual-tokens";
 import { typeScale } from "./type";
 
-const groupOrder = ["운영", "정산", "관리"] as const;
-const menuGroups = groupOrder.map((label) => ({ label, items: navigationItems.filter((item) => item.group === label) }));
+const sidebarItems = navigationItems.filter((item) => item.group && item.path !== "/messages");
 
 type AppShellProps = {
   children: React.ReactNode;
@@ -35,16 +32,7 @@ export function AppShell({
   const title = matchNavigationItem(pathname).title;
   const activeHref = activeNavigationItem(pathname).path;
   const setting = (key: string, fallback: string) => typeof settings[key] === "string" ? settings[key] : fallback;
-  const resolvedShopName = setting("shopName", shopName);
   const resolvedOwnerName = setting("ownerName", ownerName);
-  const hiddenMenus = new Set(Array.isArray(settings.hiddenMenus) ? settings.hiddenMenus.filter((value): value is string => typeof value === "string") : []);
-  const visibleGroups = menuGroups.map(({ label, items }) => ({ label, items: items.filter((item) => !hiddenMenus.has(item.path)) })).filter(({ items }) => items.length > 0);
-  // 설정 하위 목록은 설정에 있을 때만 편다. 항상 펼쳐 두면 7줄이 늘 자리를 먹어 사이드바가
-  // 화면 높이를 넘긴다(1280×800 실측). `?section=` 이 유일한 상태 저장소라 클라이언트 상태는 없다.
-  // 훅은 조건 없이 부른다 — 삼항 안에 넣으면 경로가 바뀔 때 훅 순서가 달라진다.
-  const section = useSearchParams()?.get("section") ?? undefined;
-  const settingsOpen = activeHref === "/settings";
-  const activeSection = resolveSettingsSection(section);
   const ownerLabel = resolvedOwnerName === "사용자" ? "사용자님" : `${resolvedOwnerName} 사용자님`;
   const resolvedVisualTokens = resolveVisualTokens(settings);
   const visualTokens = {
@@ -63,27 +51,11 @@ export function AppShell({
         <aside data-app-sidebar className="flex h-screen min-h-0 flex-col bg-[var(--sidebar)] px-5 pb-[22px] pt-[26px] text-white">
           <div>
             <strong className="wordmark block text-[21px] leading-none tracking-[3.4px]">HAIRHAEYO</strong>
-            <span className="mt-1.5 block text-[10px] font-medium tracking-[2.6px] text-[var(--accent-on-sidebar)]">SALON LEDGER</span>
           </div>
 
-          {/* `-mx-1 px-1`: 스크롤 컨테이너가 되면 `overflow-x` 도 auto 로 굳는다. 포커스 링은
-              `outline-offset-2` 로 링크 바깥 4px 까지 나가므로 여백이 없으면 링이 잘리거나
-              가로 스크롤바가 생긴다. `min-h-0` 이 없으면 아래 매장 카드가 화면 밖으로 밀린다. */}
-          <nav aria-label="주요 메뉴" className="mt-[26px] -mx-1 min-h-0 space-y-1 overflow-y-auto px-1">
-            {/* 설정 구역은 여기서 펼친다. 예전에 이 자리를 비운 이유는 설정 화면 안 좌측 레일이 같은
-                목록을 또 그려 목록이 두 벌이었기 때문인데, 그 레일을 없앴으므로 목록은 다시 한 벌이다
-                (`components/settings/settings-page.tsx`). 목록의 원본은 `lib/navigation.ts` 한 곳이다.
-                `hiddenMenus` 는 `/settings` 를 숨길 수 없다 — 허용 목록(`lib/settings.ts:101`)에 없다.
-                그래서 설정 줄이 사라져 하위 항목만 떠 있는 상태는 만들어지지 않는다. */}
-            {visibleGroups.map(({ label: groupLabel, items }) => <section className="mb-[18px] last:mb-0" key={groupLabel}><p className="px-3 pb-2 pt-0 font-mono text-[10px] font-medium tracking-[0.16em] text-white/55">{groupLabel}</p>{items.map(({ id, label, path }) => <Fragment key={path}><Link aria-current={path === activeHref && !settingsOpen && pathname === path ? "page" : undefined} className={`flex items-center gap-2.5 rounded-[var(--radius-control)] px-3 py-[9px] text-[13px] transition-colors ${focusRingOnDark} ${path === activeHref ? "bg-[var(--surface)]/10 font-semibold text-white" : "text-white/60 hover:bg-[var(--surface)]/5 hover:text-white"}`} href={path}><span aria-hidden="true" className={`h-[13px] w-0.5 rounded-[1px] ${path === activeHref ? "bg-[var(--accent)]" : "bg-transparent"}`} />{label}</Link>{path === activeHref && childNavigationItems(id).length > 0 && <nav aria-label={`${label} 하위 메뉴`} className="mb-0.5 ml-[13px] mt-1 border-l border-white/10 pl-[9px]">{childNavigationItems(id).map((child) => <Link aria-current={pathname === child.path ? "page" : undefined} className={`block truncate rounded-[var(--radius-control)] px-2.5 py-1.5 text-[12px] transition-colors ${focusRingOnDark} ${pathname === child.path ? "bg-[var(--surface)]/10 font-medium text-white" : "text-white/50 hover:bg-[var(--surface)]/5 hover:text-white"}`} href={child.path} key={child.path}>{child.label}</Link>)}</nav>}{path === "/settings" && settingsOpen && <nav aria-label="설정 구역" className="mb-0.5 ml-[13px] mt-1 border-l border-white/10 pl-[9px]">{settingsSections.map(([key, sectionLabel]) => <Link aria-current={key === activeSection ? "page" : undefined} className={`block truncate rounded-[var(--radius-control)] px-2.5 py-1.5 text-[12px] transition-colors ${focusRingOnDark} ${key === activeSection ? "bg-[var(--surface)]/10 font-medium text-white" : "text-white/50 hover:bg-[var(--surface)]/5 hover:text-white"}`} href={`/settings?section=${key}`} key={key}>{sectionLabel}</Link>)}</nav>}</Fragment>)}</section>)}
+          <nav aria-label="주요 메뉴" className="mt-[26px] space-y-1">
+            {sidebarItems.map(({ label, path }) => <Link aria-current={path === activeHref ? "page" : undefined} className={`flex items-center gap-2.5 rounded-[var(--radius-control)] px-3 py-[9px] text-[13px] transition-colors ${focusRingOnDark} ${path === activeHref ? "bg-[var(--surface)]/10 font-semibold text-white" : "text-white/60 hover:bg-[var(--surface)]/5 hover:text-white"}`} href={path} key={path}><span aria-hidden="true" className={`h-[13px] w-0.5 rounded-[1px] ${path === activeHref ? "bg-[var(--accent)]" : "bg-transparent"}`} />{label}</Link>)}
           </nav>
-
-          {/* 로그아웃 버튼은 `/settings?section=owner` 로 옮겼다 — 계정을 여닫는 일은 계정 설정에 있다.
-              그만큼 이 카드가 낮아져(107px → 63px 실측) 사이드바가 구역 7줄을 펼쳐도 넘치지 않는다. */}
-          <div className="mt-auto rounded-[var(--radius-card)] bg-[var(--surface)]/[0.06] px-[13px] py-3">
-            <strong className="block text-[13px] font-medium">{resolvedShopName}</strong>
-            <span className="mt-1 block font-mono text-[10px] text-white/50">● 영업중 {setting("bookingOpen", "09:30")}–{setting("bookingClose", "21:00")}</span>
-          </div>
         </aside>
 
         <div className="flex min-h-0 min-w-0 flex-col overflow-hidden">
@@ -95,9 +67,9 @@ export function AppShell({
             {/* 검색 기준 드롭다운은 없앴다. 8개 중 6개(닉네임·메모·주소·이메일·포인트카드·패밀리번호)가
                 삭제된 속성을 읽어 아무것도 찾지 못했고, 남은 둘은 `/customers` 가 입력만 보고 알아서 가른다 —
                 숫자면 번호 뒷자리, 아니면 이름. 고를 것이 없으면 고르게 하지 않는다. */}
-            <form action="/customers" className="flex h-10 w-[340px] shrink-0 items-center gap-2 rounded-[var(--radius-chip)] bg-[var(--background)] px-3" method="get" role="search">
-              {/* `outline-none` 이었다. 셸에서 유일하게 포커스가 완전히 사라지는 칸이었다. */}
-              <input aria-label="고객 검색어" className={`h-8 min-w-0 flex-1 rounded-[var(--radius-control)] bg-transparent px-1 text-[12px] ${focusRing}`} name="query" placeholder="고객명 또는 휴대전화 뒷자리" />
+            <form action="/customers" className="flex h-10 w-[340px] shrink-0 items-center gap-2 rounded-[var(--radius-chip)] bg-[var(--background)] px-3" data-header-search method="get" role="search">
+              {/* 입력 포커스는 클릭 영역 전체에 표시해, 테두리와 검색창 크기를 일치시킨다. */}
+              <input aria-label="고객 검색어" className="h-full min-w-0 flex-1 rounded-[var(--radius-control)] bg-transparent px-1 text-[12px]" data-header-search-input name="query" placeholder="고객명 또는 휴대전화 뒷자리" />
               {/* `not-sr-only` 이 `padding:0` 을 되돌려 붙인다. 크기는 `focus:` 쪽에서 다시 줘야
                   포커스로 드러난 버튼이 23×19.5px 짜리 글자 덩어리로 나오지 않는다(실측). */}
               <button className={`sr-only rounded-[var(--radius-control)] bg-[var(--brand)] text-[11px] text-white focus:not-sr-only focus:inline-flex focus:h-8 focus:items-center focus:px-2.5 ${focusRing}`} type="submit">검색</button>

@@ -82,7 +82,9 @@ describe("CustomersPage", () => {
     expect(bookings).toContain("2026-07-31 10:00 · 커트 · confirmed");
     expect(bookings).not.toContain("시술·결제 이력이");
     expect(page(undefined, { selectedCustomerId: "customer-seed-1", tab: "points" })).toContain("2026-07-24 · 1,000P");
-    expect(page(undefined, { selectedCustomerId: "customer-seed-1", tab: "messages" })).toContain("SMS · dry-run");
+    const legacyMessagesTab = page(undefined, { selectedCustomerId: "customer-seed-1", tab: "messages" });
+    expect(legacyMessagesTab).toContain("고객 정보");
+    for (const hidden of [">문자<", "문자 수신", "SMS · dry-run", "/messages"]) expect(legacyMessagesTab).not.toContain(hidden);
   });
 
   /**
@@ -258,7 +260,7 @@ describe("CustomersPage", () => {
   });
 
   it("closes every popup back onto the selected customer without losing filters", () => {
-    for (const open of [{ showNew: true }, { editCustomerId: "customer-seed-1" }, { payCustomerId: "customer-seed-1" }, { showPrepaid: true }]) {
+    for (const open of [{ showNew: true }, { editCustomerId: "customer-seed-1" }, { showPrepaid: true }]) {
       const html = page(undefined, { query: "김", selectedCustomerId: "customer-seed-1", ...open });
       const close = html.match(/<a\b[^>]*data-dialog-close="true"[^>]*>/)?.[0].match(/href="([^"]+)"/)?.[1] ?? "";
 
@@ -271,9 +273,8 @@ describe("CustomersPage", () => {
 
   // 전역 패널 폭은 `min(1120px,100%)` 다. 세로로 선 폼을 그 폭에 두면 라벨과 입력칸이 한 뼘씩 벌어진다.
   // 고객 등록만 `!w-auto` 다 — 중복 확인 패널이 옆으로 펴질 때 패널이 안쪽 폭을 따라가야 하기 때문이다.
-  it("narrows both popups, giving the payment form a little more room", () => {
+  it("keeps customer management popups at their measured widths", () => {
     expect(page(undefined, { showNew: true })).toContain("!w-auto");
-    expect(page(undefined, { payCustomerId: "customer-seed-1" })).toContain("!w-[560px]");
   });
 
   it("registers with six fields and never offers prepaid on the edit form", () => {
@@ -296,20 +297,8 @@ describe("CustomersPage", () => {
     expect(page(store, { editCustomerId: "customer-seed-1" })).toContain('<option value="female" selected="">여성</option>');
   });
 
-  /** 결제 팝업은 고객이 이미 정해져 있다. 물을 필요가 없는 칸은 숨은 값으로 보낸다. */
-  it("prefills the payment popup and omits the fields the customer record already answers", () => {
+  it("opens the shared payment modal with a customer id while keeping this page as the background", () => {
     const html = page(undefined, { payCustomerId: "customer-seed-1" });
-
-    expect(html).toContain('name="customerId" value="customer-seed-1"');
-    expect(html).toContain('name="requestKey" value="test-request-key"');
-    expect(html).toContain('name="occurredDate" value="2026-08-13"');
-    // 회원 구분칸은 사라졌다 — 등록되어 있는 사람이 회원이다.
-    expect(html).not.toContain('name="memberType"');
-    for (const gone of ["nonMemberName", "generalNote", "medicineNote", "scalpNote", "hairNote", "smsRequested"]) {
-      expect(html).not.toContain(`name="${gone}"`);
-    }
-    // 결제수단 9칸은 그대로 남는다 — `finance.ts` 가 전부를 읽는다(화면에 칸이 없으면 숨은 값).
-    expect(html).toContain('name="payment_cash"');
-    expect(html).toContain('name="payment_prepaid"');
+    expect(html).toContain("/customers?pay=1&amp;customer=customer-seed-1");
   });
 });
