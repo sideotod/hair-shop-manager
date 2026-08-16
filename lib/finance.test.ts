@@ -11,7 +11,6 @@ function form(values: Record<string, string>) {
 
 const paymentBase = {
   requestKey: "payment-request-1",
-  memberType: "member",
   customerId: "customer-seed-1",
   serviceMajor: "커트",
   serviceDetail: "여성 커트",
@@ -119,19 +118,30 @@ describe("calculatePayment", () => {
 });
 
 describe("immutable payment records", () => {
-  it("rejects a member payment without a selected customer", () => {
+  /**
+   * 고객칸이 비어도 결제는 저장된다 — **등록되지 않은 손님의 결제**다.
+   *
+   * 예전에는 `memberType` 칸이 회원/비회원을 물었고, `member` 인데 고객이 비면 던졌다.
+   * 그 칸은 사라졌다. 남은 규칙은 하나다: `customerId` 가 있으면 회원, 없으면 아니다.
+   * 대신 고객이 없는데 포인트가 붙으면 여전히 막는다(아래 테스트).
+   */
+  it("records a payment for an unregistered walk-in without a customer", () => {
     const store = createSalonStore(":memory:");
     try {
-      expect(() => recordPayment(store, form({ ...paymentBase, customerId: "" }))).toThrow("결제 고객");
+      const entry = recordPayment(store, form({ ...paymentBase, requestKey: "walk-in", customerId: "", pointsEarnedWon: "0", nonMemberName: "손님" }));
+      expect(entry.customerId).toBeFalsy();
+      expect(entry.details.customerName).toBe("손님");
+      // 지운 칸이 원장에 되살아나지 않는다.
+      expect(entry.details.memberType).toBeUndefined();
     } finally {
       store.close();
     }
   });
 
-  it("rejects non-member and mismatched points tenders before they can bypass customer points", () => {
+  it("rejects unregistered-customer and mismatched points tenders before they can bypass customer points", () => {
     const store = createSalonStore(":memory:");
     try {
-      expect(() => recordPayment(store, form({ ...paymentBase, requestKey: "non-member-points-tender", memberType: "non-member", customerId: "", pointsEarnedWon: "0", payment_points: "100" }))).toThrow("비회원");
+      expect(() => recordPayment(store, form({ ...paymentBase, requestKey: "non-member-points-tender", customerId: "", pointsEarnedWon: "0", payment_points: "100" }))).toThrow("등록되지 않은 고객");
       expect(() => recordPayment(store, form({ ...paymentBase, requestKey: "mismatched-points-tender", pointsUsedWon: "0", payment_card: "11000", payment_points: "100" }))).toThrow("포인트 결제수단");
       expect(() => recordPayment(store, form({ ...paymentBase, requestKey: "insufficient-points-tender", pointsUsedWon: "100", payment_card: "10900", payment_points: "100" }))).toThrow("사용 가능한 포인트");
     } finally {

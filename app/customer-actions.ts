@@ -14,7 +14,8 @@ function revalidateCustomers() {
 
 function returnTo(formData: FormData) {
   const value = formData.get("returnTo");
-  return typeof value === "string" && /^\/customers(?:\?|$)/.test(value) ? value : "/customers";
+  // 대시보드(`/`)에서도 고객 등록 팝업이 뜬다. 허용 목록에 없으면 저장 후 `/customers` 로 튕긴다.
+  return typeof value === "string" && /^\/(?:customers)?(?:\?|$)/.test(value) ? value : "/customers";
 }
 
 // 지금까지 `saveCustomerRecord` 등이 던지면 Next 에러 화면으로 튀어 입력이 통째로 사라졌다.

@@ -16,7 +16,7 @@ function dayChart(contextNote?: string): RevenueChartData {
   try {
     const points = buildPoints(store.aggregateLedger("2026-07-01", "2026-08-01", "day"), "daily", dailyAxis("2026-07"), "2026-07-31");
     const summary = store.summarizeLedger("2026-07-01", "2026-08-01");
-    return { kind: "day", span: "month", contextNote, label: "2026년 7월", points, total: summary.gross, count: summary.count, deltaPrevious: null };
+    return { kind: "day", span: "month", title: "일별 매출", contextNote, label: "2026년 7월", points, total: summary.gross, count: summary.count, deltaPrevious: null };
   } finally { store.close(); }
 }
 
@@ -37,10 +37,14 @@ describe("RevenueDashboard", () => {
     expect(Object.values(revenueChartMotions(true)).every((item) => !item.isAnimationActive && item.animationDuration === 0)).toBe(true);
   });
 
-  it("renders owner-only KPIs, simplified navigation, CSV, permanent bar labels, and accessible chart values", () => {
+  it("renders owner-only KPIs, uniform period chips, permanent bar labels, and accessible chart values", () => {
     const html = renderToStaticMarkup(<RevenueDashboard analytics={analytics()} chart={dayChart()} query={{ view: "month", cursor: "2026-07-31" }} />);
-    for (const text of ["총 매출", "실결제", "VAT", "지출", "수수료 차감 후", "일별", "주별", "월별", "연도", "누적", "CSV 내보내기", "시술 카테고리", "정산"]) expect(html).toContain(text);
+    for (const text of ["총 매출", "실결제", "VAT", "지출", "수수료 차감 후", "일별", "주별", "월별", "년별", "시술 카테고리", "정산"]) expect(html).toContain(text);
     for (const text of ["담당자", "성별 매출", "신규 · 재방문"]) expect(html).not.toContain(text);
+    // CSV 는 거래 기록 화면 하나에서만 내려받는다 — 분석 화면의 중복 버튼은 없앴다.
+    expect(html).not.toContain("CSV 내보내기");
+    // 기간 칩은 글자 폭이 아니라 서로에게 폭을 맞춘다. "일별" 과 "년별" 이 같은 크기여야 한 줄로 읽힌다.
+    expect(html.match(/w-\[72px\]/g)).toHaveLength(4);
     expect(html.match(/data-revenue-chart=/g)).toHaveLength(2);
     expect(html.match(/<table/g)).toHaveLength(4);
   });

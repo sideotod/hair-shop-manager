@@ -1,10 +1,10 @@
 "use client";
 
+import Link from "next/link";
 import { useEffect, useRef, useState, useSyncExternalStore } from "react";
 
 import { button, focusRing } from "../button";
 import { ModalHost } from "../modal-host";
-import { PageToolbar } from "../page-toolbar";
 import type { JsonObject } from "../../lib/salon-domain";
 import type { RevenueAnalyticsView } from "./revenue-analytics";
 import { RevenueBarChart } from "./revenue-bar-chart";
@@ -16,15 +16,25 @@ import {
   RevenueDetailDrawer,
   type RevenueSelection,
 } from "./revenue-detail-drawer";
-import { SalesControls } from "./sales-controls";
 import { surface as card } from "../surface";
 import { typeScale } from "../type";
 import {
+  nextRevenueQuery,
+  previousRevenueQuery,
+  revenueQueryMoves,
   serializeRevenueQuery,
   type RevenueQuery,
 } from "./revenue-query";
 
 const chartCard = chartShell;
+
+/** 기간 칩 4개. 각 칩은 막대 단위이고, 창은 그 단위가 읽히는 크기다. */
+const viewOptions = [
+  ["day", "일별"],
+  ["week", "주별"],
+  ["month", "월별"],
+  ["year", "년별"],
+] as const;
 
 /** 서버가 계산해 넘기는 차트 입력. 프런트는 이 값을 다시 합산하지 않는다 (§14). */
 export type RevenueSeries = {
@@ -33,11 +43,16 @@ export type RevenueSeries = {
   readonly total: number;
   readonly count: number;
 };
-/** 하루 단위 막대 — 주(7칸) 또는 달(28~31칸). */
+/** 잘게 쪼갠 막대 — 한 달의 날(28~31칸) 또는 한 해의 주(52~53칸). */
 export type RevenueDayChartData = RevenueSeries & {
   readonly kind: "day";
-  readonly span: "week" | "month";
-  /** 고른 기간과 그린 기간이 다를 때만 채운다 (일별 → 그 날이 속한 달). */
+  readonly span: "month" | "year";
+  readonly title: string;
+  /** 달이 바뀌는 칸 번호. 주별에서만 채운다. */
+  readonly dividers?: readonly number[];
+  /** 그림이 못 말하는 규칙 한 줄 (연 경계 주 합산 등). */
+  readonly footNote?: string;
+  /** 고른 기간과 그린 기간이 다를 때만 채운다. */
   readonly contextNote?: string;
   /** 진행 중인 기간을 잘라 견줬을 때 며칠까지인지. */
   readonly comparisonNote?: string;
@@ -385,8 +400,36 @@ export function RevenueDashboard({
     (kind: RevenueSelection["kind"]) => (element: HTMLDivElement | null) => {
       surfaces.current[kind] = element ?? undefined;
     };
-  // CSV는 서버 라우트가 만든다. data: URL로 만들면 누적 기간에서 문서가 1MB 가까이 커진다 (A4-5).
-  const csvHref = `/sales/revenue-csv?${serializeRevenueQuery(query)}`;
+  // 기간 표시는 조작기가 아니라 결과다. 차트 제목 아래 작은 글씨로만 둔다.
+  const periodNote = `${analytics.selectedPeriod.start} ~ ${analytics.selectedPeriod.end}`;
+  // 년별은 창이 전체 하나라 이동할 곳이 없다. 화살표를 지우면 칩 줄이 짧아지며 흔들려서
+  // 자리는 남기고 링크만 뺀다 — 칩 위치가 기간마다 튀지 않는다.
+  const moves = revenueQueryMoves(query);
+  const arrow = (target: RevenueQuery, glyph: string, arrowLabel: string) =>
+    moves ? (
+      <Link aria-label={arrowLabel} className={button("md", "secondary", "w-[40px] px-0")} data-sales-move={glyph} href={`?${serializeRevenueQuery(target)}`}>
+        {glyph}
+      </Link>
+    ) : (
+      <span aria-hidden="true" className={button("md", "secondary", "w-[40px] px-0 invisible")} />
+    );
+  const periodChips = (
+    <nav aria-label="매출 기간" className="flex gap-2">
+      {arrow(previousRevenueQuery(query), "←", "이전 기간")}
+      {viewOptions.map(([view, viewLabel]) => (
+        <Link
+          aria-current={query.view === view ? "page" : undefined}
+          className={button("md", query.view === view ? "primary" : "secondary", "w-[72px] px-0")}
+          data-sales-period={view}
+          href={`?${serializeRevenueQuery({ ...query, view })}`}
+          key={view}
+        >
+          {viewLabel}
+        </Link>
+      ))}
+      {arrow(nextRevenueQuery(query), "→", "다음 기간")}
+    </nav>
+  );
   // KPI는 서버 집계에서 필드로 직접 읽는다. 이름 문자열로 찾지 않는다 (A3-8).
   const settled = (name: string) => analytics.settlement.find((row) => row.name === name)?.value ?? 0;
   // 넉 장만 남긴다. VAT·지출은 정산 표가 이미 아홉 줄로 보여준다 —
@@ -466,17 +509,7 @@ export function RevenueDashboard({
             />
           </ModalHost>
         )}
-        <SalesControls label={analytics.selectedPeriod.label} query={query} />
-        <PageToolbar className="mt-5" description={<>결제 기록과 정산을 같은 기준으로 확인합니다. {analytics.selectedPeriod.start} ~ {analytics.selectedPeriod.end}</>}>
-          <a
-            className={button("md", "primary")}
-            download={`hairhaeyo-revenue-${analytics.selectedPeriod.start}_${analytics.selectedPeriod.end}.csv`}
-            href={csvHref}
-          >
-            CSV 내보내기
-          </a>
-        </PageToolbar>
-        {briefing && <div className="mt-5"><BriefingHeadline briefing={briefing.revenue} inProgress={briefing.inProgress} /></div>}
+        {briefing && <BriefingHeadline briefing={briefing.revenue} inProgress={briefing.inProgress} />}
         <section
           aria-label="매출 핵심 지표"
           className="mt-5 grid grid-cols-4 gap-3"
@@ -507,25 +540,40 @@ export function RevenueDashboard({
             </article>
           ))}
         </section>
+        {/* 기간 칩은 차트 카드 머리줄에 산다. 아무것도 안 하는 `매출 조회` 박스 한 줄이 사라졌다.
+            폭은 글자가 아니라 서로에 맞춘다 — `일별`(2자)과 `연도`(2자)가 다른 폭이면 줄이 흔들린다. */}
         <div className="mt-5">
           {chart.kind === "day" ? (
             <RevenueDayChart
               comparisonNote={chart.comparisonNote}
               contextNote={chart.contextNote}
+              controls={periodChips}
               count={chart.count}
               deltaPrevious={chart.deltaPrevious}
+              dividers={chart.dividers}
+              footNote={chart.footNote}
               label={chart.label}
+              periodNote={periodNote}
               points={chart.points}
               span={chart.span}
+              title={chart.title}
               total={chart.total}
               transactionsHref={(date) => `/sales/transactions?${serializeRevenueQuery({ view: "day", cursor: date })}`}
             />
           ) : (
             <RevenueBarChart
+              controls={periodChips}
               count={chart.count}
-              drilldownHref={(key) => `?${serializeRevenueQuery({ view: chart.drilldown, cursor: chart.drilldown === "month" ? `${key}-01` : `${key}-01-01` })}`}
+              // 막대를 누르면 한 단계 잘게 본다. 달 막대는 그 달의 일별로, 해 막대는 그 해의 월별로.
+              // 예전에는 달 막대가 `view=month`(=그 해 전체)로 가서 누른 막대가 있던 화면이 그대로 나왔다.
+              drilldownHref={(key) =>
+                chart.drilldown === "month"
+                  ? `?${serializeRevenueQuery({ view: "day", cursor: `${key}-01` })}`
+                  : `?${serializeRevenueQuery({ view: "month", cursor: `${key}-01-01` })}`
+              }
               emptyText={chart.emptyText}
               label={chart.label}
+              periodNote={periodNote}
               points={chart.points}
               previousLabel={chart.previousLabel}
               title={chart.title}

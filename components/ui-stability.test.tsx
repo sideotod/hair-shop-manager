@@ -65,28 +65,17 @@ function tsxFiles(dir: string, found: string[] = []) {
 describe("Sales workspace period row", () => {
   /**
    * 탭 줄(매출 분석 · 결제 등록 · 지출/정산)은 없앴다 — 성격이 다른 셋을 한 줄에 두면
-   * 한 묶음으로 배우게 된다. 그 자리를 기간 줄이 물려받았고, 같은 규칙이 그대로 적용된다:
-   * **본문 첫 줄이어야 한다.** 설명문 툴바가 앞뒤로 오가면 화면마다 줄이 위아래로 튄다.
-   * 브라우저 실측(탭 시절): /sales y=156, ?tab=payment y=116, ?tab=expenses y=162.
+   * 한 묶음으로 배우게 된다. 그 자리를 물려받은 `매출 조회` 기간 줄도 이제 없다:
+   * 지출·정산의 칩은 `view/cursor` 를 쓰고 기간 정산 폼은 `start/end` 를 써서 서로 덮어썼다.
+   * 기간은 시작일/종료일 폼 하나만 정한다.
    */
-  it("puts the period row first in the main content, and never on the payment form", async () => {
-    const before = (html: string) => html.slice(0, html.indexOf('aria-label="매출 조회"'));
-
+  it("keeps the expenses screen free of dead period controls", async () => {
     const { OperationsPage } = await import("./operations/operations-page");
-    const expenses = renderToStaticMarkup(
-      <OperationsPage expenses={[]} ledger={[]} requestKey="k" salesQuery={{ view: "month", cursor: "2026-07-31" }} />,
-    );
+    const expenses = renderToStaticMarkup(<OperationsPage expenses={[]} ledger={[]} requestKey="k" />);
 
-    expect(expenses).toContain('aria-label="매출 조회"');
-    expect(before(expenses)).not.toContain("justify-between gap-6");
-
-    // 결제 등록에는 기간이 없다. 눌러도 폼이 달라지지 않는 컨트롤 7개를 Tab 순서에서 뺀다.
-    const { SalesControls } = await import("./sales/sales-controls");
-    const payment = renderToStaticMarkup(
-      <SalesControls label="2026년 8월" query={{ view: "month", cursor: "2026-07-31" }} tab="payment" />,
-    );
-    expect(payment).toBe("");
-
+    expect(expenses).not.toContain('aria-label="매출 조회"');
+    // 기간은 이 폼 하나가 정한다.
+    expect(expenses).toContain('aria-label="기간 정산"');
     // 성격이 다른 세 화면을 한 줄에 묶던 탭 줄은 돌아오지 않는다.
     expect(expenses).not.toContain('aria-label="매출 기능"');
   });

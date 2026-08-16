@@ -4,6 +4,7 @@ import { describe, expect, it } from "vitest";
 import { PAYMENT_METHODS } from "../../lib/finance";
 import { FALLBACK_SERVICE_MAJORS } from "../../lib/operations";
 import type { JsonValue, SalonRecord } from "../../lib/salon-domain";
+import { PaymentAmounts } from "./payment-amounts";
 import { PaymentForm } from "./payment-form";
 
 const at = { defaultDate: "2026-08-01", defaultTime: "14:37" };
@@ -14,8 +15,11 @@ const catalogItem = (name: string, type = "service-major"): SalonRecord<JsonValu
 describe("PaymentForm", () => {
   it("renders all payment inputs and applies a preselected customer", () => {
     const html = renderToStaticMarkup(<PaymentForm customerId="customer-1" requestKey="payment-test-key" customers={[{ id: "customer-1", value: { name: "김하늘", points: 100 } }]} {...at} />);
-    expect(html).toContain('value="customer-1" selected=""');
-    for (const { key, label } of PAYMENT_METHODS) { expect(html).toContain(`name="payment_${key}"`); expect(html).toContain(label); }
+    // 858명짜리 드롭다운도, 회원 구분칸도 없다. 이미 정해진 고객은 숨은 값 하나와 이름 한 줄이다.
+    expect(html).toContain('name="customerId" value="customer-1"');
+    expect(html).toContain("김하늘");
+    expect(html).not.toContain('name="memberType"');
+    for (const { key } of PAYMENT_METHODS) expect(html).toContain(`name="payment_${key}"`);
     for (const name of ["grossWon", "discountWon", "pointsUsedWon", "pointsEarnedWon", "vatMode", "cardFeeRate", "expenseWon", "generalNote", "medicineNote", "scalpNote", "hairNote"]) expect(html).toContain(`name="${name}"`);
   });
 
@@ -76,12 +80,16 @@ describe("PaymentForm", () => {
     expect(html).toContain('name="cardFeeRate" value="2.75"');
   });
 
+  /** 분할 결제 여섯 칸은 3개씩 선다. 한 줄에 늘어놓으면 칸이 좁아 금액이 잘렸다. */
   it("keeps payment tenders readable across the full payment workspace", () => {
     const html = renderToStaticMarkup(<PaymentForm customers={[]} requestKey="payment-test-key" {...at} />);
-
     expect(html).toContain("w-full max-w-none");
-    expect(html).toContain('data-payment-method-grid="true"');
-    expect(html).toContain("grid-cols-2");
+
+    const split = renderToStaticMarkup(<PaymentAmounts cardFeeRate={0} splitOpen vatMode="included" />);
+    expect(split).toContain('data-payment-method-grid="true"');
+    expect(split).toContain("grid-cols-3");
+    // 여섯 칸이 전부 선다 — 나머지 세 수단은 숨은 값으로 나간다.
+    for (const key of ["transfer", "cash", "card", "naverPay", "other", "prepaid"]) expect(split).toContain(`name="payment_${key}"`);
   });
 
   it("takes the idempotency key from the server instead of minting one per render", () => {

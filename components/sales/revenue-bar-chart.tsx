@@ -60,6 +60,8 @@ export function RevenueBarChart({
   yearOverYearLabel,
   drilldownHref,
   emptyText,
+  controls,
+  periodNote,
 }: {
   title: string;
   /** `2026년` 처럼 차트 전체가 덮는 기간. */
@@ -75,6 +77,10 @@ export function RevenueBarChart({
   /** 막대를 누르면 한 단계 아래 기간으로 내려가는 링크. */
   drilldownHref: (key: string) => string;
   emptyText: string;
+  /** 기간 칩 4개와 이동 화살표. 없어진 매출 조회 박스 대신 이 카드 머리줄이 기간을 고른다. */
+  controls?: React.ReactNode;
+  /** `2026-01-01 ~ 2026-12-31`. 칩이 고른 기간을 날짜로 확인시킨다. */
+  periodNote?: string;
 }) {
   const max = Math.max(0, ...points.map((point) => point.gross ?? 0));
   const summed = points.reduce((running, point) => running + (point.gross ?? 0), 0);
@@ -85,14 +91,19 @@ export function RevenueBarChart({
 
   return (
     <section className={chartShell}>
-      <header className="px-5 pb-4 pt-[18px]">
-        <h2 className={`${typeScale.micro} text-[var(--muted)]`}>{title}</h2>
-        <p className="mt-[9px] flex items-baseline gap-3">
-          <strong className={`font-mono ${typeScale.metric} tabular-nums`}>{won(total)}</strong>
-          <span className="text-[12px] text-[var(--muted)]">
-            {label} · {count.toLocaleString("ko-KR")}건
-          </span>
-        </p>
+      <header className="flex items-start justify-between gap-6 px-5 pb-4 pt-[18px]">
+        <div>
+          <h2 className={`${typeScale.micro} text-[var(--muted)]`}>{title}</h2>
+          <p className="mt-[9px] flex items-baseline gap-3">
+            <strong className={`font-mono ${typeScale.metric} tabular-nums`}>{won(total)}</strong>
+            <span className="text-[12px] text-[var(--muted)]">
+              {label} · {count.toLocaleString("ko-KR")}건
+            </span>
+          </p>
+          {/* 기간 표시는 칩 옆이 아니라 제목 아래 작은 글씨다 — 고른 결과지 조작기가 아니다. */}
+          {periodNote && <p className="mt-[7px] font-mono text-[11px] tabular-nums text-[var(--muted)]">{periodNote}</p>}
+        </div>
+        {controls && <div className="shrink-0">{controls}</div>}
       </header>
       {mismatch && (
         <p className="mx-5 mb-3 rounded-[var(--radius-control)] border border-[var(--danger)] px-3 py-2 text-[12px] text-[var(--danger)]" role="alert">

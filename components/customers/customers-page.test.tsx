@@ -82,7 +82,9 @@ describe("CustomersPage", () => {
     expect(bookings).toContain("2026-07-31 10:00 · 커트 · confirmed");
     expect(bookings).not.toContain("시술·결제 이력이");
     expect(page(undefined, { selectedCustomerId: "customer-seed-1", tab: "points" })).toContain("2026-07-24 · 1,000P");
-    expect(page(undefined, { selectedCustomerId: "customer-seed-1", tab: "messages" })).toContain("SMS · dry-run");
+    const legacyMessagesTab = page(undefined, { selectedCustomerId: "customer-seed-1", tab: "messages" });
+    expect(legacyMessagesTab).toContain("고객 정보");
+    for (const hidden of [">문자<", "문자 수신", "SMS · dry-run", "/messages"]) expect(legacyMessagesTab).not.toContain(hidden);
   });
 
   /**
@@ -97,7 +99,26 @@ describe("CustomersPage", () => {
 
     expect(html).toContain("2020-02-18");
     expect(html).not.toContain("12:00:00");
-    expect(html).toContain(">없음<");
+    expect(html).toContain("메모가 없습니다");
+  });
+
+  /**
+   * 두 칸은 같은 높이로 서는데 기본정보는 4행뿐이라 720px 칸 아래 385px 가 비어 있었다
+   * (1440×900 실측) — 덜 그려진 화면처럼 읽혔다. 메모칸이 남은 높이를 가져가 그 자리를 채운다.
+   *
+   * 높이는 `flex-1` 사슬로 만들어진다. 한 고리라도 끊기면 메모칸이 내용 높이로 접히고
+   * 빈 자리가 돌아온다 — `h-full`(백분율)로 썼을 때 실제로 195px 로 접혔다.
+   */
+  it("stretches the memo panel so the profile tab fills the fixed detail height", () => {
+    const html = page(undefined, { selectedCustomerId: "customer-seed-1" });
+
+    // 상세 칸 바깥 껍데기: 칸 높이를 물려받아야 안쪽이 나눠 가질 높이가 생긴다.
+    expect(html).toContain("flex min-h-full flex-col");
+    // 탭 본문과 기본정보 묶음, 메모칸까지 `flex-1` 이 이어져야 한다.
+    expect(html).toContain("mt-5 flex min-h-0 flex-1 flex-col");
+    expect(html).toContain("mt-2 min-h-0 flex-1 whitespace-pre-wrap");
+    // 스크롤 상자는 `aside` 하나다. 메모칸에도 걸면 어느 쪽이 움직일지 알 수 없다.
+    expect(html).not.toContain("dialog-scroll mt-2");
   });
 
   // 식별자는 이름보다 작고 늦게 읽힌다. 제목 줄에 끼면 이름과 같은 무게로 보인다.
@@ -149,6 +170,85 @@ describe("CustomersPage", () => {
     expect(first).toContain("page=2");
   });
 
+  /**
+   * `?customer=` 없이 들어오면 목록 첫 줄이 펴진다. 예전에는 오른쪽 절반이 "선택하면 보입니다"
+   * 한 줄로 비어 있어, 무엇을 볼 수 있는 화면인지 알려면 클릭이 한 번 필요했다.
+   * 기준은 **지금 정렬** 이다 — `customers` 원본 순서가 아니라 `sorted[0]`. 이름순과 등록일순이
+   * 서로 다른 고객을 펴는지 함께 확인한다. URL 은 그대로다(자동 선택은 화면에서만 일어난다).
+   */
+  it("opens the first row of the current sort when no customer is chosen", () => {
+    const customers = many(3);
+    const byName = page(createSalonStore(":memory:"), { customers });
+    const byJoined = page(createSalonStore(":memory:"), {
+      customers: customers.map((record, index) => ({ ...record, value: { ...record.value, joinedAt: `2026-0${index + 1}-01` } })),
+      sort: "joined",
+    });
+
+    // 이름순: 고객000. 등록일순은 내림차순이라 마지막에 등록한 고객002 가 먼저다.
+    expect(byName.slice(byName.indexOf('data-customer-row="bulk-0"'))).toContain('aria-current="true"');
+    expect(byJoined.slice(byJoined.indexOf('data-customer-row="bulk-2"'))).toContain('aria-current="true"');
+    // 빈 상태 문구는 사라졌다 — 자동 선택 뒤에는 나올 자리가 없다.
+    expect(byName).not.toContain("목록에서 고객을 선택하면");
+    // 고객이 하나도 없을 때만 빈 상태가 남는다.
+    expect(page(createSalonStore(":memory:"), { customers: [] })).toContain("등록된 고객이 없습니다");
+  });
+
+  /**
+   * 선택 행은 hover 와 **다른 언어**를 써야 한다. 예전에는 둘 다 `bg-[var(--background)]` 라
+   * 선택한 고객과 마우스가 지나가는 고객이 화면상 같았다. 색 하나로만 가르지 않으려고
+   * 좌측 바(사이드바 활성 항목과 같은 어법)와 `aria-current` 를 함께 둔다 — 색각 이상과 보조 기술 양쪽.
+   * `aria-current` 는 `"page"` 가 아니다. 상세 탭 nav 가 이미 `"page"` 를 쓰므로 한 화면에 둘이 되면
+   * 보조 기술이 현재 위치를 두 번 말한다(`app-shell.test.tsx` 와 같은 규칙).
+   */
+  it("marks the selected row with more than a background colour", () => {
+    const store = createSalonStore(":memory:");
+    const customers = many(30);
+    const html = page(store, { customers, selectedCustomerId: "bulk-2", searchParams: { customer: "bulk-2" } });
+    const row = html.slice(html.indexOf('data-customer-row="bulk-2"'));
+
+    expect(row).toContain('aria-current="true"');
+    expect(row).toContain("bg-[var(--brand-soft)]");
+    expect(row).toContain("w-[2px] rounded-[1px] bg-[var(--brand)]");
+    // 선택 배경은 한 행만 갖는다. hover 는 여전히 `--background` 라 둘이 겹치지 않는다.
+    expect(html.match(/bg-\[var\(--brand-soft\)\]/g)).toHaveLength(1);
+    expect(html).not.toContain('aria-current="page"><');
+  });
+
+  /**
+   * 이름 위·번호 아래. 좌우로 갈라 두면 목록이 좁아질수록 둘 사이가 벌어져 어느 번호가
+   * 어느 이름인지 눈이 한 번 더 움직였다. 오른쪽 상세 패널도 같은 순서다.
+   * 56px 는 계산값이다 — 9행 × 56 = 504, 알약 여백 8 = 512 ≤ 519px(실측 스크롤 영역).
+   * 이 값이 커지면 위 페이지 크기 검사(9행)와 함께 깨지므로 두 검사가 서로를 지킨다.
+   */
+  it("stacks the customer name over the phone number in a 56px row", () => {
+    const html = page(createSalonStore(":memory:"), { customers: many(3) });
+
+    expect(html).toContain('class="h-[56px]"');
+    expect(html).toContain("flex h-full flex-col");
+    expect(html).not.toContain("ml-auto shrink-0 text-xs tabular-nums");
+  });
+
+  /**
+   * 구분선은 있되 **벽까지 가지 않는다**. 예전에는 선이 카드 테두리에 딱 붙어 벽에서 벽까지
+   * 갔고, hover·선택 배경도 함께 붙어 행이 카드 **안**에 있는 게 아니라 카드를 덧칠한 것처럼
+   * 보였다. 박스를 하나 더 두면 여백이 두 배(20+16)에 테두리가 3겹이 되므로, 대신 좌우 8px 을
+   * 띄운다 — `divide-y` 는 `<li>` 에 걸리므로 선도 같이 물러난다.
+   * 알약 어법은 사이드바 메뉴가 이미 쓴다(`app-shell.tsx`).
+   *
+   * 행 사이 gap 은 **없다**. 2px 씩만 줘도 8칸 16px 이 붙어 528 로 519px 를 넘긴다.
+   * 여기서 `gap-` 이 들어오면 페이지 크기 검사(9행)가 함께 깨진다.
+   */
+  it("insets the row dividers instead of running them wall to wall", () => {
+    const html = page(createSalonStore(":memory:"), { customers: many(3) });
+
+    // 구분선과 좌우 여백이 같은 `<ul>` 에 있어야 선이 여백 안쪽에서 끝난다.
+    expect(html).toContain("divide-y divide-[var(--border)] overflow-auto px-2 py-1");
+    // 알약 모서리는 컨트롤 반경이다. 카드 반경(12px)을 쓰면 카드 안에 카드가 된다.
+    expect(html).toContain("rounded-[var(--radius-control)] pl-4 pr-3");
+    // 좌측 바는 알약 **안**으로 들어온다. `left-0` 이면 알약 모서리 밖에 떠 있다.
+    expect(html).not.toContain("left-0 w-[2px]");
+  });
+
   it("carries the active search and sort across pages and drops the open modal", () => {
     const store = createSalonStore(":memory:");
     const html = page(store, { customers: many(30), query: "고객", sort: "joined", searchParams: { query: "고객", sort: "joined", new: "1" }, showNew: true });
@@ -160,7 +260,7 @@ describe("CustomersPage", () => {
   });
 
   it("closes every popup back onto the selected customer without losing filters", () => {
-    for (const open of [{ showNew: true }, { editCustomerId: "customer-seed-1" }, { payCustomerId: "customer-seed-1" }, { showPrepaid: true }]) {
+    for (const open of [{ showNew: true }, { editCustomerId: "customer-seed-1" }, { showPrepaid: true }]) {
       const html = page(undefined, { query: "김", selectedCustomerId: "customer-seed-1", ...open });
       const close = html.match(/<a\b[^>]*data-dialog-close="true"[^>]*>/)?.[0].match(/href="([^"]+)"/)?.[1] ?? "";
 
@@ -173,9 +273,8 @@ describe("CustomersPage", () => {
 
   // 전역 패널 폭은 `min(1120px,100%)` 다. 세로로 선 폼을 그 폭에 두면 라벨과 입력칸이 한 뼘씩 벌어진다.
   // 고객 등록만 `!w-auto` 다 — 중복 확인 패널이 옆으로 펴질 때 패널이 안쪽 폭을 따라가야 하기 때문이다.
-  it("narrows both popups, giving the payment form a little more room", () => {
+  it("keeps customer management popups at their measured widths", () => {
     expect(page(undefined, { showNew: true })).toContain("!w-auto");
-    expect(page(undefined, { payCustomerId: "customer-seed-1" })).toContain("!w-[560px]");
   });
 
   it("registers with six fields and never offers prepaid on the edit form", () => {
@@ -198,19 +297,8 @@ describe("CustomersPage", () => {
     expect(page(store, { editCustomerId: "customer-seed-1" })).toContain('<option value="female" selected="">여성</option>');
   });
 
-  /** 결제 팝업은 고객이 이미 정해져 있다. 물을 필요가 없는 칸은 숨은 값으로 보낸다. */
-  it("prefills the payment popup and omits the fields the customer record already answers", () => {
+  it("opens the shared payment modal with a customer id while keeping this page as the background", () => {
     const html = page(undefined, { payCustomerId: "customer-seed-1" });
-
-    expect(html).toContain('name="memberType" value="member"');
-    expect(html).toContain('name="customerId" value="customer-seed-1"');
-    expect(html).toContain('name="requestKey" value="test-request-key"');
-    expect(html).toContain('name="occurredDate" value="2026-08-13"');
-    for (const gone of ["nonMemberName", "generalNote", "medicineNote", "scalpNote", "hairNote", "smsRequested"]) {
-      expect(html).not.toContain(`name="${gone}"`);
-    }
-    // 결제수단 8칸은 그대로 남는다 — `finance.ts` 가 전부를 읽는다.
-    expect(html).toContain('name="payment_cash"');
-    expect(html).toContain('name="payment_prepaid"');
+    expect(html).toContain("/customers?pay=1&amp;customer=customer-seed-1");
   });
 });

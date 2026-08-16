@@ -11,11 +11,12 @@ import { createSalonStore } from "../lib/salon-store";
 // 환불은 `/sales/transactions` 에서, 결제는 `/customers`·`/bookings` 에서도 출발한다. 이 경로들을
 // 허용하지 않으면 실패 메시지가 `/sales` 로 떨어져 사용자가 "눌렀는데 아무 일도 안 났다" 를 본다.
 // 판정은 `lib/navigation.ts` 한 곳에 있다 — 라우트가 폼에 심을 때와 여기가 갈리면 안 된다.
-function returnTo(formData: FormData) { return paymentReturnTo(formData.get("returnTo"), "/sales?tab=payment"); }
-function back(formData: FormData, key: "error" | "notice", message: string): never {
+function returnTo(formData: FormData) { return paymentReturnTo(formData.get("returnTo"), "/sales?pay=1"); }
+function back(formData: FormData, key: "error" | "notice", message: string, extra: Readonly<Record<string, string>> = {}): never {
   const url = new URL(returnTo(formData), "http://localhost");
   url.searchParams.delete(key === "notice" ? "error" : "notice");
   url.searchParams.set(key, message);
+  for (const [name, value] of Object.entries(extra)) url.searchParams.set(name, value);
   redirect(`${url.pathname}${url.search}`);
 }
 function mutate(formData: FormData, notice: string, operation: (store: ReturnType<typeof createSalonStore>) => unknown) {
@@ -32,11 +33,11 @@ function mutate(formData: FormData, notice: string, operation: (store: ReturnTyp
  * 오류를 돌려주면 화면이 그 자리에 남아 브라우저가 들고 있는 입력값이 그대로 살아남는다.
  * `back()` 의 성공 이동은 `redirect()` 라 예외로 빠져나간다 — `catch` 밖에 두어야 삼키지 않는다.
  */
-function attempt(formData: FormData, notice: string | (() => string), operation: (store: ReturnType<typeof createSalonStore>) => unknown) {
+function attempt(formData: FormData, notice: string | (() => string), operation: (store: ReturnType<typeof createSalonStore>) => unknown, extra?: () => Readonly<Record<string, string>>) {
   try { const store = createSalonStore(); try { operation(store); } finally { store.close(); } }
   catch (error) { return error instanceof Error ? error.message : "결제를 처리하지 못했습니다."; }
   revalidatePath("/"); revalidatePath("/sales"); revalidatePath("/sales/transactions"); revalidatePath("/customers"); revalidatePath("/bookings");
-  back(formData, "notice", typeof notice === "string" ? notice : notice());
+  back(formData, "notice", typeof notice === "string" ? notice : notice(), extra?.());
 }
 /**
  * 예약에서 출발한 결제는 저장과 동시에 그 예약을 완료로 넘긴다(설계 §4.4).
@@ -49,11 +50,13 @@ function attempt(formData: FormData, notice: string | (() => string), operation:
  */
 export async function savePayment(_state: string | undefined, formData: FormData) {
   let completed = false;
+  let firstVisitPayment = "";
   return attempt(formData, () => completed ? "결제를 저장하고 예약을 완료 처리했습니다." : "결제를 저장했습니다.", (store) => {
-    recordPayment(store, formData);
+    const saved = recordPayment(store, formData);
+    if (!saved.customerId && typeof formData.get("nonMemberName") === "string" && String(formData.get("nonMemberName")).trim()) firstVisitPayment = saved.id;
     const bookingId = formData.get("bookingId");
     if (typeof bookingId === "string" && bookingId) try { completed = markBookingCompleted(store, bookingId) !== null; } catch { /* 예약 상태는 원장 정확성보다 뒤다 */ }
-  });
+  }, () => firstVisitPayment ? { firstVisitPayment } : {} as Record<string, string>);
 }
 export async function correctPayment(_state: string | undefined, formData: FormData) { return attempt(formData, "정정을 저장했습니다.", (store) => correctPaymentRecord(store, formData)); }
 export async function refundPayment(formData: FormData) { mutate(formData, "환불을 처리했습니다.", (store) => refundPaymentRecord(store, formData)); }

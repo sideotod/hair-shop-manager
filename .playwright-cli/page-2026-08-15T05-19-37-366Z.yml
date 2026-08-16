@@ -1,0 +1,12 @@
+- generic [active] [ref=e1]:
+  - main [ref=e2]:
+    - region [ref=e3]:
+      - paragraph [ref=e4]: HAIRHAEYO
+      - heading "사용자 로그인" [level=1] [ref=e5]
+      - paragraph [ref=e6]: 헤어해요 운영 화면은 사용자 계정만 사용할 수 있습니다.
+      - generic [ref=e7]:
+        - generic [ref=e8]:
+          - generic [ref=e9]: 비밀번호
+          - textbox "비밀번호" [ref=e10]
+        - button "로그인" [ref=e11]
+  - button "Open Next.js Dev Tools" [ref=e17] [cursor=pointer]

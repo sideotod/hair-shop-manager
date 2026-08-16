@@ -71,10 +71,11 @@ function paymentRevenue(records: readonly RevenueTransaction[]) {
   return Object.freeze([...values].map(([name, amount]) => Object.freeze({ name, amount, value: total ? Math.round((amount / total) * 100) : 0 })).sort((a, b) => b.amount - a.amount));
 }
 
-export function buildRevenueAnalytics(allRecords: readonly RevenueTransaction[], query: RevenueQuery, today = seoulBusinessDate()): RevenueAnalytics {
+export function buildRevenueAnalytics(allRecords: readonly RevenueTransaction[], query: RevenueQuery, today = seoulBusinessDate(), bounds?: { first: string; last: string } | null): RevenueAnalytics {
   const transactions = filterRevenueTransactions(allRecords, query);
-  const day = filterRevenueTransactions(allRecords, { view: "day", cursor: today });
-  const month = filterRevenueTransactions(allRecords, { view: "month", cursor: today });
+  // `today` 는 진짜 하루다. 칩의 `day` 창(한 달)을 쓰면 오늘 매출이 이 달 매출로 부푼다.
+  const day = allRecords.filter((record) => record.date === today);
+  const month = allRecords.filter((record) => record.date.slice(0, 7) === today.slice(0, 7));
   // 날짜별 합계는 한 번만 훑는다. 날짜마다 전체를 filter 하면 누적 기간에서 1,662일 × 5,576행이 된다 (D8).
   const byDate = new Map<string, { gross: number; profit: number }>();
   for (const record of transactions) {
@@ -92,7 +93,8 @@ export function buildRevenueAnalytics(allRecords: readonly RevenueTransaction[],
   const fee = sum(transactions, (record) => record.fee);
   const expense = sum(transactions, (record) => record.expense);
   const refunds = sum(transactions.filter((record) => record.status === "환불"), (record) => record.netPaid);
-  const range = revenueRange(query);
+  // 년별은 창이 "전체"라 원장 범위를 받아야 실제 날짜를 말한다. 없으면 0000~9999 자리표시가 화면에 나간다.
+  const range = revenueRange(query, bounds);
   // Hairnury 이관 원장은 미분류/기타라는 고정값만 남긴다. 그 한 값으로 순위나 비중을
   // 만들면 "실제 영업 분석"처럼 보이는 거짓 신호가 되므로, 서버에서 차원을 닫는다.
   const availability = Object.freeze({

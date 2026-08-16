@@ -1,6 +1,6 @@
 import type { LedgerAggregateRow, LedgerSummaryRow } from "./salon-domain";
 
-export type RevenueGranularity = "daily" | "monthly" | "yearly";
+export type RevenueGranularity = "daily" | "weekly" | "monthly" | "yearly";
 
 /** §18 — a period with no rows is not the same thing as a period with ₩0. */
 export type RevenuePointState =
@@ -52,7 +52,22 @@ export type RevenueAggregate = {
   readonly summary: RevenueSummary;
 };
 
-const KEY_LENGTH: Record<RevenueGranularity, number> = { daily: 10, monthly: 7, yearly: 4 };
+const KEY_LENGTH: Record<RevenueGranularity, number> = { daily: 10, weekly: 10, monthly: 7, yearly: 4 };
+
+/**
+ * 오늘이 속한 칸의 키. 주는 키가 그 주 월요일이라 날짜를 잘라내는 것만으로는
+ * 진행 중인 주를 못 찾는다 — 오늘도 월요일로 접어야 같은 키가 된다.
+ */
+function todayKeyFor(today: string, granularity: RevenueGranularity) {
+  return granularity === "weekly" ? mondayOf(today) : today.slice(0, KEY_LENGTH[granularity]);
+}
+
+/** Monday-start week containing `date`. */
+export function mondayOf(date: string) {
+  const start = new Date(`${date}T00:00:00Z`);
+  start.setUTCDate(start.getUTCDate() - ((start.getUTCDay() + 6) % 7));
+  return start.toISOString().slice(0, 10);
+}
 
 /** Percent change, rounded to one decimal. Never returns Infinity or NaN. */
 export function delta(current: number, previous: number | null): number | null {
@@ -74,6 +89,7 @@ function shiftMonth(key: string, months: number) {
 
 function previousKey(key: string, granularity: RevenueGranularity) {
   if (granularity === "daily") return shiftDay(key, -1);
+  if (granularity === "weekly") return shiftDay(key, -7);
   if (granularity === "monthly") return shiftMonth(key, -1);
   return String(Number(key) - 1);
 }
@@ -81,11 +97,13 @@ function previousKey(key: string, granularity: RevenueGranularity) {
 function yearAgoKey(key: string, granularity: RevenueGranularity) {
   if (granularity === "monthly") return shiftMonth(key, -12);
   if (granularity === "yearly") return String(Number(key) - 1);
-  return null; // daily year-over-year is not shown
+  return null; // daily·weekly year-over-year is not shown
 }
 
-function labelFor(key: string, granularity: RevenueGranularity) {
+/** 주 라벨은 키가 아니라 자리에서 나온다 — 그 해의 몇 번째 주인지가 축의 뜻이다. */
+function labelFor(key: string, granularity: RevenueGranularity, index: number) {
   if (granularity === "daily") return String(Number(key.slice(8, 10)));
+  if (granularity === "weekly") return `${index + 1}주차`;
   if (granularity === "monthly") return `${Number(key.slice(5, 7))}월`;
   return key;
 }
@@ -120,6 +138,38 @@ export function yearlyAxis(rows: readonly LedgerAggregateRow[]): readonly string
   return [...new Set(rows.map((row) => row.key))].sort();
 }
 
+/**
+ * `yearKey` 한 해를 덮는 월요일들. 1월 1일이 든 주부터 12월 31일이 든 주까지라
+ * 해에 따라 52칸 또는 53칸이다. 첫 주·마지막 주는 지난해·다음해 날을 물지만
+ * 합계는 그 해 날만 더한다 (`weeklyRows`).
+ */
+export function weeklyAxis(yearKey: string): readonly string[] {
+  const last = mondayOf(`${yearKey}-12-31`);
+  const keys: string[] = [];
+  for (let key = mondayOf(`${yearKey}-01-01`); key <= last; key = shiftDay(key, 7)) keys.push(key);
+  return keys;
+}
+
+/**
+ * 일별 집계 행을 월요일 기준으로 접는다. SQL 에 주 단위가 없어서 여기서 접는다.
+ * 연 경계 주에서는 `yearKey` 에 속한 날만 더한다 — 지난해 매출이 올해 1주차로 새지 않는다.
+ */
+export function weeklyRows(dayRows: readonly LedgerAggregateRow[], yearKey: string): readonly LedgerAggregateRow[] {
+  const byWeek = new Map<string, LedgerAggregateRow>();
+  for (const row of dayRows) {
+    if (!row.key.startsWith(yearKey)) continue;
+    const key = mondayOf(row.key);
+    const running = byWeek.get(key);
+    byWeek.set(
+      key,
+      running
+        ? { ...running, gross: running.gross + row.gross, netPaid: running.netPaid + row.netPaid, profit: running.profit + row.profit, count: running.count + row.count, corrections: running.corrections + row.corrections }
+        : { ...row, key },
+    );
+  }
+  return [...byWeek.values()].sort((a, b) => (a.key < b.key ? -1 : 1));
+}
+
 export function buildPoints(
   rows: readonly LedgerAggregateRow[],
   granularity: RevenueGranularity,
@@ -127,16 +177,16 @@ export function buildPoints(
   today: string,
 ): readonly RevenueAggregatePoint[] {
   const byKey = new Map(rows.map((row) => [row.key, row]));
-  const todayKey = today.slice(0, KEY_LENGTH[granularity]);
+  const todayKey = todayKeyFor(today, granularity);
   const grossAt = (key: string | null) => (key === null ? null : (byKey.get(key)?.gross ?? null));
 
-  return axis.map((key) => {
+  return axis.map((key, index) => {
     const row = byKey.get(key);
     const state: RevenuePointState = key > todayKey ? "future" : key === todayKey ? "in-progress" : row ? "actual" : "zero";
     const gross = row?.gross ?? (state === "future" ? null : 0);
     return {
       key,
-      label: labelFor(key, granularity),
+      label: labelFor(key, granularity, index),
       gross,
       netPaid: row?.netPaid ?? (state === "future" ? null : 0),
       profit: row?.profit ?? (state === "future" ? null : 0),

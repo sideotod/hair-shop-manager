@@ -77,8 +77,11 @@ export function findDuplicates(index: readonly DuplicateEntry[], name: string, p
  * SMS 수신과 방문 구분은 칸을 두지 않고 **숨은 값으로 이어받는다.** 칸을 없앤다고
  * 값까지 없애면 수신 거부해 둔 손님이 수정 한 번에 수신 동의로 돌아간다.
  */
-export function CustomerForm({ customer, duplicateIndex = [], returnTo, settings, today }: {
+export function CustomerForm({ customer, defaultName = "", defaultPhone = "", duplicateIndex = [], returnTo, settings, today }: {
   customer?: SalonRecord<JsonValue>;
+  /** 이미 어딘가에 적어 둔 값. 결제 화면의 고객 확인이 못 찾은 이름·번호를 그대로 넘긴다 — 두 번 치게 하지 않는다. */
+  defaultName?: string;
+  defaultPhone?: string;
   /** 팝업이 열렸을 때만 내려온다. 목록 화면에는 실리지 않는다. */
   duplicateIndex?: readonly DuplicateEntry[];
   returnTo: string;
@@ -92,8 +95,8 @@ export function CustomerForm({ customer, duplicateIndex = [], returnTo, settings
   const smsOptIn = customer ? current.smsOptIn !== false : settings.defaultSmsOptIn !== false;
   const points = typeof current.points === "number" ? current.points : 0;
 
-  const [name, setName] = useState(string("name"));
-  const [phone, setPhone] = useState(string("phone"));
+  const [name, setName] = useState(string("name") || defaultName);
+  const [phone, setPhone] = useState(string("phone") || defaultPhone);
   const [confirmed, setConfirmed] = useState(false);
   const duplicates = useMemo(() => findDuplicates(duplicateIndex, name, phone, customer?.id), [duplicateIndex, name, phone, customer?.id]);
   const [match] = duplicates;

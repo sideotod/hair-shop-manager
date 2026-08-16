@@ -111,17 +111,22 @@ function customerValue(store: SalonStore, customerId: string) {
 
 function paymentLedgerInput(store: SalonStore, formData: FormData, correction?: { correctionOf: string; correctionReason: string; reversalEntryId: string }): LedgerInput {
   const requestKey = text(formData, "requestKey");
-  const memberType = text(formData, "memberType");
-  const customerId = memberType === "member" ? text(formData, "customerId") : "";
+  /**
+   * **회원 구분칸은 없다.** 등록되어 있는 사람이 회원이다 — `customerId` 가 붙어 있으면 회원 결제,
+   * 비어 있으면 비회원 결제다. 예전에는 `memberType` 이라는 별도 칸이 같은 사실을 한 번 더 말했고,
+   * 두 값이 갈리면(회원인데 `non-member`) 서버가 무엇을 믿을지 정할 방법이 없었다.
+   *
+   * **데이터 구조 변경 알림:** 원장 `details.memberType` 은 더 이상 쓰지 않는다. 과거 행에는 남아
+   * 있으므로 읽는 쪽은 없어도 되는 값으로 다뤄야 한다. 회원 여부는 `entry.customerId` 로 판단한다.
+   */
+  const customerId = text(formData, "customerId");
   if (!requestKey) throw new Error("결제 요청 키를 확인하세요.");
-  if (memberType !== "member" && memberType !== "non-member") throw new Error("회원 구분을 확인하세요.");
-  if (memberType === "member" && !customerId) throw new Error("결제 고객을 확인하세요.");
   const customer = customerId ? customerValue(store, customerId) : null;
   const pointsUsed = won(formData, "pointsUsedWon");
   const pointsEarned = won(formData, "pointsEarnedWon");
   const pointsTender = won(formData, "payment_points");
   const availablePoints = customer && typeof customer.points === "number" && Number.isSafeInteger(customer.points) ? customer.points : 0;
-  if (memberType === "non-member" && (pointsUsed || pointsEarned || pointsTender)) throw new Error("비회원은 포인트를 사용하거나 적립할 수 없습니다.");
+  if (!customerId && (pointsUsed || pointsEarned || pointsTender)) throw new Error("등록되지 않은 고객은 포인트를 사용하거나 적립할 수 없습니다.");
   if (!correction && pointsUsed > availablePoints) throw new Error("사용 가능한 포인트를 초과했습니다.");
 
   const serviceMajor = text(formData, "serviceMajor");
@@ -140,7 +145,6 @@ function paymentLedgerInput(store: SalonStore, formData: FormData, correction?: 
   const visitType = customer && typeof customer.visitType === "string" ? customer.visitType : text(formData, "visitType") || "first";
   const details = {
     operator: "사용자",
-    memberType,
     customerName: customer && typeof customer.name === "string" ? customer.name : text(formData, "nonMemberName") || "비회원",
     serviceMajor,
     // 예약 존재 여부를 검증하지 않는다. 없는 id 는 원장 금액에 영향이 없고, 검증을 넣으면 예약이 나중에 취소·보관된 뒤 과거 결제를 정정하려 할 때 막힌다.
